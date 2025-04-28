@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #define MAX_COLUMNS 20
-#define MOUSE_MOVE_SENSITIVITY 0.001f
+#define MOUSE_MOVE_SENSITIVITY 0.004f
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -28,8 +28,10 @@ int main(void)
 
     int cameraMode = CAMERA_CUSTOM;
     
+    bool myDebug = false;
     float lookSensitivity = 10.0f;
     float camSpeed = 0.1f;
+    float axisSize = 0.2f;
     
     //-------------------------------------------------------------------------------------
 
@@ -59,26 +61,7 @@ int main(void)
         // Switch camera mode
         if (IsKeyPressed(KEY_ONE))
         {
-            cameraMode = CAMERA_FREE;
-            camera.up = (Vector3){ 0.0f, 1.0f, 0.0f }; // Reset roll
-        }
-
-        if (IsKeyPressed(KEY_TWO))
-        {
-            cameraMode = CAMERA_FIRST_PERSON;
-            camera.up = (Vector3){ 0.0f, 1.0f, 0.0f }; // Reset roll
-        }
-
-        if (IsKeyPressed(KEY_THREE))
-        {
-            cameraMode = CAMERA_THIRD_PERSON;
-            camera.up = (Vector3){ 0.0f, 1.0f, 0.0f }; // Reset roll
-        }
-
-        if (IsKeyPressed(KEY_FOUR))
-        {
-            cameraMode = CAMERA_ORBITAL;
-            camera.up = (Vector3){ 0.0f, 1.0f, 0.0f }; // Reset roll
+            myDebug = !myDebug;
         }
 
         // Switch camera projection
@@ -110,10 +93,26 @@ int main(void)
         }
         
         float newForward = 0;
+        float newRight = 0;
+        float newUp = 0;
         // new camera location
-        if (IsKeyDown(KEY_W))
-        {
-            newForward = camSpeed;
+        if (IsKeyDown(KEY_W)){
+            newForward += camSpeed;
+        }
+        if (IsKeyDown(KEY_S)){
+            newForward -= camSpeed;
+        }
+        if (IsKeyDown(KEY_D)){
+            newRight += camSpeed;
+        }
+        if (IsKeyDown(KEY_A)){
+            newRight -= camSpeed;
+        }
+        if (IsKeyDown(KEY_SPACE)){
+            newUp += camSpeed;
+        }
+        if (IsKeyDown(KEY_LEFT_CONTROL)){
+            newUp -= camSpeed;
         }
         
         // new camera rotation
@@ -123,7 +122,7 @@ int main(void)
 
         //UpdateCamera(&camera, cameraMode);
         UpdateCameraPro(&camera, 
-            (Vector3){ newForward, 0.0f, 0.0f }, // added pos
+            (Vector3){ newForward, newRight, newUp }, // added pos
             (Vector3){ newYaw, newPitch, 0.0f }, // added rot
             0.0f); // zoom
 
@@ -135,28 +134,32 @@ int main(void)
             ClearBackground(SKYBLUE);
 
             BeginMode3D(camera);
-
-                DrawPlane((Vector3){ 0.0f, 0.0f, 0.0f }, (Vector2){ 32.0f, 32.0f }, LIGHTGRAY); // Draw ground
+                // Draw Ground
+                DrawPlane((Vector3){ 0.0f, -1.0f, 0.0f }, (Vector2){ 32.0f, 32.0f }, LIGHTGRAY);
+                // Draw Sun?
+                DrawSphere((Vector3){ 0.0f, 5.0f, 0.0f }, 1.0f, YELLOW); 
+                DrawSphereWires((Vector3){ 0.0f, 5.0f, 0.0f }, 1.0f, 20, 20, ORANGE);
                 
-                DrawCube((Vector3){ -16.0f, 2.5f, 0.0f }, 1.0f, 10.0f, 32.0f, BLUE);     // Draw a blue wall
-                DrawCube((Vector3){ 16.0f, 2.5f, 0.0f }, 1.0f, 10.0f, 32.0f, LIME);      // Draw a green wall
-                DrawCube((Vector3){ 0.0f, 2.5f, -16.0f }, 32.0f, 10.0f, 1.0f, GOLD);      // Draw a yellow wall
-                
-                DrawCylinder((Vector3){ 10.0f, 10.0f, 10.0f }, 3.0f, 3.0f, 5.0f, 6, WHITE);
-                DrawCylinderWires((Vector3){ 10.0f, 10.0f, 10.0f }, 3.0f, 3.0f, 5.0f, 6, BLACK);
+                DrawCylinder((Vector3){camera.target.x, camera.target.y, camera.target.z}, 0.25f, 0.25f, 0.5f, 8, WHITE);
+                DrawCylinderWires((Vector3){camera.target.x, camera.target.y, camera.target.z}, 0.25f, 0.25f, 0.5f, 8, BLACK);
 
-                // Draw some cubes around
-                // for (int i = 0; i < max_columns; i++)
-                // {
-                    // drawcube(positions[i], 2.0f, heights[i], 2.0f, colors[i]);
-                    // drawcubewires(positions[i], 2.0f, heights[i], 2.0f, maroon);
-                // }
-
-                // Draw player cube
-                if (cameraMode == CAMERA_THIRD_PERSON)
-                {
-                    DrawCube(camera.target, 0.5f, 0.5f, 0.5f, PURPLE);
-                    DrawCubeWires(camera.target, 0.5f, 0.5f, 0.5f, DARKPURPLE);
+                // Draw axis
+                if (myDebug)
+                {   
+                    // draw an axis with cubes
+                    // CENTER
+                    DrawCube(camera.target, axisSize, axisSize, axisSize, WHITE);
+                    DrawCubeWires(camera.target, axisSize, axisSize, axisSize, BLACK);
+                    // RIGHT
+                    DrawCube((Vector3){camera.target.x + 0.5f, camera.target.y, camera.target.z}, axisSize, axisSize, axisSize, RED);
+                    DrawCubeWires((Vector3){camera.target.x + 0.5f, camera.target.y, camera.target.z}, axisSize, axisSize, axisSize, BLACK);
+                    // UP
+                    DrawCube((Vector3){camera.target.x, camera.target.y + 0.5f, camera.target.z}, axisSize, axisSize, axisSize, GREEN);
+                    DrawCubeWires((Vector3){camera.target.x, camera.target.y + 0.5f, camera.target.z}, axisSize, axisSize, axisSize, BLACK);
+                    // BACK
+                    DrawCube((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLUE);
+                    DrawCubeWires((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLACK);
+                    
                 }
 
             EndMode3D();
@@ -167,10 +170,7 @@ int main(void)
 
             DrawText("Camera controls:", 15, 15, 10, BLACK);
             DrawText("- Move keys: W, A, S, D, Space, Left-Ctrl", 15, 30, 10, BLACK);
-            DrawText("- Look around: arrow keys or mouse", 15, 45, 10, BLACK);
-            DrawText("- Camera mode keys: 1, 2, 3, 4", 15, 60, 10, BLACK);
-            DrawText("- Zoom keys: num-plus, num-minus or mouse scroll", 15, 75, 10, BLACK);
-            DrawText("- Camera projection key: P", 15, 90, 10, BLACK);
+            
             //----------------------------------------------------------------------------------
             DrawRectangle(1080, 5, 195, 100, Fade(SKYBLUE, 0.5f));
             DrawRectangleLines(1080, 5, 195, 100, BLUE);
@@ -180,11 +180,6 @@ int main(void)
                                               (cameraMode == CAMERA_FIRST_PERSON) ? "FIRST_PERSON" :
                                               (cameraMode == CAMERA_THIRD_PERSON) ? "THIRD_PERSON" :
                                               (cameraMode == CAMERA_ORBITAL) ? "ORBITAL" : "CUSTOM"), 1090, 30, 10, BLACK);
-            DrawText(TextFormat("- Projection: %s", (camera.projection == CAMERA_PERSPECTIVE) ? "PERSPECTIVE" :
-                                                    (camera.projection == CAMERA_ORTHOGRAPHIC) ? "ORTHOGRAPHIC" : "CUSTOM"), 1090, 45, 10, BLACK);
-            DrawText(TextFormat("- Position: (%06.3f, %06.3f, %06.3f)", camera.position.x, camera.position.y, camera.position.z), 1090, 60, 10, BLACK);
-            DrawText(TextFormat("- Target: (%06.3f, %06.3f, %06.3f)", camera.target.x, camera.target.y, camera.target.z), 1090, 75, 10, BLACK);
-            DrawText(TextFormat("- Up: (%06.3f, %06.3f, %06.3f)", camera.up.x, camera.up.y, camera.up.z), 1090, 90, 10, BLACK);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
