@@ -1,3 +1,4 @@
+-cube waterfall
 
--attach "arm" to camera (use camera.target)
+-rotating capsule
 -rotate "arm" with input
