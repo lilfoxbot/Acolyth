@@ -2,8 +2,14 @@
 #include "rcamera.h"
 #include <stdio.h>
 
-#define MAX_COLUMNS 20
-#define MOUSE_MOVE_SENSITIVITY 0.004f
+#define RAYMATH_IMPLEMENTATION
+
+#define MOUSE_MOVE_SENSITIVITY 0.001f
+
+struct TestCube {
+    int testInt;
+    Vector3 pos;
+};
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -17,6 +23,8 @@ int main(void)
     const int screenHeight = 720;
 
     InitWindow(screenWidth, screenHeight, "Acolyth");
+    DisableCursor();                    // Limit cursor to relative movement inside the window
+    SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
 
     // Define the camera to look into our 3d world (position, target, up vector)
     Camera camera = { 0 };
@@ -29,19 +37,35 @@ int main(void)
     int cameraMode = CAMERA_CUSTOM;
     
     bool myDebug = false;
-    float lookSensitivity = 10.0f;
+    float lookSensitivity = 40.0f;
     float camSpeed = 0.1f;
     float axisSize = 0.2f;
     
     //-------------------------------------------------------------------------------------
 
-    // Class testCube {
-        
-    // }
-
-    DisableCursor();                    // Limit cursor to relative movement inside the window
-
-    SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
+    struct TestCube t1;
+    t1.testInt = 5;
+    t1.pos = (Vector3){0,10,0};
+    //t1.transform.translation = (Vector3){0,0,0};
+    //t1.transform.rotation = (Quaternion){0,0,0,0};
+    
+    // printf("\n");
+    // printf("test print - %d \n", t1.testInt);
+    // printf("test print - %f \n", t1.transform.translation.x);
+    // printf("\n");
+    
+    //-------------------------------------------------------------------------------------
+    
+    void DrawTest(){
+        DrawCube(t1.pos, 0.5f, 0.5f, 0.5f, PURPLE);
+        DrawCubeWires(t1.pos, 0.5f, 0.5f, 0.5f, BLACK);
+    }
+    
+    void MoveTest(){
+        float cubeFallSpeed = -0.05f;
+        float newY = t1.pos.y + cubeFallSpeed;
+        t1.pos = (Vector3){t1.pos.x, t1.pos.y + -0.05f, t1.pos.z};
+    }
     
     //--------------------------------------------------------------------------------------
     // Main game loop
@@ -84,10 +108,10 @@ int main(void)
             }
         }
         
+        // camera movement/input
         float newForward = 0;
         float newRight = 0;
         float newUp = 0;
-        // new camera location
         if (IsKeyDown(KEY_W)){
             newForward += camSpeed;
         }
@@ -122,19 +146,14 @@ int main(void)
         // Draw
         //----------------------------------------------------------------------------------
         BeginDrawing();
-
             ClearBackground(SKYBLUE);
 
             BeginMode3D(camera);
                 // Draw Ground
                 DrawPlane((Vector3){ 0.0f, -1.0f, 0.0f }, (Vector2){ 32.0f, 32.0f }, LIGHTGRAY);
                 // Draw Sun?
-                DrawSphere((Vector3){ 0.0f, 5.0f, 0.0f }, 1.0f, YELLOW); 
-                DrawSphereWires((Vector3){ 0.0f, 5.0f, 0.0f }, 1.0f, 20, 20, ORANGE);
-                
-                // draw arm
-                DrawCylinder((Vector3){camera.target.x, camera.target.y, camera.target.z}, 0.25f, 0.25f, 0.5f, 8, WHITE);
-                DrawCylinderWires((Vector3){camera.target.x, camera.target.y, camera.target.z}, 0.25f, 0.25f, 0.5f, 8, BLACK);
+                DrawSphere((Vector3){ 0.0f, 10.0f, -10.0f }, 1.0f, YELLOW); 
+                DrawSphereWires((Vector3){ 0.0f, 10.0f, -10.0f }, 1.0f, 20, 20, ORANGE);
 
                 // Draw axis
                 if (myDebug)
@@ -154,9 +173,12 @@ int main(void)
                     DrawCubeWires((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLACK);
                     
                 }
-
-            EndMode3D();
-
+            
+            DrawTest();
+            MoveTest();
+            
+            EndMode3D(); // ----------------------------------------------------------------
+            
             // Draw info boxes
             DrawRectangle(5, 5, 330, 100, Fade(SKYBLUE, 0.5f));
             DrawRectangleLines(5, 5, 330, 100, BLUE);
@@ -164,7 +186,6 @@ int main(void)
             DrawText("Camera controls:", 15, 15, 10, BLACK);
             DrawText("- Move keys: W, A, S, D, Space, Left-Ctrl", 15, 30, 10, BLACK);
             
-            //----------------------------------------------------------------------------------
             DrawRectangle(1080, 5, 195, 100, Fade(SKYBLUE, 0.5f));
             DrawRectangleLines(1080, 5, 195, 100, BLUE);
 
