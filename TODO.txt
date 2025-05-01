@@ -1,4 +1,5 @@
 -cube waterfall
+	- spawn/despawn cubes
 
 -rotating capsule
 -rotate "arm" with input

@@ -6,6 +6,8 @@
 
 #define MOUSE_MOVE_SENSITIVITY 0.001f
 
+#define CUBE_LIMIT 50
+
 struct TestCube {
     int testInt;
     Vector3 pos;
@@ -46,25 +48,60 @@ int main(void)
     struct TestCube t1;
     t1.testInt = 5;
     t1.pos = (Vector3){0,10,0};
-    //t1.transform.translation = (Vector3){0,0,0};
-    //t1.transform.rotation = (Quaternion){0,0,0,0};
+    
+    float cubeFallSpeed = 0.05;
+    // arrays for cubes
+    Vector3 cubePos[CUBE_LIMIT] = { 0 };
+    Vector3 cubeSizes[CUBE_LIMIT] = { 0 };
+    float cubeSpeed[CUBE_LIMIT] = { 0 };
+    int cubeExists[CUBE_LIMIT] = { 0 };
+    
+    // generate some cubes
+    for (int i = 0; i < CUBE_LIMIT; i++)
+    {
+        cubePos[i] = (Vector3){(float)GetRandomValue(-10, 10), 
+                        (float)GetRandomValue(0, 10), 
+                        (float)GetRandomValue(-10, 10)};
+        cubeSizes[i] = (Vector3){0.2f, 0.2f, 0.2f};
+        cubeExists[i] = 1;
+        cubeSpeed[i] = (float)GetRandomValue(1,5)*0.01f;
+    }
     
     // printf("\n");
-    // printf("test print - %d \n", t1.testInt);
-    // printf("test print - %f \n", t1.transform.translation.x);
+    // printf("test print: %.2f \n", positions[0].x);
+    // printf("test print: %.2f \n", sizes[0].x);
+    // printf("test print: %d \n", exists[0]);
     // printf("\n");
     
     //-------------------------------------------------------------------------------------
     
-    void DrawTest(){
-        DrawCube(t1.pos, 0.5f, 0.5f, 0.5f, PURPLE);
-        DrawCubeWires(t1.pos, 0.5f, 0.5f, 0.5f, BLACK);
-    }
-    
-    void MoveTest(){
-        float cubeFallSpeed = -0.05f;
-        float newY = t1.pos.y + cubeFallSpeed;
-        t1.pos = (Vector3){t1.pos.x, t1.pos.y + -0.05f, t1.pos.z};
+    // Single Pass Cube Update
+    void UpdateMyCubes(){
+        for (int i = 0; i < CUBE_LIMIT; i++)
+        {
+            //DrawMyCube(i);
+            if (cubeExists[i]){
+                DrawCubeV(cubePos[i], cubeSizes[i], SKYBLUE);
+                DrawCubeWiresV(cubePos[i], cubeSizes[i], BLACK);
+            } else {
+                //SpawnNewCube(i);
+                cubePos[i] = (Vector3){(float)GetRandomValue(-150, 150)*0.1f, // right
+                        (float)GetRandomValue(200, 300)*0.1f, // up
+                        (float)GetRandomValue(-150, 150)*0.1f}; // back
+                cubeSizes[i] = (Vector3){0.5f, 0.5f, 0.5f};
+                cubeSpeed[i] = (float)GetRandomValue(1,5)*0.04f;
+                cubeExists[i] = 1;
+            }
+            
+            //MoveMyCube(i);
+            cubePos[i] = (Vector3){ cubePos[i].x, cubePos[i].y - cubeSpeed[i], cubePos[i].z };
+            
+            // Check Position
+            if (cubePos[i].y < -2){
+                //DespawnCube(i);
+                cubeExists[i] = 0;
+            }
+        }
     }
     
     //--------------------------------------------------------------------------------------
@@ -146,36 +183,37 @@ int main(void)
         // Draw
         //----------------------------------------------------------------------------------
         BeginDrawing();
-            ClearBackground(SKYBLUE);
-
+            ClearBackground(DARKBLUE);
             BeginMode3D(camera);
-                // Draw Ground
-                DrawPlane((Vector3){ 0.0f, -1.0f, 0.0f }, (Vector2){ 32.0f, 32.0f }, LIGHTGRAY);
-                // Draw Sun?
-                DrawSphere((Vector3){ 0.0f, 10.0f, -10.0f }, 1.0f, YELLOW); 
-                DrawSphereWires((Vector3){ 0.0f, 10.0f, -10.0f }, 1.0f, 20, 20, ORANGE);
+            // Ground
+            DrawPlane((Vector3){ 0.0f, -1.0f, 0.0f }, (Vector2){ 32.0f, 32.0f }, LIME);
+            // Draw Sun
+            DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW); 
+            DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE);
 
-                // Draw axis
-                if (myDebug)
-                {   
-                    // draw an axis with cubes
-                    // CENTER
-                    DrawCube(camera.target, axisSize, axisSize, axisSize, WHITE);
-                    DrawCubeWires(camera.target, axisSize, axisSize, axisSize, BLACK);
-                    // RIGHT
-                    DrawCube((Vector3){camera.target.x + 0.5f, camera.target.y, camera.target.z}, axisSize, axisSize, axisSize, RED);
-                    DrawCubeWires((Vector3){camera.target.x + 0.5f, camera.target.y, camera.target.z}, axisSize, axisSize, axisSize, BLACK);
-                    // UP
-                    DrawCube((Vector3){camera.target.x, camera.target.y + 0.5f, camera.target.z}, axisSize, axisSize, axisSize, GREEN);
-                    DrawCubeWires((Vector3){camera.target.x, camera.target.y + 0.5f, camera.target.z}, axisSize, axisSize, axisSize, BLACK);
-                    // BACK
-                    DrawCube((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLUE);
-                    DrawCubeWires((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLACK);
-                    
-                }
+            // Draw axis
+            if (myDebug)
+            {   
+                // draw an axis with cubes
+                // CENTER
+                DrawCube(camera.target, axisSize, axisSize, axisSize, WHITE);
+                DrawCubeWires(camera.target, axisSize, axisSize, axisSize, BLACK);
+                // RIGHT
+                DrawCube((Vector3){camera.target.x + 0.5f, camera.target.y, camera.target.z}, axisSize, axisSize, axisSize, RED);
+                DrawCubeWires((Vector3){camera.target.x + 0.5f, camera.target.y, camera.target.z}, axisSize, axisSize, axisSize, BLACK);
+                // UP
+                DrawCube((Vector3){camera.target.x, camera.target.y + 0.5f, camera.target.z}, axisSize, axisSize, axisSize, GREEN);
+                DrawCubeWires((Vector3){camera.target.x, camera.target.y + 0.5f, camera.target.z}, axisSize, axisSize, axisSize, BLACK);
+                // BACK
+                DrawCube((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLUE);
+                DrawCubeWires((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLACK);
+                
+            }
             
-            DrawTest();
-            MoveTest();
+            DrawCapsule((Vector3){0,0,0}, camera.target,0.5f,10,5, WHITE);
+            DrawCapsuleWires((Vector3){0,0,0}, camera.target,0.5f,10,5, BLACK);
+            
+            UpdateMyCubes();
             
             EndMode3D(); // ----------------------------------------------------------------
             
