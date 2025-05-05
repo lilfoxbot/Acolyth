@@ -1,5 +1,6 @@
--cube waterfall
-	- spawn/despawn cubes
 
--rotating capsule
--rotate "arm" with input
+-beam (capsule) from camera to target space
+	-input to move target
+
+-collision box testing
+	-color change on overlap

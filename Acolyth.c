@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include "rcamera.h"
+#include "raymath.h"
 #include <stdio.h>
 
 #define RAYMATH_IMPLEMENTATION
@@ -30,8 +31,8 @@ int main(void)
 
     // Define the camera to look into our 3d world (position, target, up vector)
     Camera camera = { 0 };
-    camera.position = (Vector3){ 0.0f, 2.0f, 4.0f };    // Camera position
-    camera.target = (Vector3){ 0.0f, 2.0f, 0.0f };      // Camera looking at point
+    camera.position = (Vector3){ 0.0f, 2.0f, 0.0f };    // Camera position
+    camera.target = (Vector3){ 0.0f, 2.0f, -2.0f };      // Camera looking at point
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 60.0f;                                // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
@@ -42,6 +43,8 @@ int main(void)
     float lookSensitivity = 40.0f;
     float camSpeed = 0.1f;
     float axisSize = 0.2f;
+    float armX = 0;
+    float armY = 0;
     
     //-------------------------------------------------------------------------------------
 
@@ -185,15 +188,16 @@ int main(void)
         BeginDrawing();
             ClearBackground(DARKBLUE);
             BeginMode3D(camera);
+            // Grid
+            DrawGrid(20,1.0f);
             // Ground
             DrawPlane((Vector3){ 0.0f, -1.0f, 0.0f }, (Vector2){ 32.0f, 32.0f }, LIME);
             // Draw Sun
             DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW); 
             DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE);
 
-            // Draw axis
-            if (myDebug)
-            {   
+            // Debug axis
+            if (myDebug){   
                 // draw an axis with cubes
                 // CENTER
                 DrawCube(camera.target, axisSize, axisSize, axisSize, WHITE);
@@ -207,11 +211,28 @@ int main(void)
                 // BACK
                 DrawCube((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLUE);
                 DrawCubeWires((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLACK);
-                
             }
             
-            DrawCapsule((Vector3){0,0,0}, camera.target,0.5f,10,5, WHITE);
-            DrawCapsuleWires((Vector3){0,0,0}, camera.target,0.5f,10,5, BLACK);
+            Vector3 camF = GetCameraForward(&camera);
+            Vector3 camR = GetCameraRight(&camera);
+            
+            if (IsKeyDown(KEY_LEFT)){
+                armX -= 0.1f;
+            }
+             if (IsKeyDown(KEY_RIGHT)){
+                armX += 0.1f;
+            }
+            
+            // My ARM?!
+            Vector3 myTargetBegin = GetCameraRight(&camera);
+            myTargetBegin = Vector3Scale(myTargetBegin, 1.0f);
+            myTargetBegin = Vector3Add(myTargetBegin, Vector3Add(camera.position, (Vector3){0,-1,0}));
+            
+            Vector3 myBeamTarget = Vector3Add(Vector3Scale(camF,1.5f),Vector3Scale(camR,armX));
+            myBeamTarget = Vector3Add(myBeamTarget, camera.position);
+            
+            DrawCapsule(myTargetBegin, myBeamTarget,0.1f,20,5, WHITE);
+            DrawCapsuleWires(myTargetBegin, myBeamTarget,0.1f,20,5, BLACK);
             
             UpdateMyCubes();
             
@@ -232,6 +253,8 @@ int main(void)
                                               (cameraMode == CAMERA_FIRST_PERSON) ? "FIRST_PERSON" :
                                               (cameraMode == CAMERA_THIRD_PERSON) ? "THIRD_PERSON" :
                                               (cameraMode == CAMERA_ORBITAL) ? "ORBITAL" : "CUSTOM"), 1090, 30, 10, BLACK);
+            DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f",camera.target.x,camera.target.y,camera.target.z), 1090, 45, 10, BLACK);
+            //DrawText(TextFormat("camTar2 - %0.2f - %0.2f - %0.2f",myTargetEnd.x,myTargetEnd.y,myTargetEnd.z), 1090, 60, 10, BLACK);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
