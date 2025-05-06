@@ -45,19 +45,31 @@ int main(void)
     float axisSize = 0.2f;
     float armX = 0;
     float armY = 0;
+    float armSpeed = 0.05f;
     
     //-------------------------------------------------------------------------------------
 
-    struct TestCube t1;
-    t1.testInt = 5;
-    t1.pos = (Vector3){0,10,0};
+    // struct TestCube t1;
+    // t1.testInt = 5;
+    // t1.pos = (Vector3){0,10,0};
+    
+    struct Ray r1;
+    r1.position = (Vector3){0,0,0};
+    r1.direction = (Vector3){10,10,0};
+    
+    struct BoundingBox b1;
+    b1.min = (Vector3){0,0,0};
+    b1.max = (Vector3){5,5,5};
     
     float cubeFallSpeed = 0.05;
+    float cubeSize = 0.5f;
+    
     // arrays for cubes
     Vector3 cubePos[CUBE_LIMIT] = { 0 };
     Vector3 cubeSizes[CUBE_LIMIT] = { 0 };
     float cubeSpeed[CUBE_LIMIT] = { 0 };
     int cubeExists[CUBE_LIMIT] = { 0 };
+    struct BoundingBox cubeBBs[CUBE_LIMIT];
     
     // generate some cubes
     for (int i = 0; i < CUBE_LIMIT; i++)
@@ -65,9 +77,12 @@ int main(void)
         cubePos[i] = (Vector3){(float)GetRandomValue(-10, 10), 
                         (float)GetRandomValue(0, 10), 
                         (float)GetRandomValue(-10, 10)};
-        cubeSizes[i] = (Vector3){0.2f, 0.2f, 0.2f};
+        cubeSizes[i] = (Vector3){cubeSize, cubeSize, cubeSize};
         cubeExists[i] = 1;
         cubeSpeed[i] = (float)GetRandomValue(1,5)*0.01f;
+        // cubeBB[i] = ScaleVector3(cubePos[i],0.2f and -0.2f);
+        cubeBBs[i].min = Vector3Add(cubePos[i], (Vector3){-0.1f,-0.1f,-0.1f});
+        cubeBBs[i].max = Vector3Add(cubePos[i], (Vector3){0.1f,0.1f,0.1f});
     }
     
     // printf("\n");
@@ -85,19 +100,21 @@ int main(void)
             //DrawMyCube(i);
             if (cubeExists[i]){
                 DrawCubeV(cubePos[i], cubeSizes[i], SKYBLUE);
-                DrawCubeWiresV(cubePos[i], cubeSizes[i], BLACK);
+                DrawBoundingBox(cubeBBs[i], WHITE);
             } else {
                 //SpawnNewCube(i);
                 cubePos[i] = (Vector3){(float)GetRandomValue(-150, 150)*0.1f, // right
                         (float)GetRandomValue(200, 300)*0.1f, // up
                         (float)GetRandomValue(-150, 150)*0.1f}; // back
-                cubeSizes[i] = (Vector3){0.5f, 0.5f, 0.5f};
-                cubeSpeed[i] = (float)GetRandomValue(1,5)*0.04f;
+                cubeSizes[i] = (Vector3){cubeSize, cubeSize, cubeSize};
+                cubeSpeed[i] = (float)GetRandomValue(1,5)*cubeFallSpeed;
                 cubeExists[i] = 1;
             }
             
             //MoveMyCube(i);
             cubePos[i] = (Vector3){ cubePos[i].x, cubePos[i].y - cubeSpeed[i], cubePos[i].z };
+            cubeBBs[i].min = Vector3Add(cubePos[i], (Vector3){-(cubeSize/2),-(cubeSize/2),-(cubeSize/2)});
+            cubeBBs[i].max = Vector3Add(cubePos[i], (Vector3){(cubeSize/2),(cubeSize/2),(cubeSize/2)});
             
             // Check Position
             if (cubePos[i].y < -2){
@@ -152,24 +169,12 @@ int main(void)
         float newForward = 0;
         float newRight = 0;
         float newUp = 0;
-        if (IsKeyDown(KEY_W)){
-            newForward += camSpeed;
-        }
-        if (IsKeyDown(KEY_S)){
-            newForward -= camSpeed;
-        }
-        if (IsKeyDown(KEY_D)){
-            newRight += camSpeed;
-        }
-        if (IsKeyDown(KEY_A)){
-            newRight -= camSpeed;
-        }
-        if (IsKeyDown(KEY_SPACE)){
-            newUp += camSpeed;
-        }
-        if (IsKeyDown(KEY_LEFT_CONTROL)){
-            newUp -= camSpeed;
-        }
+        if (IsKeyDown(KEY_W)) newForward += camSpeed;
+        if (IsKeyDown(KEY_S)) newForward -= camSpeed;
+        if (IsKeyDown(KEY_D)) newRight += camSpeed;
+        if (IsKeyDown(KEY_A)) newRight -= camSpeed;
+        if (IsKeyDown(KEY_SPACE)) newUp += camSpeed;
+        if (IsKeyDown(KEY_LEFT_CONTROL)) newUp -= camSpeed;
         
         // new camera rotation
         Vector2 mousePositionDelta = GetMouseDelta();
@@ -181,6 +186,9 @@ int main(void)
             (Vector3){ newForward, newRight, newUp }, // added pos
             (Vector3){ newYaw, newPitch, 0.0f }, // added rot
             0.0f); // zoom
+        
+        // Collision
+        //GetRayCollisionBox();
 
         //----------------------------------------------------------------------------------
         // Draw
@@ -195,6 +203,8 @@ int main(void)
             // Draw Sun
             DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW); 
             DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE);
+            // Draw Ray(lib)
+            //DrawRay(r1, WHITE);
 
             // Debug axis
             if (myDebug){   
@@ -215,13 +225,12 @@ int main(void)
             
             Vector3 camF = GetCameraForward(&camera);
             Vector3 camR = GetCameraRight(&camera);
+            Vector3 camU = GetCameraUp(&camera);
             
-            if (IsKeyDown(KEY_LEFT)){
-                armX -= 0.1f;
-            }
-             if (IsKeyDown(KEY_RIGHT)){
-                armX += 0.1f;
-            }
+            if (IsKeyDown(KEY_LEFT)) armX -= armSpeed;
+            if (IsKeyDown(KEY_RIGHT)) armX += armSpeed;
+            if (IsKeyDown(KEY_UP)) armY += armSpeed;
+            if (IsKeyDown(KEY_DOWN)) armY -= armSpeed;
             
             // My ARM?!
             Vector3 myTargetBegin = GetCameraRight(&camera);
@@ -229,10 +238,17 @@ int main(void)
             myTargetBegin = Vector3Add(myTargetBegin, Vector3Add(camera.position, (Vector3){0,-1,0}));
             
             Vector3 myBeamTarget = Vector3Add(Vector3Scale(camF,1.5f),Vector3Scale(camR,armX));
+            myBeamTarget = Vector3Add(myBeamTarget, Vector3Scale(camU, armY));
             myBeamTarget = Vector3Add(myBeamTarget, camera.position);
             
-            DrawCapsule(myTargetBegin, myBeamTarget,0.1f,20,5, WHITE);
-            DrawCapsuleWires(myTargetBegin, myBeamTarget,0.1f,20,5, BLACK);
+            r1.position = myTargetBegin;
+            r1.direction = Vector3Scale(camF,1.0f);
+            DrawRay(r1,WHITE);
+            
+            DrawBoundingBox(b1,WHITE);
+            
+            // DrawCubeV(myBeamTarget,(Vector3){0.2f,0.2f,0.2f}, GREEN);
+            // DrawCubeWiresV(myBeamTarget,(Vector3){0.2f,0.2f,0.2f}, BLACK);
             
             UpdateMyCubes();
             

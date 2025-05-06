@@ -1,6 +1,2 @@
-
--beam (capsule) from camera to target space
-	-input to move target
-
 -collision box testing
 	-color change on overlap
