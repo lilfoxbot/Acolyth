@@ -7,7 +7,7 @@
 
 #define MOUSE_MOVE_SENSITIVITY 0.001f
 
-#define CUBE_LIMIT 50
+#define CUBE_LIMIT 10
 
 struct TestCube {
     int testInt;
@@ -56,33 +56,40 @@ int main(void)
     struct Ray r1;
     r1.position = (Vector3){0,0,0};
     r1.direction = (Vector3){10,10,0};
+    Color r1Color = WHITE;
     
     struct BoundingBox b1;
     b1.min = (Vector3){0,0,0};
     b1.max = (Vector3){5,5,5};
     
-    float cubeFallSpeed = 0.05;
-    float cubeSize = 0.5f;
+    float cubeFallSpeed = 0.005;
+    float cubeSize = 1.0f;
     
     // arrays for cubes
     Vector3 cubePos[CUBE_LIMIT] = { 0 };
     Vector3 cubeSizes[CUBE_LIMIT] = { 0 };
     float cubeSpeed[CUBE_LIMIT] = { 0 };
     int cubeExists[CUBE_LIMIT] = { 0 };
+    int cubeColors[CUBE_LIMIT] = { 0 };
     struct BoundingBox cubeBBs[CUBE_LIMIT];
+    struct RayCollision cubeRayHits[CUBE_LIMIT];
+    
+    Vector2 cubeSpawnX = { -100, 100 };
+    Vector2 cubeSpawnY = { 0, 100 };
+    Vector2 cubeSpawnZ = { -200, -100 };
+    float spawnMod = 0.1f;
     
     // generate some cubes
     for (int i = 0; i < CUBE_LIMIT; i++)
     {
-        cubePos[i] = (Vector3){(float)GetRandomValue(-10, 10), 
-                        (float)GetRandomValue(0, 10), 
-                        (float)GetRandomValue(-10, 10)};
+        cubePos[i] = (Vector3){(float)GetRandomValue(cubeSpawnX.x, cubeSpawnX.y)*spawnMod, 
+                        (float)GetRandomValue(cubeSpawnY.x, cubeSpawnY.y)*spawnMod, 
+                        (float)GetRandomValue(cubeSpawnZ.x, cubeSpawnZ.y)*spawnMod};
         cubeSizes[i] = (Vector3){cubeSize, cubeSize, cubeSize};
         cubeExists[i] = 1;
-        cubeSpeed[i] = (float)GetRandomValue(1,5)*0.01f;
-        // cubeBB[i] = ScaleVector3(cubePos[i],0.2f and -0.2f);
-        cubeBBs[i].min = Vector3Add(cubePos[i], (Vector3){-0.1f,-0.1f,-0.1f});
-        cubeBBs[i].max = Vector3Add(cubePos[i], (Vector3){0.1f,0.1f,0.1f});
+        cubeSpeed[i] = (float)GetRandomValue(1,4)*cubeFallSpeed;
+        cubeBBs[i].min = Vector3Add(cubePos[i], (Vector3){-(cubeSize/2),-(cubeSize/2),-(cubeSize/2)});
+        cubeBBs[i].max = Vector3Add(cubePos[i], (Vector3){(cubeSize/2),(cubeSize/2),(cubeSize/2)});
     }
     
     // printf("\n");
@@ -97,27 +104,36 @@ int main(void)
     void UpdateMyCubes(){
         for (int i = 0; i < CUBE_LIMIT; i++)
         {
+            //CheckCubeCollision
+            cubeRayHits[i] = GetRayCollisionBox(r1,cubeBBs[i]);
+            
             //DrawMyCube(i);
             if (cubeExists[i]){
-                DrawCubeV(cubePos[i], cubeSizes[i], SKYBLUE);
+                if (cubeRayHits[i].hit){
+                    DrawCubeV(cubePos[i], cubeSizes[i], RED);
+                    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) 
+                        cubeExists[i] = 0;
+                } else {
+                    DrawCubeV(cubePos[i], cubeSizes[i], SKYBLUE);
+                }
                 DrawBoundingBox(cubeBBs[i], WHITE);
             } else {
                 //SpawnNewCube(i);
-                cubePos[i] = (Vector3){(float)GetRandomValue(-150, 150)*0.1f, // right
-                        (float)GetRandomValue(200, 300)*0.1f, // up
-                        (float)GetRandomValue(-150, 150)*0.1f}; // back
+                cubePos[i] = (Vector3){(float)GetRandomValue(cubeSpawnX.x, cubeSpawnX.y)*spawnMod, 
+                        (float)GetRandomValue(cubeSpawnY.x, cubeSpawnY.y)*spawnMod, 
+                        (float)GetRandomValue(cubeSpawnZ.x, cubeSpawnZ.y)*spawnMod};
                 cubeSizes[i] = (Vector3){cubeSize, cubeSize, cubeSize};
-                cubeSpeed[i] = (float)GetRandomValue(1,5)*cubeFallSpeed;
+                cubeSpeed[i] = (float)GetRandomValue(1,4)*cubeFallSpeed;
                 cubeExists[i] = 1;
             }
             
             //MoveMyCube(i);
-            cubePos[i] = (Vector3){ cubePos[i].x, cubePos[i].y - cubeSpeed[i], cubePos[i].z };
+            cubePos[i] = (Vector3){ cubePos[i].x, cubePos[i].y, cubePos[i].z + cubeSpeed[i]};
             cubeBBs[i].min = Vector3Add(cubePos[i], (Vector3){-(cubeSize/2),-(cubeSize/2),-(cubeSize/2)});
             cubeBBs[i].max = Vector3Add(cubePos[i], (Vector3){(cubeSize/2),(cubeSize/2),(cubeSize/2)});
             
             // Check Position
-            if (cubePos[i].y < -2){
+            if (cubePos[i].y > 10){
                 //DespawnCube(i);
                 cubeExists[i] = 0;
             }
@@ -129,17 +145,16 @@ int main(void)
     //--------------------------------------------------------------------------------------
     while (!WindowShouldClose())        // Detect window close button or ESC key
     {
-        // Update
+        //----------------------------------------------------------------------------------
+        // Input
         //----------------------------------------------------------------------------------
         // Switch camera mode
-        if (IsKeyPressed(KEY_ONE))
-        {
+        if (IsKeyPressed(KEY_ONE)){
             myDebug = !myDebug;
         }
 
         // Switch camera projection
-        if (IsKeyPressed(KEY_P))
-        {
+        if (IsKeyPressed(KEY_P)){
             if (camera.projection == CAMERA_PERSPECTIVE)
             {
                 // Create isometric view
@@ -176,6 +191,11 @@ int main(void)
         if (IsKeyDown(KEY_SPACE)) newUp += camSpeed;
         if (IsKeyDown(KEY_LEFT_CONTROL)) newUp -= camSpeed;
         
+        if (IsKeyDown(KEY_LEFT)) armX -= armSpeed;
+        if (IsKeyDown(KEY_RIGHT)) armX += armSpeed;
+        if (IsKeyDown(KEY_UP)) armY += armSpeed;
+        if (IsKeyDown(KEY_DOWN)) armY -= armSpeed;
+        
         // new camera rotation
         Vector2 mousePositionDelta = GetMouseDelta();
         float newYaw = mousePositionDelta.x*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
@@ -187,9 +207,11 @@ int main(void)
             (Vector3){ newYaw, newPitch, 0.0f }, // added rot
             0.0f); // zoom
         
+        //----------------------------------------------------------------------------------
         // Collision
-        //GetRayCollisionBox();
-
+        //----------------------------------------------------------------------------------
+        RayCollision myHit = GetRayCollisionBox(r1,b1);
+        
         //----------------------------------------------------------------------------------
         // Draw
         //----------------------------------------------------------------------------------
@@ -227,15 +249,10 @@ int main(void)
             Vector3 camR = GetCameraRight(&camera);
             Vector3 camU = GetCameraUp(&camera);
             
-            if (IsKeyDown(KEY_LEFT)) armX -= armSpeed;
-            if (IsKeyDown(KEY_RIGHT)) armX += armSpeed;
-            if (IsKeyDown(KEY_UP)) armY += armSpeed;
-            if (IsKeyDown(KEY_DOWN)) armY -= armSpeed;
-            
             // My ARM?!
             Vector3 myTargetBegin = GetCameraRight(&camera);
-            myTargetBegin = Vector3Scale(myTargetBegin, 1.0f);
-            myTargetBegin = Vector3Add(myTargetBegin, Vector3Add(camera.position, (Vector3){0,-1,0}));
+            myTargetBegin = Vector3Scale(myTargetBegin, 0.5f);
+            myTargetBegin = Vector3Add(myTargetBegin, Vector3Add(camera.position, (Vector3){0,-0.5f,0}));
             
             Vector3 myBeamTarget = Vector3Add(Vector3Scale(camF,1.5f),Vector3Scale(camR,armX));
             myBeamTarget = Vector3Add(myBeamTarget, Vector3Scale(camU, armY));
@@ -243,12 +260,14 @@ int main(void)
             
             r1.position = myTargetBegin;
             r1.direction = Vector3Scale(camF,1.0f);
-            DrawRay(r1,WHITE);
             
-            DrawBoundingBox(b1,WHITE);
+            if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+              r1Color = RED;
+            } else {
+                r1Color = WHITE;
+            }
+            DrawRay(r1,r1Color);
             
-            // DrawCubeV(myBeamTarget,(Vector3){0.2f,0.2f,0.2f}, GREEN);
-            // DrawCubeWiresV(myBeamTarget,(Vector3){0.2f,0.2f,0.2f}, BLACK);
             
             UpdateMyCubes();
             
@@ -270,7 +289,7 @@ int main(void)
                                               (cameraMode == CAMERA_THIRD_PERSON) ? "THIRD_PERSON" :
                                               (cameraMode == CAMERA_ORBITAL) ? "ORBITAL" : "CUSTOM"), 1090, 30, 10, BLACK);
             DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f",camera.target.x,camera.target.y,camera.target.z), 1090, 45, 10, BLACK);
-            //DrawText(TextFormat("camTar2 - %0.2f - %0.2f - %0.2f",myTargetEnd.x,myTargetEnd.y,myTargetEnd.z), 1090, 60, 10, BLACK);
+            DrawText(TextFormat("%d",myHit.hit), 1090, 60, 10, BLACK);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
