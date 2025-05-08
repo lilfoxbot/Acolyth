@@ -8,11 +8,8 @@
 #define MOUSE_MOVE_SENSITIVITY 0.001f
 
 #define CUBE_LIMIT 10
+#define TRI_LIMIT 12
 
-struct TestCube {
-    int testInt;
-    Vector3 pos;
-};
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -47,11 +44,9 @@ int main(void)
     float armY = 0;
     float armSpeed = 0.05f;
     
+    int score = 0;
+    
     //-------------------------------------------------------------------------------------
-
-    // struct TestCube t1;
-    // t1.testInt = 5;
-    // t1.pos = (Vector3){0,10,0};
     
     struct Ray r1;
     r1.position = (Vector3){0,0,0};
@@ -68,9 +63,9 @@ int main(void)
     // arrays for cubes
     Vector3 cubePos[CUBE_LIMIT] = { 0 };
     Vector3 cubeSizes[CUBE_LIMIT] = { 0 };
-    float cubeSpeed[CUBE_LIMIT] = { 0 };
+    float cubeSpeeds[CUBE_LIMIT] = { 0 };
     int cubeExists[CUBE_LIMIT] = { 0 };
-    int cubeColors[CUBE_LIMIT] = { 0 };
+    int cubeLifetimes[CUBE_LIMIT] = { 0 };
     struct BoundingBox cubeBBs[CUBE_LIMIT];
     struct RayCollision cubeRayHits[CUBE_LIMIT];
     
@@ -79,31 +74,36 @@ int main(void)
     Vector2 cubeSpawnZ = { -200, -100 };
     float spawnMod = 0.1f;
     
-    // generate some cubes
-    for (int i = 0; i < CUBE_LIMIT; i++)
-    {
+    void SpawnNewCube(int i){
         cubePos[i] = (Vector3){(float)GetRandomValue(cubeSpawnX.x, cubeSpawnX.y)*spawnMod, 
                         (float)GetRandomValue(cubeSpawnY.x, cubeSpawnY.y)*spawnMod, 
                         (float)GetRandomValue(cubeSpawnZ.x, cubeSpawnZ.y)*spawnMod};
         cubeSizes[i] = (Vector3){cubeSize, cubeSize, cubeSize};
+        cubeSpeeds[i] = (float)GetRandomValue(1,4)*cubeFallSpeed;
         cubeExists[i] = 1;
-        cubeSpeed[i] = (float)GetRandomValue(1,4)*cubeFallSpeed;
+        cubeLifetimes[i] = 0;
         cubeBBs[i].min = Vector3Add(cubePos[i], (Vector3){-(cubeSize/2),-(cubeSize/2),-(cubeSize/2)});
         cubeBBs[i].max = Vector3Add(cubePos[i], (Vector3){(cubeSize/2),(cubeSize/2),(cubeSize/2)});
     }
     
-    // printf("\n");
-    // printf("test print: %.2f \n", positions[0].x);
-    // printf("test print: %.2f \n", sizes[0].x);
-    // printf("test print: %d \n", exists[0]);
-    // printf("\n");
+    // generate some cubes
+    for (int i = 0; i < CUBE_LIMIT; i++){
+        SpawnNewCube(i);
+    }
+    
+    // MY TRI
+    Vector3 myTriCenter = (Vector3){ 0.0f, 3.0f, 0.0f };
+    Vector3 myTriOne = Vector3Add(myTriCenter, (Vector3){ 0.0f, 1.0f, 0.0f });
+    Vector3 myTriTwo = Vector3Add(myTriCenter, (Vector3){ 1.0f, -1.0f, 0.0f });
+    Vector3 myTriThree = Vector3Add(myTriCenter, (Vector3){ -1.0f, -1.0f, 0.0f });
+    Color myTriColor = YELLOW;
+    Color myTriOutline = BLACK;
     
     //-------------------------------------------------------------------------------------
     
     // Single Pass Cube Update
     void UpdateMyCubes(){
-        for (int i = 0; i < CUBE_LIMIT; i++)
-        {
+        for (int i = 0; i < CUBE_LIMIT; i++){
             //CheckCubeCollision
             cubeRayHits[i] = GetRayCollisionBox(r1,cubeBBs[i]);
             
@@ -111,29 +111,30 @@ int main(void)
             if (cubeExists[i]){
                 if (cubeRayHits[i].hit){
                     DrawCubeV(cubePos[i], cubeSizes[i], RED);
-                    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) 
+                    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                         cubeExists[i] = 0;
+                        score += 1;
+                    }
                 } else {
-                    DrawCubeV(cubePos[i], cubeSizes[i], SKYBLUE);
+                    if (cubeLifetimes[i] <= 10){
+                        DrawCubeV(cubePos[i], cubeSizes[i], WHITE);
+                    } else {
+                        DrawCubeV(cubePos[i], cubeSizes[i], SKYBLUE);
+                    }
                 }
                 DrawBoundingBox(cubeBBs[i], WHITE);
+                cubeLifetimes[i] += 1;
             } else {
-                //SpawnNewCube(i);
-                cubePos[i] = (Vector3){(float)GetRandomValue(cubeSpawnX.x, cubeSpawnX.y)*spawnMod, 
-                        (float)GetRandomValue(cubeSpawnY.x, cubeSpawnY.y)*spawnMod, 
-                        (float)GetRandomValue(cubeSpawnZ.x, cubeSpawnZ.y)*spawnMod};
-                cubeSizes[i] = (Vector3){cubeSize, cubeSize, cubeSize};
-                cubeSpeed[i] = (float)GetRandomValue(1,4)*cubeFallSpeed;
-                cubeExists[i] = 1;
+                SpawnNewCube(i);
             }
             
             //MoveMyCube(i);
-            cubePos[i] = (Vector3){ cubePos[i].x, cubePos[i].y, cubePos[i].z + cubeSpeed[i]};
+            cubePos[i] = (Vector3){ cubePos[i].x, cubePos[i].y, cubePos[i].z + cubeSpeeds[i]};
             cubeBBs[i].min = Vector3Add(cubePos[i], (Vector3){-(cubeSize/2),-(cubeSize/2),-(cubeSize/2)});
             cubeBBs[i].max = Vector3Add(cubePos[i], (Vector3){(cubeSize/2),(cubeSize/2),(cubeSize/2)});
             
             // Check Position
-            if (cubePos[i].y > 10){
+            if (cubePos[i].z > 10){
                 //DespawnCube(i);
                 cubeExists[i] = 0;
             }
@@ -221,12 +222,31 @@ int main(void)
             // Grid
             DrawGrid(20,1.0f);
             // Ground
-            DrawPlane((Vector3){ 0.0f, -1.0f, 0.0f }, (Vector2){ 32.0f, 32.0f }, LIME);
+            DrawPlane((Vector3){ 0.0f, -1.0f, 0.0f }, (Vector2){ 100.0f, 100.0f }, LIME);
             // Draw Sun
             DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW); 
-            DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE);
-            // Draw Ray(lib)
-            //DrawRay(r1, WHITE);
+            DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE); 
+            
+            // Update MY TRI
+            //myTriOne = Vector3RotateByAxisAngle(myTriOne,camera.target, 0.1f);
+            //myTriTwo = Vector3RotateByAxisAngle(myTriTwo,camera.target, 0.1f);
+            //myTriThree = Vector3RotateByAxisAngle(myTriThree,camera.target, 0.1f);
+            myTriOne = (Vector3){ myTriOne.x + (float)GetRandomValue(-1,1)*0.01f,
+                myTriOne.y + (float)GetRandomValue(-1,1)*0.01f,
+                myTriOne.z + (float)GetRandomValue(-1,1)*0.01f
+                };
+            myTriTwo = (Vector3){ myTriTwo.x + (float)GetRandomValue(-1,1)*0.01f,
+                myTriTwo.y + (float)GetRandomValue(-1,1)*0.01f,
+                myTriTwo.z + (float)GetRandomValue(-1,1)*0.01f
+                };
+                
+            
+            // Draw MY TRI
+            DrawTriangle3D(myTriOne,myTriTwo,myTriThree, myTriColor);
+            DrawTriangle3D(myTriOne,myTriThree,myTriTwo, myTriColor);
+            DrawLine3D(myTriOne,myTriTwo,myTriOutline);
+            DrawLine3D(myTriTwo,myTriThree,myTriOutline);
+            DrawLine3D(myTriThree,myTriOne,myTriOutline);
 
             // Debug axis
             if (myDebug){   
@@ -289,7 +309,7 @@ int main(void)
                                               (cameraMode == CAMERA_THIRD_PERSON) ? "THIRD_PERSON" :
                                               (cameraMode == CAMERA_ORBITAL) ? "ORBITAL" : "CUSTOM"), 1090, 30, 10, BLACK);
             DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f",camera.target.x,camera.target.y,camera.target.z), 1090, 45, 10, BLACK);
-            DrawText(TextFormat("%d",myHit.hit), 1090, 60, 10, BLACK);
+            DrawText(TextFormat("Score = %d", score), 1090, 60, 10, BLACK);
 
         EndDrawing();
         //----------------------------------------------------------------------------------

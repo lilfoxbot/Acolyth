@@ -1,1 +1,4 @@
--make cubes asplode when clicked
+
+spawn rotating triangles from cubes on shoot
+
+world generator (hallway of cubes)
