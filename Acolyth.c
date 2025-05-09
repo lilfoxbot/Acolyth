@@ -10,7 +10,6 @@
 #define CUBE_LIMIT 10
 #define TRI_LIMIT 12
 
-
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -47,6 +46,15 @@ int main(void)
     int score = 0;
     
     //-------------------------------------------------------------------------------------
+    
+    typedef struct _Tri{
+        Vector3 center;
+        Vector3 one;
+        Vector3 two;
+        Vector3 three;
+        Color myTriColor;
+        Color myTriOutline;
+    } Tri_;
     
     struct Ray r1;
     r1.position = (Vector3){0,0,0};
