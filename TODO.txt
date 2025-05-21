@@ -1,4 +1,5 @@
 -convert cubes into struct array
+-break UpdateMyCubes into separate functions 
 
 -spawn triangles from cubes on shoot
 
