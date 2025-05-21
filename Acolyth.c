@@ -8,7 +8,7 @@
 #define MOUSE_MOVE_SENSITIVITY 0.001f
 
 #define CUBE_LIMIT 10
-#define TRI_LIMIT 12
+#define TRI_LIMIT 10
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -45,8 +45,7 @@ int main(void)
     
     int score = 0;
     
-    //-------------------------------------------------------------------------------------
-    
+    // TRI ----------------------------------------------------------------------------------
     typedef struct _Tri{
         Vector3 center;
         Vector3 one;
@@ -54,21 +53,33 @@ int main(void)
         Vector3 three;
         Color myTriColor;
         Color myTriOutline;
-    } Tri_;
+    };
     
-    struct Ray r1;
-    r1.position = (Vector3){0,0,0};
-    r1.direction = (Vector3){10,10,0};
-    Color r1Color = WHITE;
+    struct _Tri tris[10];
     
-    struct BoundingBox b1;
-    b1.min = (Vector3){0,0,0};
-    b1.max = (Vector3){5,5,5};
+    // MY TRI
+    Vector3 myTriCenter = (Vector3){ 0.0f, 3.0f, 0.0f };
+    Vector3 myTriOne = Vector3Add(myTriCenter, (Vector3){ 0.0f, 1.0f, 0.0f });
+    Vector3 myTriTwo = Vector3Add(myTriCenter, (Vector3){ 1.0f, -1.0f, 0.0f });
+    Vector3 myTriThree = Vector3Add(myTriCenter, (Vector3){ -1.0f, -1.0f, 0.0f });
+    Color myTriColor = YELLOW;
+    Color myTriOutline = BLACK;
+    
+    // CUBE ----------------------------------------------------------------------------------
+    typedef struct _Cube{
+        Vector3 position;
+        Vector3 size;
+        float speed;
+        int exist;
+        int lifetime;
+        struct BoundingBox bb;
+        struct RayCollision col;
+    };
     
     float cubeFallSpeed = 0.005;
     float cubeSize = 1.0f;
     
-    // arrays for cubes
+    // arrays for test cubes
     Vector3 cubePos[CUBE_LIMIT] = { 0 };
     Vector3 cubeSizes[CUBE_LIMIT] = { 0 };
     float cubeSpeeds[CUBE_LIMIT] = { 0 };
@@ -94,20 +105,15 @@ int main(void)
         cubeBBs[i].max = Vector3Add(cubePos[i], (Vector3){(cubeSize/2),(cubeSize/2),(cubeSize/2)});
     }
     
-    // generate some cubes
-    for (int i = 0; i < CUBE_LIMIT; i++){
-        SpawnNewCube(i);
-    }
+    // OTHER ----------------------------------------------------------------------------------
+    struct Ray r1;
+    r1.position = (Vector3){0,0,0};
+    r1.direction = (Vector3){10,10,0};
+    Color r1Color = WHITE;
     
-    // MY TRI
-    Vector3 myTriCenter = (Vector3){ 0.0f, 3.0f, 0.0f };
-    Vector3 myTriOne = Vector3Add(myTriCenter, (Vector3){ 0.0f, 1.0f, 0.0f });
-    Vector3 myTriTwo = Vector3Add(myTriCenter, (Vector3){ 1.0f, -1.0f, 0.0f });
-    Vector3 myTriThree = Vector3Add(myTriCenter, (Vector3){ -1.0f, -1.0f, 0.0f });
-    Color myTriColor = YELLOW;
-    Color myTriOutline = BLACK;
-    
-    //-------------------------------------------------------------------------------------
+    struct BoundingBox b1;
+    b1.min = (Vector3){0,0,0};
+    b1.max = (Vector3){5,5,5};
     
     // Single Pass Cube Update
     void UpdateMyCubes(){
@@ -149,14 +155,16 @@ int main(void)
         }
     }
     
-    //--------------------------------------------------------------------------------------
-    // Main game loop
-    //--------------------------------------------------------------------------------------
+    // READY ----------------------------------------------------------------------------------
+    // generate some cubes
+    for (int i = 0; i < CUBE_LIMIT; i++){
+        SpawnNewCube(i);
+    }
+    
+    // MAIN GAME LOOP ---------------------------------------------------------------------
     while (!WindowShouldClose())        // Detect window close button or ESC key
     {
-        //----------------------------------------------------------------------------------
-        // Input
-        //----------------------------------------------------------------------------------
+        // INPUT --------------------------------------------------------------------------
         // Switch camera mode
         if (IsKeyPressed(KEY_ONE)){
             myDebug = !myDebug;
@@ -209,21 +217,32 @@ int main(void)
         Vector2 mousePositionDelta = GetMouseDelta();
         float newYaw = mousePositionDelta.x*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
         float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
+        
+        // UPDATE -----------------------------------------------------------------------
 
         //UpdateCamera(&camera, cameraMode);
         UpdateCameraPro(&camera, 
             (Vector3){ newForward, newRight, newUp }, // added pos
             (Vector3){ newYaw, newPitch, 0.0f }, // added rot
-            0.0f); // zoom
-        
-        //----------------------------------------------------------------------------------
-        // Collision
-        //----------------------------------------------------------------------------------
+            0.0f); // zoo
+            
+        // Update MY TRI
+            myTriOne = Vector3RotateByAxisAngle(myTriOne,myTriCenter, 0.1f);
+            myTriTwo = Vector3RotateByAxisAngle(myTriTwo,myTriCenter, 0.1f);
+            myTriThree = Vector3RotateByAxisAngle(myTriThree,myTriCenter, 0.1f);
+            // myTriOne = (Vector3){ myTriOne.x + (float)GetRandomValue(-1,1)*0.001f,
+                // myTriOne.y + (float)GetRandomValue(-1,1)*0.01f,
+                // myTriOne.z + (float)GetRandomValue(-1,1)*0.01f
+                // };
+            // myTriTwo = (Vector3){ myTriTwo.x + (float)GetRandomValue(-1,1)*0.001f,
+                // myTriTwo.y + (float)GetRandomValue(-1,1)*0.01f,
+                // myTriTwo.z + (float)GetRandomValue(-1,1)*0.01f
+                // };
+            
+        // COLLISION ---------------------------------------------------------------------
         RayCollision myHit = GetRayCollisionBox(r1,b1);
         
-        //----------------------------------------------------------------------------------
-        // Draw
-        //----------------------------------------------------------------------------------
+        // DRAW --------------------------------------------------------------------------
         BeginDrawing();
             ClearBackground(DARKBLUE);
             BeginMode3D(camera);
@@ -231,23 +250,9 @@ int main(void)
             DrawGrid(20,1.0f);
             // Ground
             DrawPlane((Vector3){ 0.0f, -1.0f, 0.0f }, (Vector2){ 100.0f, 100.0f }, LIME);
-            // Draw Sun
+            // Sun
             DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW); 
             DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE); 
-            
-            // Update MY TRI
-            //myTriOne = Vector3RotateByAxisAngle(myTriOne,camera.target, 0.1f);
-            //myTriTwo = Vector3RotateByAxisAngle(myTriTwo,camera.target, 0.1f);
-            //myTriThree = Vector3RotateByAxisAngle(myTriThree,camera.target, 0.1f);
-            myTriOne = (Vector3){ myTriOne.x + (float)GetRandomValue(-1,1)*0.01f,
-                myTriOne.y + (float)GetRandomValue(-1,1)*0.01f,
-                myTriOne.z + (float)GetRandomValue(-1,1)*0.01f
-                };
-            myTriTwo = (Vector3){ myTriTwo.x + (float)GetRandomValue(-1,1)*0.01f,
-                myTriTwo.y + (float)GetRandomValue(-1,1)*0.01f,
-                myTriTwo.z + (float)GetRandomValue(-1,1)*0.01f
-                };
-                
             
             // Draw MY TRI
             DrawTriangle3D(myTriOne,myTriTwo,myTriThree, myTriColor);
@@ -295,7 +300,6 @@ int main(void)
                 r1Color = WHITE;
             }
             DrawRay(r1,r1Color);
-            
             
             UpdateMyCubes();
             

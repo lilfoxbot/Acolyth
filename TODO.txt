@@ -1,4 +1,7 @@
+-convert cubes into struct array
 
-spawn triangles from cubes on shoot
+-spawn triangles from cubes on shoot
 
-world generator (hallway of cubes)
+-world generator (hallway of cubes)
+
+-unlock framerate (deltatime)
