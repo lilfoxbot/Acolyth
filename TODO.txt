@@ -1,8 +1,11 @@
--convert cubes into struct array
--break UpdateMyCubes into separate functions 
+
+-unlock framerate (deltatime)
+	-move structcube across area
+	-compare speeds
+
+-spawn/shoot/break structcubes
 
 -spawn triangles from cubes on shoot
 
 -world generator (hallway of cubes)
 
--unlock framerate (deltatime)

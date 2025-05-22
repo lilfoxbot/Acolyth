@@ -24,6 +24,8 @@ int main(void)
     InitWindow(screenWidth, screenHeight, "Acolyth");
     DisableCursor();                    // Limit cursor to relative movement inside the window
     SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
+    float dt = 0;
+    float timePassed = 0;
 
     // Define the camera to look into our 3d world (position, target, up vector)
     Camera camera = { 0 };
@@ -46,16 +48,15 @@ int main(void)
     int score = 0;
     
     // TRI ----------------------------------------------------------------------------------
-    typedef struct _Tri{
+    typedef struct {
         Vector3 center;
         Vector3 one;
         Vector3 two;
         Vector3 three;
         Color myTriColor;
         Color myTriOutline;
-    };
-    
-    struct _Tri tris[10];
+    } _Tri;
+    _Tri tris[10];
     
     // MY TRI
     Vector3 myTriCenter = (Vector3){ 0.0f, 3.0f, 0.0f };
@@ -66,18 +67,54 @@ int main(void)
     Color myTriOutline = BLACK;
     
     // CUBE ----------------------------------------------------------------------------------
-    typedef struct _Cube{
+    typedef struct {
+        int exist;
+        float lifetime;
+        float speed;
         Vector3 position;
         Vector3 size;
-        float speed;
-        int exist;
-        int lifetime;
         struct BoundingBox bb;
         struct RayCollision col;
-    };
+    } _Cube;
+    _Cube cubes[10];
     
-    float cubeFallSpeed = 0.005;
-    float cubeSize = 1.0f;
+    int SpawnStructCube(){
+        // allocate index for new cube
+        for (int i = 0; i < sizeof(cubes); i++){
+            if (cubes[i].exist == 0){
+                cubes[i].exist = 1;
+                cubes[i].lifetime = 0.0f;
+                cubes[i].speed = 0.1f;
+                cubes[i].position = (Vector3){2.0f,2.0f,2.0f};
+                cubes[i].size = (Vector3){0.5f,0.5f,0.5f};
+                cubes[i].bb.min = Vector3Add(cubes[i].position, (Vector3){-(cubes[i].size.x/2),-(cubes[i].size.y/2),-(cubes[i].size.z/2)});
+                cubes[i].bb.max = Vector3Add(cubes[i].position, (Vector3){(cubes[i].size.x/2),(cubes[i].size.y/2),(cubes[i].size.z/2)});
+                return i;
+            }
+        }
+        
+        return -1;
+    }
+    
+    void UpdateStructCube(int i, Vector3 addPos){
+        cubes[i].position = (Vector3){cubes[i].position.x + addPos.x,
+                                        cubes[i].position.y + addPos.y,
+                                        cubes[i].position.z + addPos.z};
+        cubes[i].bb.min = Vector3Add(cubes[i].position, (Vector3){-(cubes[i].size.x/2),-(cubes[i].size.y/2),-(cubes[i].size.z/2)});
+        cubes[i].bb.max = Vector3Add(cubes[i].position, (Vector3){(cubes[i].size.x/2),(cubes[i].size.y/2),(cubes[i].size.z/2)});
+        cubes[i].lifetime += dt;
+    }
+    
+    void DrawStructCube(int i){
+        if (cubes[i].exist){
+            DrawCubeV(cubes[i].position, cubes[i].size, BLUE);
+            DrawBoundingBox(cubes[i].bb, WHITE);
+        }
+    }
+    
+    void DestroyStructCube(int i){
+        cubes[i].exist = 0;
+    }
     
     // arrays for test cubes
     Vector3 cubePos[CUBE_LIMIT] = { 0 };
@@ -92,6 +129,8 @@ int main(void)
     Vector2 cubeSpawnY = { 0, 100 };
     Vector2 cubeSpawnZ = { -200, -100 };
     float spawnMod = 0.1f;
+    float cubeFallSpeed = 0.005;
+    float cubeSize = 1.0f;
     
     void SpawnNewCube(int i){
         cubePos[i] = (Vector3){(float)GetRandomValue(cubeSpawnX.x, cubeSpawnX.y)*spawnMod, 
@@ -111,9 +150,9 @@ int main(void)
     r1.direction = (Vector3){10,10,0};
     Color r1Color = WHITE;
     
-    struct BoundingBox b1;
-    b1.min = (Vector3){0,0,0};
-    b1.max = (Vector3){5,5,5};
+    // struct BoundingBox b1;
+    // b1.min = (Vector3){0,0,0};
+    // b1.max = (Vector3){5,5,5};
     
     // Single Pass Cube Update
     void UpdateMyCubes(){
@@ -161,14 +200,21 @@ int main(void)
         SpawnNewCube(i);
     }
     
+    // spawn struct cube
+    int shakeCube = SpawnStructCube();
+    int speedCube = SpawnStructCube();
+    
     // MAIN GAME LOOP ---------------------------------------------------------------------
     while (!WindowShouldClose())        // Detect window close button or ESC key
     {
+        dt = GetFrameTime();
+        timePassed += dt;
+        
         // INPUT --------------------------------------------------------------------------
         // Switch camera mode
-        if (IsKeyPressed(KEY_ONE)){
-            myDebug = !myDebug;
-        }
+        if (IsKeyPressed(KEY_ONE)){ myDebug = !myDebug; }
+        if (IsKeyPressed(KEY_TWO)){ SetTargetFPS(60); }
+        if (IsKeyPressed(KEY_THREE)){ SetTargetFPS(120); }
 
         // Switch camera projection
         if (IsKeyPressed(KEY_P)){
@@ -238,9 +284,14 @@ int main(void)
                 // myTriTwo.y + (float)GetRandomValue(-1,1)*0.01f,
                 // myTriTwo.z + (float)GetRandomValue(-1,1)*0.01f
                 // };
-            
+        
+        UpdateStructCube(shakeCube, (Vector3){ (float)GetRandomValue(-1,1)*0.001f, 
+                                                            (float)GetRandomValue(-1,1)*0.001f, 
+                                                            (float)GetRandomValue(-1,1)*0.001f });
+        UpdateStructCube(speedCube, (Vector3){ 1.0f*dt,0,0 });
+        
         // COLLISION ---------------------------------------------------------------------
-        RayCollision myHit = GetRayCollisionBox(r1,b1);
+        //RayCollision myHit = GetRayCollisionBox(r1,b1);
         
         // DRAW --------------------------------------------------------------------------
         BeginDrawing();
@@ -295,23 +346,27 @@ int main(void)
             r1.direction = Vector3Scale(camF,1.0f);
             
             if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-              r1Color = RED;
+                r1Color = RED;
             } else {
                 r1Color = WHITE;
             }
             DrawRay(r1,r1Color);
             
-            UpdateMyCubes();
+            DrawStructCube(shakeCube);
+            DrawStructCube(speedCube);
             
             EndMode3D(); // ----------------------------------------------------------------
             
             // Draw info boxes
+            // Left side
             DrawRectangle(5, 5, 330, 100, Fade(SKYBLUE, 0.5f));
             DrawRectangleLines(5, 5, 330, 100, BLUE);
-
-            DrawText("Camera controls:", 15, 15, 10, BLACK);
-            DrawText("- Move keys: W, A, S, D, Space, Left-Ctrl", 15, 30, 10, BLACK);
             
+            DrawText("Move keys: W, A, S, D, Space, Left-Ctrl", 15, 15, 10, BLACK);
+            DrawText(TextFormat("Time Passed - %0.2f", timePassed),15, 30, 10, BLACK);
+            DrawText(TextFormat("TargetFPS - %d", GetFPS()), 15, 45, 10, BLACK);
+            
+            //Right side
             DrawRectangle(1080, 5, 195, 100, Fade(SKYBLUE, 0.5f));
             DrawRectangleLines(1080, 5, 195, 100, BLUE);
 
