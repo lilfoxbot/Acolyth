@@ -39,7 +39,7 @@ int main(void)
     
     bool myDebug = false;
     float lookSensitivity = 40.0f;
-    float camSpeed = 0.1f;
+    float camSpeed = 2.0f;
     float axisSize = 0.2f;
     float armX = 0;
     float armY = 0;
@@ -76,16 +76,30 @@ int main(void)
         struct BoundingBox bb;
         struct RayCollision col;
     } _Cube;
-    _Cube cubes[10];
+    _Cube cubes[CUBE_LIMIT];
+    
+    for (int i = 0; i < sizeof(cubes)/sizeof(cubes[0]); i++){
+        cubes[i].exist = 0;
+    }
+    
+    Vector2 cubeSpawnX = { -100, 100 };
+    Vector2 cubeSpawnY = { 0, 100 };
+    Vector2 cubeSpawnZ = { -200, -100 };
+    float spawnMod = 0.1f;
+    float cubeFallSpeed = 0.005;
+    float cubeSize = 1.0f;
+    float cubeSpawn = 1.0f;
     
     int SpawnStructCube(){
         // allocate index for new cube
-        for (int i = 0; i < sizeof(cubes); i++){
-            if (cubes[i].exist == 0){
+        for (int i = 0; i < sizeof(cubes)/sizeof(cubes[0]); i++){
+            if (cubes[i].exist != 1){
                 cubes[i].exist = 1;
                 cubes[i].lifetime = 0.0f;
                 cubes[i].speed = 0.1f;
-                cubes[i].position = (Vector3){2.0f,2.0f,2.0f};
+                cubes[i].position = (Vector3){(float)GetRandomValue(cubeSpawnX.x, cubeSpawnX.y)*spawnMod, 
+                        (float)GetRandomValue(cubeSpawnY.x, cubeSpawnY.y)*spawnMod, 
+                        (float)GetRandomValue(cubeSpawnZ.x, cubeSpawnZ.y)*spawnMod};
                 cubes[i].size = (Vector3){0.5f,0.5f,0.5f};
                 cubes[i].bb.min = Vector3Add(cubes[i].position, (Vector3){-(cubes[i].size.x/2),-(cubes[i].size.y/2),-(cubes[i].size.z/2)});
                 cubes[i].bb.max = Vector3Add(cubes[i].position, (Vector3){(cubes[i].size.x/2),(cubes[i].size.y/2),(cubes[i].size.z/2)});
@@ -105,15 +119,28 @@ int main(void)
         cubes[i].lifetime += dt;
     }
     
+    void CheckStructCollision(int i, Ray cubeRay){
+        cubes[i].col = GetRayCollisionBox(cubeRay, cubes[i].bb);
+    }
+    
     void DrawStructCube(int i){
-        if (cubes[i].exist){
-            DrawCubeV(cubes[i].position, cubes[i].size, BLUE);
+        if (cubes[i].exist == 1){
+            Color cubeColor = (cubes[i].col.hit) ? RED : BLUE;
+            DrawCubeV(cubes[i].position, cubes[i].size, cubeColor);
             DrawBoundingBox(cubes[i].bb, WHITE);
         }
     }
     
     void DestroyStructCube(int i){
         cubes[i].exist = 0;
+    }
+
+    void CubeSpawnTicker(){
+        cubeSpawn -= dt;
+        if (cubeSpawn <= 0){
+            SpawnStructCube();
+            cubeSpawn = 1.0f;
+        }
     }
     
     // arrays for test cubes
@@ -124,13 +151,6 @@ int main(void)
     int cubeLifetimes[CUBE_LIMIT] = { 0 };
     struct BoundingBox cubeBBs[CUBE_LIMIT];
     struct RayCollision cubeRayHits[CUBE_LIMIT];
-    
-    Vector2 cubeSpawnX = { -100, 100 };
-    Vector2 cubeSpawnY = { 0, 100 };
-    Vector2 cubeSpawnZ = { -200, -100 };
-    float spawnMod = 0.1f;
-    float cubeFallSpeed = 0.005;
-    float cubeSize = 1.0f;
     
     void SpawnNewCube(int i){
         cubePos[i] = (Vector3){(float)GetRandomValue(cubeSpawnX.x, cubeSpawnX.y)*spawnMod, 
@@ -195,14 +215,10 @@ int main(void)
     }
     
     // READY ----------------------------------------------------------------------------------
-    // generate some cubes
-    for (int i = 0; i < CUBE_LIMIT; i++){
-        SpawnNewCube(i);
-    }
-    
-    // spawn struct cube
-    int shakeCube = SpawnStructCube();
-    int speedCube = SpawnStructCube();
+    printf("\n");
+    printf(TextFormat("%d", sizeof(cubes)/sizeof(cubes[0])));
+    printf("\n");
+    printf("\n");
     
     // MAIN GAME LOOP ---------------------------------------------------------------------
     while (!WindowShouldClose())        // Detect window close button or ESC key
@@ -268,30 +284,26 @@ int main(void)
 
         //UpdateCamera(&camera, cameraMode);
         UpdateCameraPro(&camera, 
-            (Vector3){ newForward, newRight, newUp }, // added pos
+            (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
             (Vector3){ newYaw, newPitch, 0.0f }, // added rot
-            0.0f); // zoo
+            0.0f); // zoom
             
         // Update MY TRI
             myTriOne = Vector3RotateByAxisAngle(myTriOne,myTriCenter, 0.1f);
             myTriTwo = Vector3RotateByAxisAngle(myTriTwo,myTriCenter, 0.1f);
             myTriThree = Vector3RotateByAxisAngle(myTriThree,myTriCenter, 0.1f);
-            // myTriOne = (Vector3){ myTriOne.x + (float)GetRandomValue(-1,1)*0.001f,
-                // myTriOne.y + (float)GetRandomValue(-1,1)*0.01f,
-                // myTriOne.z + (float)GetRandomValue(-1,1)*0.01f
-                // };
-            // myTriTwo = (Vector3){ myTriTwo.x + (float)GetRandomValue(-1,1)*0.001f,
-                // myTriTwo.y + (float)GetRandomValue(-1,1)*0.01f,
-                // myTriTwo.z + (float)GetRandomValue(-1,1)*0.01f
-                // };
         
-        UpdateStructCube(shakeCube, (Vector3){ (float)GetRandomValue(-1,1)*0.001f, 
-                                                            (float)GetRandomValue(-1,1)*0.001f, 
-                                                            (float)GetRandomValue(-1,1)*0.001f });
-        UpdateStructCube(speedCube, (Vector3){ 1.0f*dt,0,0 });
+        // UpdateStructCube(shakeCube, (Vector3){ (float)GetRandomValue(-1,1)*0.001f, 
+                                                            // (float)GetRandomValue(-1,1)*0.001f, 
+                                                            // (float)GetRandomValue(-1,1)*0.001f });
+        // UpdateStructCube(speedCube, (Vector3){ 1.0f*dt,0,0 });
+        
+        CubeSpawnTicker();
         
         // COLLISION ---------------------------------------------------------------------
-        //RayCollision myHit = GetRayCollisionBox(r1,b1);
+        for (int i = 0; i < CUBE_LIMIT; i++){
+            CheckStructCollision(i, r1);
+        }
         
         // DRAW --------------------------------------------------------------------------
         BeginDrawing();
@@ -338,22 +350,15 @@ int main(void)
             myTargetBegin = Vector3Scale(myTargetBegin, 0.5f);
             myTargetBegin = Vector3Add(myTargetBegin, Vector3Add(camera.position, (Vector3){0,-0.5f,0}));
             
-            Vector3 myBeamTarget = Vector3Add(Vector3Scale(camF,1.5f),Vector3Scale(camR,armX));
-            myBeamTarget = Vector3Add(myBeamTarget, Vector3Scale(camU, armY));
-            myBeamTarget = Vector3Add(myBeamTarget, camera.position);
-            
             r1.position = myTargetBegin;
-            r1.direction = Vector3Scale(camF,1.0f);
-            
-            if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-                r1Color = RED;
-            } else {
-                r1Color = WHITE;
-            }
+            r1.direction = camF;
+            r1Color = (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) ? RED : WHITE;
             DrawRay(r1,r1Color);
             
-            DrawStructCube(shakeCube);
-            DrawStructCube(speedCube);
+            // Draw Cubes
+            for (int i = 0; i < sizeof(cubes)/sizeof(cubes[0]); i++){
+                DrawStructCube(i);
+            }
             
             EndMode3D(); // ----------------------------------------------------------------
             

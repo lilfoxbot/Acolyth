@@ -1,9 +1,7 @@
 
--unlock framerate (deltatime)
-	-move structcube across area
-	-compare speeds
-
 -spawn/shoot/break structcubes
+	-spawn timer
+
 
 -spawn triangles from cubes on shoot
 
