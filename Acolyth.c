@@ -7,8 +7,8 @@
 
 #define MOUSE_MOVE_SENSITIVITY 0.001f
 
-#define CUBE_LIMIT 10
-#define TRI_LIMIT 10
+#define CUBE_LIMIT 50
+#define TRI_LIMIT 50
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -49,14 +49,32 @@ int main(void)
     
     // TRI ----------------------------------------------------------------------------------
     typedef struct {
+        int exist;
         Vector3 center;
         Vector3 one;
         Vector3 two;
         Vector3 three;
-        Color myTriColor;
-        Color myTriOutline;
+        Color triColor;
+        Color triOutline;
     } _Tri;
-    _Tri tris[10];
+    _Tri tris[TRI_LIMIT];
+    
+    for (int i = 0; i < TRI_LIMIT; i++){
+        tris[i].exist = 0;
+    }
+    
+    void SpinTri(int i){
+        tris[i].one = Vector3RotateByAxisAngle(tris[i].one, tris[i].center, 0.1f);
+        tris[i].two = Vector3RotateByAxisAngle(tris[i].two, tris[i].center, 0.1f);
+        tris[i].three = Vector3RotateByAxisAngle(tris[i].three, tris[i].center, 0.1f);
+    }
+    
+    // STRUCT TRI
+    void SpawnTri(int i, Vector3 pos){
+        tris[i].exist = 1;
+        tris[i].center = pos;
+    }
+    
     
     // MY TRI
     Vector3 myTriCenter = (Vector3){ 0.0f, 3.0f, 0.0f };
@@ -78,7 +96,7 @@ int main(void)
     } _Cube;
     _Cube cubes[CUBE_LIMIT];
     
-    for (int i = 0; i < sizeof(cubes)/sizeof(cubes[0]); i++){
+    for (int i = 0; i < CUBE_LIMIT; i++){
         cubes[i].exist = 0;
     }
     
@@ -92,7 +110,7 @@ int main(void)
     
     int SpawnStructCube(){
         // allocate index for new cube
-        for (int i = 0; i < sizeof(cubes)/sizeof(cubes[0]); i++){
+        for (int i = 0; i < CUBE_LIMIT; i++){
             if (cubes[i].exist != 1){
                 cubes[i].exist = 1;
                 cubes[i].lifetime = 0.0f;
@@ -103,6 +121,10 @@ int main(void)
                 cubes[i].size = (Vector3){0.5f,0.5f,0.5f};
                 cubes[i].bb.min = Vector3Add(cubes[i].position, (Vector3){-(cubes[i].size.x/2),-(cubes[i].size.y/2),-(cubes[i].size.z/2)});
                 cubes[i].bb.max = Vector3Add(cubes[i].position, (Vector3){(cubes[i].size.x/2),(cubes[i].size.y/2),(cubes[i].size.z/2)});
+                
+                // printf("\n");
+                // printf(TextFormat("%d", i));
+                // printf("\n");
                 return i;
             }
         }
@@ -111,24 +133,39 @@ int main(void)
     }
     
     void UpdateStructCube(int i, Vector3 addPos){
+        if (cubes[i].exist == 1){ } else { return; }
+        
         cubes[i].position = (Vector3){cubes[i].position.x + addPos.x,
                                         cubes[i].position.y + addPos.y,
                                         cubes[i].position.z + addPos.z};
         cubes[i].bb.min = Vector3Add(cubes[i].position, (Vector3){-(cubes[i].size.x/2),-(cubes[i].size.y/2),-(cubes[i].size.z/2)});
         cubes[i].bb.max = Vector3Add(cubes[i].position, (Vector3){(cubes[i].size.x/2),(cubes[i].size.y/2),(cubes[i].size.z/2)});
         cubes[i].lifetime += dt;
+        
+        if (cubes[i].col.hit){
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+                        cubes[i].exist = 0;
+                        
+                        score += 1;
+                    }
+        }
     }
     
     void CheckStructCollision(int i, Ray cubeRay){
+        if (cubes[i].exist == 1){ } else { return; }
         cubes[i].col = GetRayCollisionBox(cubeRay, cubes[i].bb);
     }
     
     void DrawStructCube(int i){
-        if (cubes[i].exist == 1){
-            Color cubeColor = (cubes[i].col.hit) ? RED : BLUE;
-            DrawCubeV(cubes[i].position, cubes[i].size, cubeColor);
-            DrawBoundingBox(cubes[i].bb, WHITE);
+        if (cubes[i].exist == 1){ } else { return; }
+        Color cubeColor;
+        if (cubes[i].lifetime <= 0.2f){ cubeColor = WHITE;}
+        else {
+            cubeColor = (cubes[i].col.hit) ? RED : BLUE;
         }
+        
+        DrawCubeV(cubes[i].position, cubes[i].size, cubeColor);
+        DrawBoundingBox(cubes[i].bb, WHITE);
     }
     
     void DestroyStructCube(int i){
@@ -143,27 +180,6 @@ int main(void)
         }
     }
     
-    // arrays for test cubes
-    Vector3 cubePos[CUBE_LIMIT] = { 0 };
-    Vector3 cubeSizes[CUBE_LIMIT] = { 0 };
-    float cubeSpeeds[CUBE_LIMIT] = { 0 };
-    int cubeExists[CUBE_LIMIT] = { 0 };
-    int cubeLifetimes[CUBE_LIMIT] = { 0 };
-    struct BoundingBox cubeBBs[CUBE_LIMIT];
-    struct RayCollision cubeRayHits[CUBE_LIMIT];
-    
-    void SpawnNewCube(int i){
-        cubePos[i] = (Vector3){(float)GetRandomValue(cubeSpawnX.x, cubeSpawnX.y)*spawnMod, 
-                        (float)GetRandomValue(cubeSpawnY.x, cubeSpawnY.y)*spawnMod, 
-                        (float)GetRandomValue(cubeSpawnZ.x, cubeSpawnZ.y)*spawnMod};
-        cubeSizes[i] = (Vector3){cubeSize, cubeSize, cubeSize};
-        cubeSpeeds[i] = (float)GetRandomValue(1,4)*cubeFallSpeed;
-        cubeExists[i] = 1;
-        cubeLifetimes[i] = 0;
-        cubeBBs[i].min = Vector3Add(cubePos[i], (Vector3){-(cubeSize/2),-(cubeSize/2),-(cubeSize/2)});
-        cubeBBs[i].max = Vector3Add(cubePos[i], (Vector3){(cubeSize/2),(cubeSize/2),(cubeSize/2)});
-    }
-    
     // OTHER ----------------------------------------------------------------------------------
     struct Ray r1;
     r1.position = (Vector3){0,0,0};
@@ -174,51 +190,10 @@ int main(void)
     // b1.min = (Vector3){0,0,0};
     // b1.max = (Vector3){5,5,5};
     
-    // Single Pass Cube Update
-    void UpdateMyCubes(){
-        for (int i = 0; i < CUBE_LIMIT; i++){
-            //CheckCubeCollision
-            cubeRayHits[i] = GetRayCollisionBox(r1,cubeBBs[i]);
-            
-            //DrawMyCube(i);
-            if (cubeExists[i]){
-                if (cubeRayHits[i].hit){
-                    DrawCubeV(cubePos[i], cubeSizes[i], RED);
-                    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                        cubeExists[i] = 0;
-                        score += 1;
-                    }
-                } else {
-                    if (cubeLifetimes[i] <= 10){
-                        DrawCubeV(cubePos[i], cubeSizes[i], WHITE);
-                    } else {
-                        DrawCubeV(cubePos[i], cubeSizes[i], SKYBLUE);
-                    }
-                }
-                DrawBoundingBox(cubeBBs[i], WHITE);
-                cubeLifetimes[i] += 1;
-            } else {
-                SpawnNewCube(i);
-            }
-            
-            //MoveMyCube(i);
-            cubePos[i] = (Vector3){ cubePos[i].x, cubePos[i].y, cubePos[i].z + cubeSpeeds[i]};
-            cubeBBs[i].min = Vector3Add(cubePos[i], (Vector3){-(cubeSize/2),-(cubeSize/2),-(cubeSize/2)});
-            cubeBBs[i].max = Vector3Add(cubePos[i], (Vector3){(cubeSize/2),(cubeSize/2),(cubeSize/2)});
-            
-            // Check Position
-            if (cubePos[i].z > 10){
-                //DespawnCube(i);
-                cubeExists[i] = 0;
-            }
-        }
-    }
-    
     // READY ----------------------------------------------------------------------------------
-    printf("\n");
-    printf(TextFormat("%d", sizeof(cubes)/sizeof(cubes[0])));
-    printf("\n");
-    printf("\n");
+    // printf("\n");
+    // printf(TextFormat("%d", CUBE_LIMIT)));
+    // printf("\n");
     
     // MAIN GAME LOOP ---------------------------------------------------------------------
     while (!WindowShouldClose())        // Detect window close button or ESC key
@@ -293,12 +268,13 @@ int main(void)
             myTriTwo = Vector3RotateByAxisAngle(myTriTwo,myTriCenter, 0.1f);
             myTriThree = Vector3RotateByAxisAngle(myTriThree,myTriCenter, 0.1f);
         
-        // UpdateStructCube(shakeCube, (Vector3){ (float)GetRandomValue(-1,1)*0.001f, 
-                                                            // (float)GetRandomValue(-1,1)*0.001f, 
-                                                            // (float)GetRandomValue(-1,1)*0.001f });
+        
         // UpdateStructCube(speedCube, (Vector3){ 1.0f*dt,0,0 });
         
         CubeSpawnTicker();
+        for (int i = 0; i < CUBE_LIMIT; i++){
+            UpdateStructCube(i, (Vector3){0,0,0});
+        }
         
         // COLLISION ---------------------------------------------------------------------
         for (int i = 0; i < CUBE_LIMIT; i++){
@@ -356,7 +332,7 @@ int main(void)
             DrawRay(r1,r1Color);
             
             // Draw Cubes
-            for (int i = 0; i < sizeof(cubes)/sizeof(cubes[0]); i++){
+            for (int i = 0; i < CUBE_LIMIT; i++){
                 DrawStructCube(i);
             }
             

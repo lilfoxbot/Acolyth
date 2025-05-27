@@ -1,9 +1,9 @@
 
--spawn/shoot/break structcubes
-	-spawn timer
-
-
 -spawn triangles from cubes on shoot
+
+-linked list for cubes and tris
+
+-reset scene hotkey
 
 -world generator (hallway of cubes)
 
