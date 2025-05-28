@@ -1,7 +1,9 @@
 
--spawn triangles from cubes on shoot
+-spawn triangles from cubes on shoot (moving debris)
+	- random rotations of tris
+	- random velocity of tris
 
--linked list for cubes and tris
+-stack of open indices to allocate game objects
 
 -reset scene hotkey
 
