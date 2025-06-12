@@ -1,3 +1,6 @@
+- poly struct header
+
+- OBJ array?
 
 -spawn triangles from cubes on shoot (moving debris)
 	- random rotations of tris

@@ -3,12 +3,15 @@
 #include "raymath.h"
 #include <stdio.h>
 
+#include "Poly.h"
+
 #define RAYMATH_IMPLEMENTATION
 
 #define MOUSE_MOVE_SENSITIVITY 0.001f
 
 #define CUBE_LIMIT 50
 #define TRI_LIMIT 50
+#define POLY_LIMIT 50
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -111,7 +114,6 @@ int main(void)
         if (tris[i].size <= 0){
             Destroy_Tri(i);
         }
-        
     }
     
     void Draw_Tri(int i){
@@ -124,7 +126,7 @@ int main(void)
     }
     
     // MY TRI
-    Vector3 myTriCenter = (Vector3){ 0.0f, 3.0f, 0.0f };
+    Vector3 myTriCenter = (Vector3){ 0.0f, 6.0f, 0.0f };
     Vector3 myTriOne = Vector3Add(myTriCenter, (Vector3){ 0.0f, 1.0f, 0.0f });
     Vector3 myTriTwo = Vector3Add(myTriCenter, (Vector3){ 1.0f, -1.0f, 0.0f });
     Vector3 myTriThree = Vector3Add(myTriCenter, (Vector3){ -1.0f, -1.0f, 0.0f });
@@ -239,8 +241,8 @@ int main(void)
     // printf(TextFormat("%d", CUBE_LIMIT)));
     // printf("\n");
     
-    int testTri = Spawn_Tri((Vector3){3,3,3});
-    int testTri2 = Spawn_Tri((Vector3){-3,3,-3});
+    struct _Poly polys[POLY_LIMIT];
+    Spawn_Poly(polys,POLY_LIMIT,(Vector3){1,1,1});
     
     // MAIN GAME LOOP ---------------------------------------------------------------------
     while (!WindowShouldClose())        // Detect window close button or ESC key
@@ -304,7 +306,7 @@ int main(void)
         
         // UPDATE -----------------------------------------------------------------------
 
-        //UpdateCamera(&camera, cameraMode);
+        // UpdateCamera(&camera, cameraMode);
         UpdateCameraPro(&camera, 
             (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
             (Vector3){ newYaw, newPitch, 0.0f }, // added rot
@@ -314,9 +316,6 @@ int main(void)
             myTriOne = Vector3RotateByAxisAngle(myTriOne,myTriCenter, 0.1f);
             myTriTwo = Vector3RotateByAxisAngle(myTriTwo,myTriCenter, 0.1f);
             myTriThree = Vector3RotateByAxisAngle(myTriThree,myTriCenter, 0.1f);
-            
-        Update_Tri(testTri);
-        Update_Tri(testTri2);
         
         // UpdateStructCube(speedCube, (Vector3){ 1.0f*dt,0,0 });
         
@@ -349,8 +348,6 @@ int main(void)
             DrawLine3D(myTriTwo,myTriThree,myTriOutline);
             DrawLine3D(myTriThree,myTriOne,myTriOutline);
             
-            Draw_Tri(testTri);
-            Draw_Tri(testTri2);
 
             // Debug axis
             if (myDebug){   
@@ -387,6 +384,8 @@ int main(void)
             for (int i = 0; i < CUBE_LIMIT; i++){
                 Draw_Cube(i);
             }
+            
+            Poly_CUD(polys, POLY_LIMIT);
             
             EndMode3D(); // ----------------------------------------------------------------
             
