@@ -11,7 +11,7 @@
 
 #define CUBE_LIMIT 50
 #define TRI_LIMIT 50
-#define POLY_LIMIT 50
+#define POLY_LIMIT 100
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -49,6 +49,14 @@ int main(void)
     float armSpeed = 0.05f;
     int score = 0;
     
+    struct _Poly polys[POLY_LIMIT];
+    
+    Vector3 GetRandomVector(int range, float multiplier){
+    return (Vector3){ GetRandomValue(-range,range)*(multiplier),
+    GetRandomValue(-range,range)*(multiplier), 
+    GetRandomValue(-range,range)*(multiplier)};
+    }
+    
     // TRI -------------------------------------------------------------------------------
     typedef struct {
         int exist;
@@ -80,8 +88,8 @@ int main(void)
                 tris[i].one = Vector3Add(pos, (Vector3){ 0.0f, 0.2f, 0.0f });
                 tris[i].two = Vector3Add(pos, (Vector3){ 0.2f, -0.2f, 0.0f });
                 tris[i].three = Vector3Add(pos, (Vector3){ -0.2f, -0.2f, 0.0f });
-                tris[i].velocity = (Vector3){ 0,0.02f,0 };
-                tris[i].size = 0.5f;
+                tris[i].velocity = (Vector3){ 0, 0.02f, 0 };
+                tris[i].size = 0.2f;
                 tris[i].triColor = YELLOW;
                 tris[i].triOutline = BLACK;
                 return i;
@@ -149,9 +157,9 @@ int main(void)
         cubes[i].exist = 0;
     }
     
-    Vector2 cubeSpawnX = { -100, 100 };
-    Vector2 cubeSpawnY = { 0, 100 };
-    Vector2 cubeSpawnZ = { -200, -100 };
+    Vector2 cubeSpawnX = { -50, 50 };
+    Vector2 cubeSpawnY = { 0, 50 };
+    Vector2 cubeSpawnZ = { -100, -50 };
     float spawnMod = 0.1f;
     float cubeFallSpeed = 0.005;
     float cubeSize = 1.0f;
@@ -180,7 +188,9 @@ int main(void)
     
     void Destroy_Cube(int i){
         cubes[i].exist = 0;
-        Spawn_Tri(cubes[i].position);
+        for (int j = 0; j < 11; j++){
+            Spawn_Poly(polys, POLY_LIMIT, Vector3Add(cubes[i].position, GetRandomVector(3,0.1)));
+        }
     }
     
     void Update_Cube(int i, Vector3 addPos){
@@ -193,11 +203,11 @@ int main(void)
         cubes[i].bb.max = Vector3Add(cubes[i].position, (Vector3){(cubes[i].size.x/2),(cubes[i].size.y/2),(cubes[i].size.z/2)});
         cubes[i].lifetime += dt;
         
-        if (cubes[i].col.hit){
+        if (cubes[i].col.hit && cubes[i].exist){
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                         Destroy_Cube(i);
                         score += 1;
-                    }
+            }
         }
     }
     
@@ -241,7 +251,6 @@ int main(void)
     // printf(TextFormat("%d", CUBE_LIMIT)));
     // printf("\n");
     
-    struct _Poly polys[POLY_LIMIT];
     Spawn_Poly(polys,POLY_LIMIT,(Vector3){1,1,1});
     
     // MAIN GAME LOOP ---------------------------------------------------------------------

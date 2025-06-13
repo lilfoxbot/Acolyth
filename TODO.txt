@@ -1,12 +1,4 @@
-- poly struct header
-
-- OBJ array?
-
--spawn triangles from cubes on shoot (moving debris)
-	- random rotations of tris
-	- random velocity of tris
-
--stack of open indices to allocate game objects
+- importing models
 
 -reset scene hotkey
 
