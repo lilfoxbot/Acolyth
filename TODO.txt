@@ -1,4 +1,6 @@
-- importing models
+-clean up my silly C code (it works but there's errors)
+
+-importing models
 
 -reset scene hotkey
 
