@@ -1,4 +1,4 @@
--clean up my silly C code (it works but there's errors)
+-move cube to seperate file
 
 -importing models
 
