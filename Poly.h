@@ -2,25 +2,27 @@
 *   single poly struct and functions
 */
 
+#pragma once
+
 #include "raylib.h"
 #include "raymath.h"
 #include <stdio.h>
 
 struct _Poly{
-        int exist;
-        float lifetime;
-        float endtime;
-        Vector3 center;
-        Vector3 one;
-        Vector3 two;
-        Vector3 three;
-        Vector3 velocity;
-        float size;
-        Color polyColor;
-        Color polyOutline;
-    };
+    int exist;
+    float lifetime;
+    float endtime;
+    Vector3 center;
+    Vector3 one;
+    Vector3 two;
+    Vector3 three;
+    Vector3 velocity;
+    float size;
+    Color polyColor;
+    Color polyOutline;
+};
 
-Vector3 GetRandomVector(int range, float multiplier){
+Vector3 PGetRandomVector(int range, float multiplier){
     return (Vector3){ GetRandomValue(-range,range)*(multiplier),
     GetRandomValue(-range,range)*(multiplier), 
     GetRandomValue(-range,range)*(multiplier)};
@@ -33,10 +35,10 @@ Vector3 GetRandomVector(int range, float multiplier){
 // }
 
 void Destroy_Poly(struct _Poly *polyArr, int i){
-        polyArr[i].exist = 0;
-    }
+    polyArr[i].exist = 0;
+}
 
-// this can be made more efficient with a stack of indices to allocate new spawns
+
 void Spawn_Poly(struct _Poly *polyArr, int arrSize, Vector3 startPos){
     for (int i = 0; i < arrSize; i++){
         if (polyArr[i].exist != 1){
@@ -45,10 +47,10 @@ void Spawn_Poly(struct _Poly *polyArr, int arrSize, Vector3 startPos){
             polyArr[i].endtime = GetRandomValue(3,6);
             polyArr[i].center = startPos;
             polyArr[i].size = 0.2f;
-            polyArr[i].one = GetRandomVector(3,0.1f);
-            polyArr[i].two = GetRandomVector(3,0.1f);
-            polyArr[i].three = GetRandomVector(3,0.1f);
-            polyArr[i].velocity = GetRandomVector(5,0.01f);
+            polyArr[i].one = PGetRandomVector(3,0.1f);
+            polyArr[i].two = PGetRandomVector(3,0.1f);
+            polyArr[i].three = PGetRandomVector(3,0.1f);
+            polyArr[i].velocity = PGetRandomVector(5,0.01f);
             polyArr[i].polyColor = RED;
             polyArr[i].polyOutline = WHITE;
             return;
@@ -74,9 +76,9 @@ void Poly_CUD(struct _Poly *polyArr, int arrSize){
             polyArr[i].center = Vector3Add(polyArr[i].center, (Vector3){0,polyArr[i].lifetime*(0.2f),0});
             
             // jitter
-            polyArr[i].one = Vector3Add(polyArr[i].one, GetRandomVector(5,0.005f));
-            polyArr[i].two = Vector3Add(polyArr[i].two, GetRandomVector(5,0.005f));
-            polyArr[i].three = Vector3Add(polyArr[i].three, GetRandomVector(5,0.005f));
+            polyArr[i].one = Vector3Add(polyArr[i].one, PGetRandomVector(5,0.005f));
+            polyArr[i].two = Vector3Add(polyArr[i].two, PGetRandomVector(5,0.005f));
+            polyArr[i].three = Vector3Add(polyArr[i].three, PGetRandomVector(5,0.005f));
             // shrink
             polyArr[i].one = Vector3Scale(polyArr[i].one, 0.95f);
             polyArr[i].two = Vector3Scale(polyArr[i].two, 0.95f);

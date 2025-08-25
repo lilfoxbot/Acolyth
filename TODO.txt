@@ -1,4 +1,4 @@
--move cube to seperate file
+-move cube to separate file
 
 -importing models
 
