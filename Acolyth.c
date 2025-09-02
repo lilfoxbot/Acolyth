@@ -14,6 +14,10 @@
 #define CUBE_LIMIT 10
 #define TRI_LIMIT 50
 #define POLY_LIMIT 100
+#define ENTITY_LIMIT 50
+
+#define ENTITY_SPAWN_TIMER 1.0f
+float entitySpawnTick = 1.0f;
 
 bool myDebug = false;
 float lookSensitivity = 40.0f;
@@ -28,12 +32,32 @@ float timePassed = 0;
 
 struct _Cube cubes[CUBE_LIMIT];
 struct _Poly polys[POLY_LIMIT];
+struct Entity* hall_entities[ENTITY_LIMIT];
 
 void CubeSpawnTicker(){
     cubeSpawn -= dt;
     if (cubeSpawn <= 0){
         Spawn_Cube(cubes, CUBE_LIMIT);
         cubeSpawn = 1.0f;
+    }
+}
+
+int FindFreeEntitySlot(struct Entity* entityArr[], int arrSize){
+    for (int i = 0; i < ENTITY_LIMIT; i++){
+        if (entityArr[i] == NULL){
+            return i;
+        }
+    }
+    return -1;
+}
+
+void HallwayEntitySpawnTicker(){
+    entitySpawnTick -= dt;
+    if (entitySpawnTick <= 0){
+        int i = FindFreeEntitySlot(hall_entities, ENTITY_LIMIT);
+        if (i == -1) return;
+        hall_entities[i] = CreateEntity(i, (Vector3){GetRandomValue(-5,5),GetRandomValue(0,3), -50});
+        entitySpawnTick = ENTITY_SPAWN_TIMER;
     }
 }
 
@@ -60,11 +84,14 @@ int main(void)
         cubes[i].exist = 0;
     }
     
-    // OTHER ----------------------------------------------------------------------------------
     struct Ray r1;
     r1.position = (Vector3){0,0,0};
     r1.direction = (Vector3){10,10,0};
     Color r1Color = WHITE;
+
+    // for (int i = 0; i < ENTITY_LIMIT; i++){
+    //     entities[i] = CreateEntity(i, (Vector3){GetRandomValue(0,3),GetRandomValue(0,3),GetRandomValue(0,3)});
+    // }
     
     // struct BoundingBox b1;
     // b1.min = (Vector3){0,0,0};
@@ -81,7 +108,7 @@ int main(void)
         dt = GetFrameTime();
         timePassed += dt;
         
-        // INPUT --------------------------------------------------------------------------
+        // @INPUT --------------------------------------------------------------------------
         // Switch camera mode
         if (IsKeyPressed(KEY_ONE)){ myDebug = !myDebug; }
         if (IsKeyPressed(KEY_TWO)){ SetTargetFPS(60); }
@@ -135,42 +162,45 @@ int main(void)
         float newYaw = mousePositionDelta.x*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
         float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
         
-        // UPDATE -----------------------------------------------------------------------
+        // @UPDATE -----------------------------------------------------------------------
 
-        // UpdateCamera(&camera, cameraMode);
+        HallwayEntitySpawnTicker();
+        
+        for (int i = 0; i < ENTITY_LIMIT; i++){
+            UpdateEntity(hall_entities[i]);
+        }
+
         UpdateCameraPro(&camera, 
             (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
             (Vector3){ newYaw, newPitch, 0.0f }, // added rot
             0.0f); // zoom
-            
-        // Update MY TRI
-            // myTriOne = Vector3RotateByAxisAngle(myTriOne,myTriCenter, 0.1f);
-            // myTriTwo = Vector3RotateByAxisAngle(myTriTwo,myTriCenter, 0.1f);
-            // myTriThree = Vector3RotateByAxisAngle(myTriThree,myTriCenter, 0.1f);
         
-        // UpdateStructCube(speedCube, (Vector3){ 1.0f*dt,0,0 });
+        // @COLLISION ---------------------------------------------------------------------
+
+            for (int i = 0; i < ENTITY_LIMIT; i++){
+                if (hall_entities[i] == NULL) continue;
+                if (hall_entities[i]->position.z > 5){
+                    DestroyEntity(hall_entities[i]);
+                    hall_entities[i] = NULL;
+                }
+            }
         
-        CubeSpawnTicker();
-        for (int i = 0; i < CUBE_LIMIT; i++){
-            Update_Cube(cubes, i, dt, (Vector3){0,0,0});
-        }
-        
-        // COLLISION ---------------------------------------------------------------------
-        for (int i = 0; i < CUBE_LIMIT; i++){
-            Check_Cube(cubes, i, r1);
-        }
-        
-        // DRAW --------------------------------------------------------------------------
+        // @DRAW --------------------------------------------------------------------------
+
         BeginDrawing();
             ClearBackground(DARKBLUE);
             BeginMode3D(camera);
             // Grid
             DrawGrid(20,1.0f);
             // Ground
-            DrawPlane((Vector3){ 0.0f, -1.0f, 0.0f }, (Vector2){ 100.0f, 100.0f }, LIME);
+            DrawPlane((Vector3){ 0.0f, -0.01f, 0.0f }, (Vector2){ 20.0f, 20.0f }, DARKGRAY);
             // Sun
             DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW); 
             DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE); 
+
+            for (int i = 0; i < ENTITY_LIMIT; i++){
+                DrawEntity(hall_entities[i]);
+            }  
             
             // Debug axis
             if (myDebug){   
@@ -203,13 +233,6 @@ int main(void)
             r1Color = (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) ? RED : WHITE;
             DrawRay(r1,r1Color);
             
-            // Draw Cubes
-            for (int i = 0; i < CUBE_LIMIT; i++){
-                Draw_Cube(cubes, i);
-            }
-            
-            Poly_CUD(polys, POLY_LIMIT);
-            
             EndMode3D(); // ----------------------------------------------------------------
             
             // Draw HUD
@@ -219,7 +242,7 @@ int main(void)
             
             DrawText("Move keys: W, A, S, D, Space, Left-Ctrl", 15, 15, 10, BLACK);
             DrawText(TextFormat("Time Passed - %0.2f", timePassed),15, 30, 10, BLACK);
-            DrawText(TextFormat("TargetFPS - %d", GetFPS()), 15, 45, 10, BLACK);
+            DrawText(TextFormat("Current FPS - %d", GetFPS()), 15, 45, 10, BLACK);
             
             //Right side
             DrawRectangle(1080, 5, 195, 100, Fade(SKYBLUE, 0.5f));

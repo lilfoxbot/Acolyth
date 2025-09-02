@@ -1,34 +1,35 @@
-// entity.c
-#include "entity.h" // Include the header file for declarations
-#include <stdlib.h> // For malloc/free
-#include <stdio.h>  // For printf, if needed for debugging/logging
+#include "entity.h" 
+#include <stdlib.h>
+#include <stdio.h>
 
-Entity* createEntity(int id, Vector3 position) {
-        Entity* newEntity = (Entity*)malloc(sizeof(Entity));
-        if (newEntity != NULL) {
-            newEntity->id = id;
-            newEntity->position = position;
-            newEntity->isActive = true;
-        }
-        return newEntity;
+Entity* CreateEntity(int id, Vector3 position) {
+    Entity* newEntity = (Entity*)malloc(sizeof(Entity));
+    if (newEntity != NULL) {
+        newEntity->id = id;
+        newEntity->position = position;
+        newEntity->velocity = (Vector3){0,0,0.05f};
+        newEntity->size = (Vector3){1,GetRandomValue(1,4),1};
+        newEntity->isActive = true;
+        newEntity->hasModel = false;
     }
+    return newEntity;
+}
 
-    void destroyEntity(Entity* entity) {
-        if (entity != NULL) {
-            free(entity);
-        }
+void DestroyEntity(Entity* entity) {
+    if (entity != NULL) {
+        free(entity);
     }
+}
 
-    void updateEntity(Entity* entity, float deltaTime) {
-        if (entity != NULL && entity->isActive) {
-            // Update logic here
-            //entity->x += 1.0 * deltaTime; // Example: move right
-        }
+void UpdateEntity(Entity* entity) {
+    if (entity != NULL && entity->isActive) {
+        entity->position = Vector3Add(entity->position, entity->velocity);
     }
+}
 
-    void renderEntity(const Entity* entity) {
-        if (entity != NULL && entity->isActive) {
-            // Rendering logic here (e.g., print position)
-            //printf("Entity %d at (%.2f, %.2f)\n", entity->id, entity->x, entity->y);
-        }
+void DrawEntity(const Entity* entity) {
+    if (entity != NULL && entity->isActive && !entity->hasModel) {
+        DrawCube(entity->position, entity->size.x, entity->size.y, entity->size.z, SKYBLUE);
+        DrawCubeWires(entity->position, entity->size.x, entity->size.y, entity->size.z, BLACK);
     }
+}

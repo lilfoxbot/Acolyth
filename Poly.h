@@ -38,7 +38,6 @@ void Destroy_Poly(struct _Poly *polyArr, int i){
     polyArr[i].exist = 0;
 }
 
-
 void Spawn_Poly(struct _Poly *polyArr, int arrSize, Vector3 startPos){
     for (int i = 0; i < arrSize; i++){
         if (polyArr[i].exist != 1){

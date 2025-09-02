@@ -4,19 +4,18 @@
 #include "raymath.h"
 #include <stdio.h>
 
-#ifndef ENTITY_H
-#define ENTITY_H
-
-typedef struct {
+typedef struct Entity {
     int id;
     Vector3 position;
+    Vector3 velocity;
+    Vector3 size;
     bool isActive;
+    bool hasModel;
 } Entity;
 
-// Function declarations related to Entity management
-Entity* createEntity(int id, Vector3 position);
-void destroyEntity(Entity* entity);
-void updateEntity(Entity* entity, float deltaTime);
-void renderEntity(const Entity* entity);
+const float ENTITY_PLACEHOLDER_SIZE = 1;
 
-#endif // ENTITY_H
+Entity* CreateEntity(int id, Vector3 position);
+void DestroyEntity(Entity* entity);
+void UpdateEntity(Entity* entity);
+void DrawEntity(const Entity* entity);
