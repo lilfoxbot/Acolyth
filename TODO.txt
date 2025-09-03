@@ -1,7 +1,7 @@
 
--world generator (hallway of cubes)
-- spawn in pairs
-- slight variation in color
+- little level builder:
+    -multiple saves
+    -color picker for blocks?
 
 -importing models
 

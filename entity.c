@@ -8,9 +8,10 @@ Entity* CreateEntity(int id, Vector3 position) {
         newEntity->id = id;
         newEntity->position = position;
         newEntity->velocity = (Vector3){0,0,0.05f};
-        newEntity->size = (Vector3){1,GetRandomValue(1,4),1};
+        newEntity->size = (Vector3){1,1,1};
         newEntity->isActive = true;
         newEntity->hasModel = false;
+        newEntity->color = (Color){ GetRandomValue(100,255), GetRandomValue(100,255), GetRandomValue(100,255), 255 };
     }
     return newEntity;
 }
@@ -29,7 +30,7 @@ void UpdateEntity(Entity* entity) {
 
 void DrawEntity(const Entity* entity) {
     if (entity != NULL && entity->isActive && !entity->hasModel) {
-        DrawCube(entity->position, entity->size.x, entity->size.y, entity->size.z, SKYBLUE);
+        DrawCube(entity->position, entity->size.x, entity->size.y, entity->size.z, entity->color);
         DrawCubeWires(entity->position, entity->size.x, entity->size.y, entity->size.z, BLACK);
     }
 }

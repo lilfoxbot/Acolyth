@@ -11,6 +11,7 @@ typedef struct Entity {
     Vector3 size;
     bool isActive;
     bool hasModel;
+    Color color;
 } Entity;
 
 const float ENTITY_PLACEHOLDER_SIZE = 1;

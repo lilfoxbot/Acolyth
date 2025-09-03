@@ -2,6 +2,7 @@
 #include "rcamera.h"
 #include "raymath.h"
 #include <stdio.h>
+#include <string.h>
 
 #include "poly.h"
 #include "cube.h"
@@ -33,14 +34,8 @@ float timePassed = 0;
 struct _Cube cubes[CUBE_LIMIT];
 struct _Poly polys[POLY_LIMIT];
 struct Entity* hall_entities[ENTITY_LIMIT];
-
-void CubeSpawnTicker(){
-    cubeSpawn -= dt;
-    if (cubeSpawn <= 0){
-        Spawn_Cube(cubes, CUBE_LIMIT);
-        cubeSpawn = 1.0f;
-    }
-}
+struct Entity* block_entities[ENTITY_LIMIT];
+struct Entity* control_block = NULL;
 
 int FindFreeEntitySlot(struct Entity* entityArr[], int arrSize){
     for (int i = 0; i < ENTITY_LIMIT; i++){
@@ -56,7 +51,7 @@ void HallwayEntitySpawnTicker(){
     if (entitySpawnTick <= 0){
         int i = FindFreeEntitySlot(hall_entities, ENTITY_LIMIT);
         if (i == -1) return;
-        hall_entities[i] = CreateEntity(i, (Vector3){GetRandomValue(-5,5),GetRandomValue(0,3), -50});
+        hall_entities[i] = CreateEntity(i, (Vector3){-4, GetRandomValue(0,3), -50});
         entitySpawnTick = ENTITY_SPAWN_TIMER;
     }
 }
@@ -88,10 +83,6 @@ int main(void)
     r1.position = (Vector3){0,0,0};
     r1.direction = (Vector3){10,10,0};
     Color r1Color = WHITE;
-
-    // for (int i = 0; i < ENTITY_LIMIT; i++){
-    //     entities[i] = CreateEntity(i, (Vector3){GetRandomValue(0,3),GetRandomValue(0,3),GetRandomValue(0,3)});
-    // }
     
     // struct BoundingBox b1;
     // b1.min = (Vector3){0,0,0};
@@ -116,8 +107,7 @@ int main(void)
 
         // Switch camera projection
         if (IsKeyPressed(KEY_P)){
-            if (camera.projection == CAMERA_PERSPECTIVE)
-            {
+            if (camera.projection == CAMERA_PERSPECTIVE){
                 // Create isometric view
                 cameraMode = CAMERA_THIRD_PERSON;
                 // Note: The target distance is related to the render distance in the orthographic projection
@@ -128,9 +118,7 @@ int main(void)
                 camera.fovy = 20.0f; // near plane width in CAMERA_ORTHOGRAPHIC
                 CameraYaw(&camera, -135 * DEG2RAD, true);
                 CameraPitch(&camera, -45 * DEG2RAD, true, true, false);
-            }
-            else if (camera.projection == CAMERA_ORTHOGRAPHIC)
-            {
+            } else if (camera.projection == CAMERA_ORTHOGRAPHIC) {
                 // Reset to default view
                 cameraMode = CAMERA_THIRD_PERSON;
                 camera.position = (Vector3){ 0.0f, 2.0f, 10.0f };
@@ -162,9 +150,78 @@ int main(void)
         float newYaw = mousePositionDelta.x*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
         float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
         
+        // Save block entity positions to text file
+        if (IsKeyPressed(KEY_KP_DECIMAL)){
+            char outString[1000] = "";
+            // compile string of entity positions
+            for (int i = 0; i < ENTITY_LIMIT; i++){
+                if (block_entities[i] == NULL) break;
+                strcat(outString, TextFormat("%0.2f,%0.2f,%0.2f\n", block_entities[i]->position.x, block_entities[i]->position.y, block_entities[i]->position.z));
+            }
+            strcat(outString, "\0");
+            SaveFileText("entity_pos.txt", outString);
+        }
+        
+        // Load block entity positions from text file
+        if (IsKeyPressed(KEY_KP_MULTIPLY)){
+            char* inString = LoadFileText("entity_pos.txt");
+            char* line = strtok(inString, "\n");
+            int i = 0;
+            while (line != NULL && i < ENTITY_LIMIT){
+                float x, y, z;
+                sscanf(line, "%f,%f,%f", &x, &y, &z);
+                if (block_entities[i] == NULL){
+                    block_entities[i] = CreateEntity(i, (Vector3){x,y,z});
+                } else {
+                    block_entities[i]->position = (Vector3){x,y,z};
+                }
+                line = strtok(NULL, "\n");
+                i++;
+            }
+            UnloadFileText(inString);
+        }
+
+        // create placeable block
+        if (IsKeyPressed(KEY_KP_ADD)){
+            int i = FindFreeEntitySlot(block_entities, ENTITY_LIMIT);
+            if (i == -1) return -1;
+            block_entities[i] = CreateEntity(i, (Vector3){0,0,0});
+            control_block = block_entities[i];
+            
+        }
+
+        // Undo
+        if (IsKeyPressed(KEY_KP_SUBTRACT)){
+            for (int i = ENTITY_LIMIT-1; i >= 0; i--){
+                if (block_entities[i] != NULL){
+                    DestroyEntity(block_entities[i]);
+                    block_entities[i] = NULL;
+                    break;
+                }
+            }
+        }
+
+        // Clear all blocks 
+        if (IsKeyPressed(KEY_KP_DIVIDE)){
+            for (int i = 0; i < ENTITY_LIMIT; i++){
+                if (block_entities[i] != NULL){
+                    DestroyEntity(block_entities[i]);
+                    block_entities[i] = NULL;
+                }
+            }
+            control_block = NULL;
+        }
+
+        if (IsKeyPressed(KEY_KP_8)){ if (control_block != NULL) control_block->position.z -= 1; }
+        if (IsKeyPressed(KEY_KP_5)){ if (control_block != NULL) control_block->position.z += 1; }
+        if (IsKeyPressed(KEY_KP_4)){ if (control_block != NULL) control_block->position.x -= 1; }
+        if (IsKeyPressed(KEY_KP_6)){ if (control_block != NULL) control_block->position.x += 1; }
+        if (IsKeyPressed(KEY_KP_7)){ if (control_block != NULL) control_block->position.y += 1; }
+        if (IsKeyPressed(KEY_KP_1)){ if (control_block != NULL) control_block->position.y -= 1; }
+        
         // @UPDATE -----------------------------------------------------------------------
 
-        HallwayEntitySpawnTicker();
+        //HallwayEntitySpawnTicker();
         
         for (int i = 0; i < ENTITY_LIMIT; i++){
             UpdateEntity(hall_entities[i]);
@@ -193,13 +250,14 @@ int main(void)
             // Grid
             DrawGrid(20,1.0f);
             // Ground
-            DrawPlane((Vector3){ 0.0f, -0.01f, 0.0f }, (Vector2){ 20.0f, 20.0f }, DARKGRAY);
+            DrawPlane((Vector3){ 0.0f, -1.0f, 0.0f }, (Vector2){ 20.0f, 20.0f }, DARKGRAY);
             // Sun
             DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW); 
             DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE); 
 
             for (int i = 0; i < ENTITY_LIMIT; i++){
                 DrawEntity(hall_entities[i]);
+                DrawEntity(block_entities[i]);
             }  
             
             // Debug axis
