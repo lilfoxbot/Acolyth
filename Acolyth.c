@@ -30,6 +30,7 @@ float armSpeed = 0.05f;
 int score = 0;
 float dt = 0;
 float timePassed = 0;
+int saveIndex = 0;
 
 struct _Cube cubes[CUBE_LIMIT];
 struct _Poly polys[POLY_LIMIT];
@@ -100,6 +101,16 @@ int main(void)
         timePassed += dt;
         
         // @INPUT --------------------------------------------------------------------------
+
+        if (IsKeyPressed(KEY_PAGE_UP)){
+            saveIndex++;
+            Clamp(saveIndex, 0, 9);
+        }
+        if (IsKeyPressed(KEY_PAGE_DOWN)){
+            saveIndex--;
+            Clamp(saveIndex, 0, 9);
+        }
+
         // Switch camera mode
         if (IsKeyPressed(KEY_ONE)){ myDebug = !myDebug; }
         if (IsKeyPressed(KEY_TWO)){ SetTargetFPS(60); }
@@ -140,11 +151,6 @@ int main(void)
         if (IsKeyDown(KEY_SPACE)) newUp += camSpeed;
         if (IsKeyDown(KEY_LEFT_CONTROL)) newUp -= camSpeed;
         
-        if (IsKeyDown(KEY_LEFT)) armX -= armSpeed;
-        if (IsKeyDown(KEY_RIGHT)) armX += armSpeed;
-        if (IsKeyDown(KEY_UP)) armY += armSpeed;
-        if (IsKeyDown(KEY_DOWN)) armY -= armSpeed;
-        
         // new camera rotation
         Vector2 mousePositionDelta = GetMouseDelta();
         float newYaw = mousePositionDelta.x*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
@@ -153,18 +159,22 @@ int main(void)
         // Save block entity positions to text file
         if (IsKeyPressed(KEY_KP_DECIMAL)){
             char outString[1000] = "";
+            char saveFileString[50] = "save";
             // compile string of entity positions
             for (int i = 0; i < ENTITY_LIMIT; i++){
                 if (block_entities[i] == NULL) break;
                 strcat(outString, TextFormat("%0.2f,%0.2f,%0.2f\n", block_entities[i]->position.x, block_entities[i]->position.y, block_entities[i]->position.z));
             }
             strcat(outString, "\0");
-            SaveFileText("entity_pos.txt", outString);
+            strcat(saveFileString, TextFormat("%d.txt", saveIndex));
+            SaveFileText(saveFileString, outString);
         }
         
         // Load block entity positions from text file
         if (IsKeyPressed(KEY_KP_MULTIPLY)){
-            char* inString = LoadFileText("entity_pos.txt");
+            char saveFileString[50] = "save";
+            strcat(saveFileString, TextFormat("%d.txt", saveIndex));
+            char* inString = LoadFileText(saveFileString);
             char* line = strtok(inString, "\n");
             int i = 0;
             while (line != NULL && i < ENTITY_LIMIT){
@@ -312,7 +322,8 @@ int main(void)
                                               (cameraMode == CAMERA_THIRD_PERSON) ? "THIRD_PERSON" :
                                               (cameraMode == CAMERA_ORBITAL) ? "ORBITAL" : "CUSTOM"), 1090, 30, 10, BLACK);
             DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f",camera.target.x,camera.target.y,camera.target.z), 1090, 45, 10, BLACK);
-            DrawText(TextFormat("Score = %d", score), 1090, 60, 10, BLACK);
+            DrawText(TextFormat("SaveFile = %d", saveIndex), 1090, 60, 10, BLACK);
+            //DrawText(TextFormat("Score = %d", score), 1090, 60, 10, BLACK);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
