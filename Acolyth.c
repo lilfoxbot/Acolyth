@@ -15,7 +15,7 @@
 #define CUBE_LIMIT 10
 #define TRI_LIMIT 50
 #define POLY_LIMIT 100
-#define ENTITY_LIMIT 50
+#define ENTITY_LIMIT 100
 
 #define ENTITY_SPAWN_TIMER 1.0f
 float entitySpawnTick = 1.0f;
@@ -47,16 +47,6 @@ int FindFreeEntitySlot(struct Entity* entityArr[], int arrSize){
     return -1;
 }
 
-void HallwayEntitySpawnTicker(){
-    entitySpawnTick -= dt;
-    if (entitySpawnTick <= 0){
-        int i = FindFreeEntitySlot(hall_entities, ENTITY_LIMIT);
-        if (i == -1) return;
-        hall_entities[i] = CreateEntity(i, (Vector3){-4, GetRandomValue(0,3), -50});
-        entitySpawnTick = ENTITY_SPAWN_TIMER;
-    }
-}
-
 int main(void)
 {
     const int screenWidth = 1280;
@@ -84,6 +74,11 @@ int main(void)
     r1.position = (Vector3){0,0,0};
     r1.direction = (Vector3){10,10,0};
     Color r1Color = WHITE;
+
+    Mesh myMesh = GenMeshCube(1, 1, 1);
+    Model placeHolderModel = LoadModelFromMesh(myMesh);
+
+    Model myModel = LoadModel("resources/models/myCube.obj");
     
     // struct BoundingBox b1;
     // b1.min = (Vector3){0,0,0};
@@ -181,7 +176,7 @@ int main(void)
                 float x, y, z;
                 sscanf(line, "%f,%f,%f", &x, &y, &z);
                 if (block_entities[i] == NULL){
-                    block_entities[i] = CreateEntity(i, (Vector3){x,y,z});
+                    block_entities[i] = CreateEntity(i, (Vector3){x,y,z}, placeHolderModel);
                 } else {
                     block_entities[i]->position = (Vector3){x,y,z};
                 }
@@ -194,8 +189,8 @@ int main(void)
         // create placeable block
         if (IsKeyPressed(KEY_KP_ADD)){
             int i = FindFreeEntitySlot(block_entities, ENTITY_LIMIT);
-            if (i == -1) return -1;
-            block_entities[i] = CreateEntity(i, (Vector3){0,0,0});
+            if (i == -1) break;
+            block_entities[i] = CreateEntity(i, (Vector3){0,0,0}, placeHolderModel);
             control_block = block_entities[i];
             
         }
@@ -263,7 +258,13 @@ int main(void)
             DrawPlane((Vector3){ 0.0f, -1.0f, 0.0f }, (Vector2){ 20.0f, 20.0f }, DARKGRAY);
             // Sun
             DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW); 
-            DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE); 
+            DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE);
+
+            DrawModel(myModel, (Vector3){-2,0,-5}, 1.0f, RED);
+            DrawModelWires(myModel, (Vector3){-2,0,-5}, 1.0f, BLACK);
+
+            DrawModelEx(myModel, (Vector3){2,0,-5}, (Vector3){0,1,0}, 45.0f, (Vector3){1,1,1}, BLUE);
+            DrawModelWiresEx(myModel, (Vector3){2,0,-5}, (Vector3){0,1,0}, 45.0f, (Vector3){1,1,1}, BLACK);
 
             for (int i = 0; i < ENTITY_LIMIT; i++){
                 DrawEntity(hall_entities[i]);

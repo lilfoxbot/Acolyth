@@ -1,8 +1,5 @@
 
-- little level builder:
-    -multiple saves
-    -color picker for blocks?
+entity rotations
 
--importing models
-
--reset scene hotkey
+-collision
+-shooting and exploding

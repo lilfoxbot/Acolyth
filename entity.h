@@ -10,13 +10,13 @@ typedef struct Entity {
     Vector3 velocity;
     Vector3 size;
     bool isActive;
-    bool hasModel;
+    Model model;
     Color color;
 } Entity;
 
 const float ENTITY_PLACEHOLDER_SIZE = 1;
 
-Entity* CreateEntity(int id, Vector3 position);
+Entity* CreateEntity(int id, Vector3 position, Model model);
 void DestroyEntity(Entity* entity);
 void UpdateEntity(Entity* entity);
 void DrawEntity(const Entity* entity);
