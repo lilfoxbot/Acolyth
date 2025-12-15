@@ -78,7 +78,7 @@ int main(void)
     Mesh myMesh = GenMeshCube(1, 1, 1);
     Model placeHolderModel = LoadModelFromMesh(myMesh);
 
-    Model myModel = LoadModel("resources/models/myCube.obj");
+    //Model myModel = LoadModel("resources/models/myCube.obj");
     
     // struct BoundingBox b1;
     // b1.min = (Vector3){0,0,0};
@@ -260,11 +260,11 @@ int main(void)
             DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW); 
             DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE);
 
-            DrawModel(myModel, (Vector3){-2,0,-5}, 1.0f, RED);
-            DrawModelWires(myModel, (Vector3){-2,0,-5}, 1.0f, BLACK);
+            // DrawModel(myModel, (Vector3){-2,0,-5}, 1.0f, RED);
+            // DrawModelWires(myModel, (Vector3){-2,0,-5}, 1.0f, BLACK);
 
-            DrawModelEx(myModel, (Vector3){2,0,-5}, (Vector3){0,1,0}, 45.0f, (Vector3){1,1,1}, BLUE);
-            DrawModelWiresEx(myModel, (Vector3){2,0,-5}, (Vector3){0,1,0}, 45.0f, (Vector3){1,1,1}, BLACK);
+            // DrawModelEx(myModel, (Vector3){2,0,-5}, (Vector3){0,1,0}, 45.0f, (Vector3){1,1,1}, BLUE);
+            // DrawModelWiresEx(myModel, (Vector3){2,0,-5}, (Vector3){0,1,0}, 45.0f, (Vector3){1,1,1}, BLACK);
 
             for (int i = 0; i < ENTITY_LIMIT; i++){
                 DrawEntity(hall_entities[i]);

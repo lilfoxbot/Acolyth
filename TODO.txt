@@ -1,5 +1,6 @@
-
-entity rotations
+- build levels with mouse?
+    - mouse cursor
+    - collision on grid from mouse
 
 -collision
 -shooting and exploding
