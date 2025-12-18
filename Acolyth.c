@@ -6,6 +6,7 @@
 
 #include "poly.h"
 #include "cube.h"
+#include "levelgrid.h"
 #include "entity.c"
 
 #define RAYMATH_IMPLEMENTATION
@@ -34,6 +35,12 @@ int saveIndex = 0;
 
 struct _Cube cubes[CUBE_LIMIT];
 struct _Poly polys[POLY_LIMIT];
+
+const int LEVEL_GRID_ROWS = 10;
+const int LEVEL_GRID_COLS = 10;
+const float LEVEL_GRID_CELL_SIZE = 1.0f;
+
+struct _LevelGrid levelGrid;
 struct Entity* hall_entities[ENTITY_LIMIT];
 struct Entity* block_entities[ENTITY_LIMIT];
 struct Entity* control_block = NULL;
@@ -47,7 +54,7 @@ int FindFreeEntitySlot(struct Entity* entityArr[], int arrSize){
     return -1;
 }
 
-int main(void)
+int main(void) // @init
 {
     const int screenWidth = 1280;
     const int screenHeight = 720;
@@ -77,6 +84,19 @@ int main(void)
 
     Mesh myMesh = GenMeshCube(1, 1, 1);
     Model placeHolderModel = LoadModelFromMesh(myMesh);
+    
+    struct _LevelCell levelCells[InitLevelGrid(&levelGrid, LEVEL_GRID_ROWS, LEVEL_GRID_COLS, LEVEL_GRID_CELL_SIZE)];
+    // allocate level cells
+    for (int r = 0; r < LEVEL_GRID_ROWS; r++){
+        for (int c = 0; c < LEVEL_GRID_COLS; c++){
+            int cellIndex = r * LEVEL_GRID_COLS + c;
+            levelCells[cellIndex].exist = 1;
+            levelCells[cellIndex].position = (Vector3){0,0,0};
+            levelCells[cellIndex].size = (Vector3){ LEVEL_GRID_CELL_SIZE, LEVEL_GRID_CELL_SIZE, LEVEL_GRID_CELL_SIZE};
+            levelCells[cellIndex].bb.min = Vector3Add(levelCells[cellIndex].position, (Vector3){-(levelCells[cellIndex].size.x/2),-(levelCells[cellIndex].size.y/2),-(levelCells[cellIndex].size.z/2)});
+            levelCells[cellIndex].bb.max = Vector3Add(levelCells[cellIndex].position, (Vector3){(levelCells[cellIndex].size.x/2),(levelCells[cellIndex].size.y/2),(levelCells[cellIndex].size.z/2)});
+        }
+    }
 
     //Model myModel = LoadModel("resources/models/myCube.obj");
     
@@ -85,9 +105,9 @@ int main(void)
     // b1.max = (Vector3){5,5,5};
     
     // READY ----------------------------------------------------------------------------------
-    // printf("\n");
-    // printf(TextFormat("%d", CUBE_LIMIT)));
-    // printf("\n");
+    printf("\n");
+    printf(TextFormat("%d", sizeof(levelCells) / sizeof(levelCells[0])));
+    printf("\n");
 
     // MAIN GAME LOOP ---------------------------------------------------------------------
     while (!WindowShouldClose())        // Detect window close button or ESC key
@@ -252,22 +272,19 @@ int main(void)
         BeginDrawing();
             ClearBackground(DARKBLUE);
             BeginMode3D(camera);
-            // Grid
-            DrawGrid(20,1.0f);
-            // Ground
-            DrawPlane((Vector3){ 0.0f, -1.0f, 0.0f }, (Vector2){ 20.0f, 20.0f }, DARKGRAY);
-            // Sun
+            
+            // North Star
             DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW); 
             DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE);
-
-            // DrawModel(myModel, (Vector3){-2,0,-5}, 1.0f, RED);
-            // DrawModelWires(myModel, (Vector3){-2,0,-5}, 1.0f, BLACK);
-
-            // DrawModelEx(myModel, (Vector3){2,0,-5}, (Vector3){0,1,0}, 45.0f, (Vector3){1,1,1}, BLUE);
-            // DrawModelWiresEx(myModel, (Vector3){2,0,-5}, (Vector3){0,1,0}, 45.0f, (Vector3){1,1,1}, BLACK);
+            
+            // @Grid
+            // Level Grid Cells
+            DrawLevelGrid(&levelGrid);
+            for (int i = 0; i < LEVEL_GRID_ROWS * LEVEL_GRID_COLS; i++){
+                DrawCell(&levelCells[i]);
+            }
 
             for (int i = 0; i < ENTITY_LIMIT; i++){
-                DrawEntity(hall_entities[i]);
                 DrawEntity(block_entities[i]);
             }  
             
@@ -292,7 +309,7 @@ int main(void)
             //Vector3 camR = GetCameraRight(&camera);
             //Vector3 camU = GetCameraUp(&camera);
             
-            // My ARM?!
+            // Cursor Ray
             Vector3 myTargetBegin = GetCameraRight(&camera);
             myTargetBegin = Vector3Scale(myTargetBegin, 0.5f);
             myTargetBegin = Vector3Add(myTargetBegin, Vector3Add(camera.position, (Vector3){0,-0.5f,0}));
@@ -304,6 +321,10 @@ int main(void)
             
             EndMode3D(); // ----------------------------------------------------------------
             
+            // Draw Crosshair
+            //DrawLine(screenWidth/2 - 5, screenHeight/2, screenWidth/2 + 4, screenHeight/2, BLACK);
+            //DrawLine(screenWidth/2, screenHeight/2 - 5, screenWidth/2, screenHeight/2 + 6, BLACK);
+
             // Draw HUD
             // Left side
             DrawRectangle(5, 5, 330, 100, Fade(SKYBLUE, 0.5f));
@@ -322,9 +343,10 @@ int main(void)
                                               (cameraMode == CAMERA_FIRST_PERSON) ? "FIRST_PERSON" :
                                               (cameraMode == CAMERA_THIRD_PERSON) ? "THIRD_PERSON" :
                                               (cameraMode == CAMERA_ORBITAL) ? "ORBITAL" : "CUSTOM"), 1090, 30, 10, BLACK);
-            DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f",camera.target.x,camera.target.y,camera.target.z), 1090, 45, 10, BLACK);
+            DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f", camera.target.x, camera.target.y, camera.target.z), 1090, 45, 10, BLACK);
             DrawText(TextFormat("SaveFile = %d", saveIndex), 1090, 60, 10, BLACK);
-            //DrawText(TextFormat("Score = %d", score), 1090, 60, 10, BLACK);
+            if (control_block != NULL)
+            DrawText(TextFormat("ControlBlockPos = %0.1f - %0.1f - %0.1f", control_block->position.x,control_block->position.y,control_block->position.z), 1090, 75, 10, BLACK);
 
         EndDrawing();
         //----------------------------------------------------------------------------------

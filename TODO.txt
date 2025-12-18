@@ -1,6 +1,4 @@
 - build levels with mouse?
-    - mouse cursor
-    - collision on grid from mouse
+    - grid with cells that highlight when targeted with player ray
 
--collision
--shooting and exploding
+-shoot projectiles
