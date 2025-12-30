@@ -7,6 +7,7 @@
 #include "poly.h"
 #include "cube.h"
 #include "levelgrid.h"
+#include "octree.h"
 #include "entity.c"
 
 #define RAYMATH_IMPLEMENTATION
@@ -59,7 +60,7 @@ int main(void) // @init
     const int screenWidth = 1280;
     const int screenHeight = 720;
 
-    InitWindow(screenWidth, screenHeight, "Acolyth");
+    InitWindow(screenWidth, screenHeight, "Tandem");
     DisableCursor();                    // Limit cursor to relative movement inside the window
     SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
 
@@ -87,16 +88,26 @@ int main(void) // @init
     
     struct _LevelCell levelCells[InitLevelGrid(&levelGrid, LEVEL_GRID_ROWS, LEVEL_GRID_COLS, LEVEL_GRID_CELL_SIZE)];
     // allocate level cells
-    for (int r = 0; r < LEVEL_GRID_ROWS; r++){
-        for (int c = 0; c < LEVEL_GRID_COLS; c++){
-            int cellIndex = r * LEVEL_GRID_COLS + c;
-            levelCells[cellIndex].exist = 1;
-            levelCells[cellIndex].position = (Vector3){0,0,0};
-            levelCells[cellIndex].size = (Vector3){ LEVEL_GRID_CELL_SIZE, LEVEL_GRID_CELL_SIZE, LEVEL_GRID_CELL_SIZE};
-            levelCells[cellIndex].bb.min = Vector3Add(levelCells[cellIndex].position, (Vector3){-(levelCells[cellIndex].size.x/2),-(levelCells[cellIndex].size.y/2),-(levelCells[cellIndex].size.z/2)});
-            levelCells[cellIndex].bb.max = Vector3Add(levelCells[cellIndex].position, (Vector3){(levelCells[cellIndex].size.x/2),(levelCells[cellIndex].size.y/2),(levelCells[cellIndex].size.z/2)});
+    for (int r = -5; r < 5; r++){
+        for (int c = -5; c < 5; c++){
+            levelCells[levelGrid.cellCount].exist = true;
+            levelCells[levelGrid.cellCount].color = WHITE;
+            levelCells[levelGrid.cellCount].position = (Vector3){r+0.5f,0,c+0.5f};
+            levelCells[levelGrid.cellCount].size = (Vector3){ LEVEL_GRID_CELL_SIZE, LEVEL_GRID_CELL_SIZE, LEVEL_GRID_CELL_SIZE};
+            levelCells[levelGrid.cellCount].bb.min = Vector3Add(levelCells[levelGrid.cellCount].position, 
+                                            (Vector3){-(levelCells[levelGrid.cellCount].size.x/2),
+                                                    -(levelCells[levelGrid.cellCount].size.y/2),
+                                                    -(levelCells[levelGrid.cellCount].size.z/2)});
+            levelCells[levelGrid.cellCount].bb.max = Vector3Add(levelCells[levelGrid.cellCount].position, 
+                                            (Vector3){(levelCells[levelGrid.cellCount].size.x/2),
+                                                    (levelCells[levelGrid.cellCount].size.y/2),
+                                                    (levelCells[levelGrid.cellCount].size.z/2)});
+
+            levelGrid.cellCount++;
         }
     }
+
+    OctreeNode* root = createNode(0, 0, 0, 100, 100, 100);
 
     //Model myModel = LoadModel("resources/models/myCube.obj");
     
@@ -156,6 +167,7 @@ int main(void) // @init
         }
         
         // camera movement/input
+        camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
         float newForward = 0;
         float newRight = 0;
         float newUp = 0;
@@ -212,7 +224,6 @@ int main(void) // @init
             if (i == -1) break;
             block_entities[i] = CreateEntity(i, (Vector3){0,0,0}, placeHolderModel);
             control_block = block_entities[i];
-            
         }
 
         // Undo
@@ -245,8 +256,6 @@ int main(void) // @init
         if (IsKeyPressed(KEY_KP_1)){ if (control_block != NULL) control_block->position.y -= 1; }
         
         // @UPDATE -----------------------------------------------------------------------
-
-        //HallwayEntitySpawnTicker();
         
         for (int i = 0; i < ENTITY_LIMIT; i++){
             UpdateEntity(hall_entities[i]);
@@ -258,14 +267,23 @@ int main(void) // @init
             0.0f); // zoom
         
         // @COLLISION ---------------------------------------------------------------------
+        
+        // for (int i = 0; i < sizeof(levelCells) / sizeof(levelCells[0]); i++){
+        //     levelCells[i].targeted = false;
+        //     levelCells[i].color = WHITE;
+        // }
 
-            for (int i = 0; i < ENTITY_LIMIT; i++){
-                if (hall_entities[i] == NULL) continue;
-                if (hall_entities[i]->position.z > 5){
-                    DestroyEntity(hall_entities[i]);
-                    hall_entities[i] = NULL;
-                }
-            }
+        // for (int i = 0; i < sizeof(levelCells) / sizeof(levelCells[0]); i++){
+        //     if (levelCells[i].exist == 1) {
+                
+        //         if (GetRayCollisionBox(r1, levelCells[i].bb).hit){
+        //             levelCells[i].color = GREEN;
+        //             levelCells[i].targeted = true;
+        //         } else {
+        //             levelCells[i].color = WHITE;
+        //         }
+        //     }
+        // }
         
         // @DRAW --------------------------------------------------------------------------
 
@@ -280,13 +298,13 @@ int main(void) // @init
             // @Grid
             // Level Grid Cells
             DrawLevelGrid(&levelGrid);
-            for (int i = 0; i < LEVEL_GRID_ROWS * LEVEL_GRID_COLS; i++){
-                DrawCell(&levelCells[i]);
-            }
+            // for (int i = 0; i < LEVEL_GRID_ROWS * LEVEL_GRID_COLS; i++){
+            //     DrawCell(&levelCells[i]);
+            // }
 
-            for (int i = 0; i < ENTITY_LIMIT; i++){
-                DrawEntity(block_entities[i]);
-            }  
+            // for (int i = 0; i < ENTITY_LIMIT; i++){
+            //     DrawEntity(block_entities[i]);
+            // }  
             
             // Debug axis
             if (myDebug){   

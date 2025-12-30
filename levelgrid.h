@@ -1,7 +1,3 @@
-/*
-*   single cube struct and functions
-*/
-
 #pragma once
 
 #include "raylib.h"
@@ -9,10 +5,12 @@
 #include <stdio.h>
 
 struct _LevelCell{
-    int exist;
+    bool exist;
+    bool targeted;
     Vector3 position;
     Vector3 size;
     struct BoundingBox bb;
+    Color color;
 };
 
 struct _LevelGrid{
@@ -26,7 +24,7 @@ int InitLevelGrid(struct _LevelGrid* grid, int rows, int cols, float cellSize){
     grid->rows = rows;
     grid->cols = cols;
     grid->cellSize = cellSize;
-    grid->cellCount = rows * cols;
+    grid->cellCount = 0;
 
     return rows * cols;
 }
@@ -37,5 +35,8 @@ void DrawLevelGrid(struct _LevelGrid* grid){
 }
 
 void DrawCell(struct _LevelCell* cell){
-    DrawBoundingBox(cell->bb, GREEN);
+    DrawBoundingBox(cell->bb, cell->color);
+    if (cell->targeted){
+        DrawCube(cell->position, cell->size.x, cell->size.y, cell->size.z, Fade(YELLOW, 0.3f));
+    }
 }
