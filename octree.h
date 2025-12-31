@@ -20,7 +20,7 @@ typedef struct OctreeNode {
 } OctreeNode;
 
 // Function to create a new OctreeNode
-OctreeNode* createNode(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+OctreeNode* CreateOctreeNode(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
     OctreeNode* node = (OctreeNode*)malloc(sizeof(OctreeNode));
     node->point = NULL; // Initially no point stored
     for (int i = 0; i < 8; i++) {
@@ -36,7 +36,7 @@ OctreeNode* createNode(int minX, int minY, int minZ, int maxX, int maxY, int max
 }
 
 // Function to determine which octant a point belongs to
-int getOctant(OctreeNode* node, Point* p) {
+int GetOctant(OctreeNode* node, Point* p) {
     int midX = (node->minX + node->maxX) / 2;
     int midY = (node->minY + node->maxY) / 2;
     int midZ = (node->minZ + node->maxZ) / 2;
@@ -61,12 +61,14 @@ int getOctant(OctreeNode* node, Point* p) {
 }
 
 // Basic insertion function
-void insert(OctreeNode* node, Point* p) {
+void InsertPointOctree(OctreeNode* node, Point* p) {
     // Check if the point is within the node's bounds
     if (p->x < node->minX || p->x > node->maxX ||
         p->y < node->minY || p->y > node->maxY ||
         p->z < node->minZ || p->z > node->maxZ) {
         return;
+    } else {
+        // Point is within bounds, proceed with insertion
     }
 
     // If this is a leaf node and doesn't have a point yet, store the point
@@ -78,25 +80,98 @@ void insert(OctreeNode* node, Point* p) {
 
     // If it has a point, and we're not at max depth, subdivide and re-insert
     // For simplicity, we just find the correct child and insert
-    int octant = getOctant(node, p);
+    int octant = GetOctant(node, p);
     if (node->children[octant] == NULL) {
         // Create new child node with appropriate bounds (omitted for brevity)
         // This is where bounds calculation for the 8 sub-regions would go
+        switch (octant) {
+            case 0: 
+                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
+                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+                break;
+            case 1: 
+                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
+                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+                break;
+            case 2: 
+                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
+                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+                break;
+            case 3:
+                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
+                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+                break;
+            case 4: 
+                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
+                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+                break;
+            case 5: 
+                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
+                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+                break;
+            case 6: 
+                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
+                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+                break;
+            case 7: // TRF
+                node->children[octant] = CreateOctreeNode(node->minX*(3/4), node->minY*(3/4), node->minZ*(3/4),
+                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+                break;
+            default:
+                break;
+        }        
+
         // For this example, we stop at the point limit of 1 per leaf
         return;
     }
-    insert(node->children[octant], p);
+    InsertPointOctree(node->children[octant], p);
+}
+
+void DrawOctreeNode(OctreeNode* node) {
+    if (node == NULL) return;
+
+    // Draw the bounding box of the current node
+    DrawCubeWires(
+        (Vector3){(node->minX + node->maxX) / 2.0f, (node->minY + node->maxY) / 2.0f, (node->minZ + node->maxZ) / 2.0f},
+        node->maxX - node->minX,
+        node->maxY - node->minY,
+        node->maxZ - node->minZ,
+        WHITE
+    );
+
+    // Recursively draw child nodes
+    for (int i = 0; i < 8; i++) {
+        DrawOctreeNode(node->children[i]);
+    }
+}
+
+void DestroyOctreeNode(OctreeNode* node) {
+    if (node == NULL) return;
+
+    // Recursively free child nodes
+    for (int i = 0; i < 8; i++) {
+        DestroyOctreeNode(node->children[i]);
+    }
+
+    // Free the current node
+    free(node);
+}
+
+void DrawPoint(Point* p) {
+    if (p == NULL) return;
+
+    DrawSphere((Vector3){(float)p->x, (float)p->y, (float)p->z}, 0.1f, RED);
 }
 
 // Example usage
 // int main() {
 //     // Create the root node with initial bounds
-//     OctreeNode* root = createNode(0, 0, 0, 100, 100, 100);
+//     OctreeNode* root = CreateOctreeNode(-5, 0, -5, 5, 5, 5);
 
 //     Point* p1 = (Point*)malloc(sizeof(Point));
-//     p1->x = 10; p1->y = 20; p1->z = 30;
+//     p1->x = 1; p1->y = 2; p1->z = 3;
 
-//     insert(root, p1);
+//     InsertPointOctree(root, p1);
 
 //     printf("Point inserted\n");
 //     // Free allocated memory in a complete program

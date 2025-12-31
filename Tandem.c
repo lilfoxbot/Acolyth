@@ -44,7 +44,8 @@ const float LEVEL_GRID_CELL_SIZE = 1.0f;
 struct _LevelGrid levelGrid;
 struct Entity* hall_entities[ENTITY_LIMIT];
 struct Entity* block_entities[ENTITY_LIMIT];
-struct Entity* control_block = NULL;
+
+Vector3 testpoint = {0,0,0};
 
 int FindFreeEntitySlot(struct Entity* entityArr[], int arrSize){
     for (int i = 0; i < ENTITY_LIMIT; i++){
@@ -55,7 +56,7 @@ int FindFreeEntitySlot(struct Entity* entityArr[], int arrSize){
     return -1;
 }
 
-int main(void) // @init
+int main(void) // @init ========================================================================
 {
     const int screenWidth = 1280;
     const int screenHeight = 720;
@@ -107,35 +108,31 @@ int main(void) // @init
         }
     }
 
-    OctreeNode* root = createNode(0, 0, 0, 100, 100, 100);
-
     //Model myModel = LoadModel("resources/models/myCube.obj");
     
     // struct BoundingBox b1;
     // b1.min = (Vector3){0,0,0};
     // b1.max = (Vector3){5,5,5};
     
-    // READY ----------------------------------------------------------------------------------
+    // READY ==========================================================================
     printf("\n");
     printf(TextFormat("%d", sizeof(levelCells) / sizeof(levelCells[0])));
     printf("\n");
 
-    // MAIN GAME LOOP ---------------------------------------------------------------------
+    // MAIN GAME LOOP ==========================================================================
     while (!WindowShouldClose())        // Detect window close button or ESC key
     {
         dt = GetFrameTime();
         timePassed += dt;
         
-        // @INPUT --------------------------------------------------------------------------
+        // @INPUT ==========================================================================
 
-        if (IsKeyPressed(KEY_PAGE_UP)){
-            saveIndex++;
-            Clamp(saveIndex, 0, 9);
-        }
-        if (IsKeyPressed(KEY_PAGE_DOWN)){
-            saveIndex--;
-            Clamp(saveIndex, 0, 9);
-        }
+        if (IsKeyDown(KEY_KP_8)){ testpoint.z -= 0.2f; }
+        if (IsKeyDown(KEY_KP_5)){ testpoint.z += 0.2f; }
+        if (IsKeyDown(KEY_KP_4)){ testpoint.x -= 0.2f; }
+        if (IsKeyDown(KEY_KP_6)){ testpoint.x += 0.2f; }
+        if (IsKeyDown(KEY_KP_7)){ testpoint.y += 0.2f; }
+        if (IsKeyDown(KEY_KP_1)){ testpoint.y -= 0.2f; }
 
         // Switch camera mode
         if (IsKeyPressed(KEY_ONE)){ myDebug = !myDebug; }
@@ -183,79 +180,7 @@ int main(void) // @init
         float newYaw = mousePositionDelta.x*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
         float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
         
-        // Save block entity positions to text file
-        if (IsKeyPressed(KEY_KP_DECIMAL)){
-            char outString[1000] = "";
-            char saveFileString[50] = "save";
-            // compile string of entity positions
-            for (int i = 0; i < ENTITY_LIMIT; i++){
-                if (block_entities[i] == NULL) break;
-                strcat(outString, TextFormat("%0.2f,%0.2f,%0.2f\n", block_entities[i]->position.x, block_entities[i]->position.y, block_entities[i]->position.z));
-            }
-            strcat(outString, "\0");
-            strcat(saveFileString, TextFormat("%d.txt", saveIndex));
-            SaveFileText(saveFileString, outString);
-        }
-        
-        // Load block entity positions from text file
-        if (IsKeyPressed(KEY_KP_MULTIPLY)){
-            char saveFileString[50] = "save";
-            strcat(saveFileString, TextFormat("%d.txt", saveIndex));
-            char* inString = LoadFileText(saveFileString);
-            char* line = strtok(inString, "\n");
-            int i = 0;
-            while (line != NULL && i < ENTITY_LIMIT){
-                float x, y, z;
-                sscanf(line, "%f,%f,%f", &x, &y, &z);
-                if (block_entities[i] == NULL){
-                    block_entities[i] = CreateEntity(i, (Vector3){x,y,z}, placeHolderModel);
-                } else {
-                    block_entities[i]->position = (Vector3){x,y,z};
-                }
-                line = strtok(NULL, "\n");
-                i++;
-            }
-            UnloadFileText(inString);
-        }
-
-        // create placeable block
-        if (IsKeyPressed(KEY_KP_ADD)){
-            int i = FindFreeEntitySlot(block_entities, ENTITY_LIMIT);
-            if (i == -1) break;
-            block_entities[i] = CreateEntity(i, (Vector3){0,0,0}, placeHolderModel);
-            control_block = block_entities[i];
-        }
-
-        // Undo
-        if (IsKeyPressed(KEY_KP_SUBTRACT)){
-            for (int i = ENTITY_LIMIT-1; i >= 0; i--){
-                if (block_entities[i] != NULL){
-                    DestroyEntity(block_entities[i]);
-                    block_entities[i] = NULL;
-                    break;
-                }
-            }
-        }
-
-        // Clear all blocks 
-        if (IsKeyPressed(KEY_KP_DIVIDE)){
-            for (int i = 0; i < ENTITY_LIMIT; i++){
-                if (block_entities[i] != NULL){
-                    DestroyEntity(block_entities[i]);
-                    block_entities[i] = NULL;
-                }
-            }
-            control_block = NULL;
-        }
-
-        if (IsKeyPressed(KEY_KP_8)){ if (control_block != NULL) control_block->position.z -= 1; }
-        if (IsKeyPressed(KEY_KP_5)){ if (control_block != NULL) control_block->position.z += 1; }
-        if (IsKeyPressed(KEY_KP_4)){ if (control_block != NULL) control_block->position.x -= 1; }
-        if (IsKeyPressed(KEY_KP_6)){ if (control_block != NULL) control_block->position.x += 1; }
-        if (IsKeyPressed(KEY_KP_7)){ if (control_block != NULL) control_block->position.y += 1; }
-        if (IsKeyPressed(KEY_KP_1)){ if (control_block != NULL) control_block->position.y -= 1; }
-        
-        // @UPDATE -----------------------------------------------------------------------
+        // @UPDATE ==========================================================================
         
         for (int i = 0; i < ENTITY_LIMIT; i++){
             UpdateEntity(hall_entities[i]);
@@ -266,7 +191,17 @@ int main(void) // @init
             (Vector3){ newYaw, newPitch, 0.0f }, // added rot
             0.0f); // zoom
         
-        // @COLLISION ---------------------------------------------------------------------
+        // @COLLISION ==========================================================================
+
+        OctreeNode* root = CreateOctreeNode(-8, -8, -8, 8, 8, 8);
+        
+        Point* p1 = (Point*)malloc(sizeof(Point));
+        p1->x = testpoint.x; p1->y = testpoint.y; p1->z = testpoint.z;
+        InsertPointOctree(root, p1);
+
+        Point* p2 = (Point*)malloc(sizeof(Point));
+        p2->x = 6; p2->y = 6; p2->z = 6;
+        InsertPointOctree(root, p2);
         
         // for (int i = 0; i < sizeof(levelCells) / sizeof(levelCells[0]); i++){
         //     levelCells[i].targeted = false;
@@ -285,7 +220,7 @@ int main(void) // @init
         //     }
         // }
         
-        // @DRAW --------------------------------------------------------------------------
+        // @DRAW ==========================================================================
 
         BeginDrawing();
             ClearBackground(DARKBLUE);
@@ -301,6 +236,10 @@ int main(void) // @init
             // for (int i = 0; i < LEVEL_GRID_ROWS * LEVEL_GRID_COLS; i++){
             //     DrawCell(&levelCells[i]);
             // }
+
+            DrawOctreeNode(root);
+            DrawPoint(p1);
+            DrawPoint(p2);
 
             // for (int i = 0; i < ENTITY_LIMIT; i++){
             //     DrawEntity(block_entities[i]);
@@ -337,7 +276,7 @@ int main(void) // @init
             r1Color = (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) ? RED : WHITE;
             DrawRay(r1,r1Color);
             
-            EndMode3D(); // ----------------------------------------------------------------
+            EndMode3D(); // ==========================================================================
             
             // Draw Crosshair
             //DrawLine(screenWidth/2 - 5, screenHeight/2, screenWidth/2 + 4, screenHeight/2, BLACK);
@@ -362,18 +301,20 @@ int main(void) // @init
                                               (cameraMode == CAMERA_THIRD_PERSON) ? "THIRD_PERSON" :
                                               (cameraMode == CAMERA_ORBITAL) ? "ORBITAL" : "CUSTOM"), 1090, 30, 10, BLACK);
             DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f", camera.target.x, camera.target.y, camera.target.z), 1090, 45, 10, BLACK);
-            DrawText(TextFormat("SaveFile = %d", saveIndex), 1090, 60, 10, BLACK);
-            if (control_block != NULL)
-            DrawText(TextFormat("ControlBlockPos = %0.1f - %0.1f - %0.1f", control_block->position.x,control_block->position.y,control_block->position.z), 1090, 75, 10, BLACK);
+            DrawText(TextFormat("TestPoint = %0.1f - %0.1f - %0.1f", testpoint.x,testpoint.y,testpoint.z), 1090, 75, 10, BLACK);
 
         EndDrawing();
-        //----------------------------------------------------------------------------------
+
+        // @CLEANUP =================================================================
+        DestroyOctreeNode(root);
+        free(p1);
+        free(p2);
+        // ==========================================================================
     }
 
-    // De-Initialization
-    //--------------------------------------------------------------------------------------
+    // De-Initialization ============================================================
     CloseWindow();        // Close window and OpenGL context
-    //--------------------------------------------------------------------------------------
+    //===============================================================================
 
     return 0;
 }
