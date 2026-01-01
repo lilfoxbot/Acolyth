@@ -37,6 +37,7 @@ int saveIndex = 0;
 struct _Cube cubes[CUBE_LIMIT];
 struct _Poly polys[POLY_LIMIT];
 
+const int OCT = 8; //octree root size
 const int LEVEL_GRID_ROWS = 10;
 const int LEVEL_GRID_COLS = 10;
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
@@ -84,8 +85,8 @@ int main(void) // @init ========================================================
     r1.direction = (Vector3){10,10,0};
     Color r1Color = WHITE;
 
-    Mesh myMesh = GenMeshCube(1, 1, 1);
-    Model placeHolderModel = LoadModelFromMesh(myMesh);
+    //Mesh myMesh = GenMeshCube(1, 1, 1);
+    //Model placeHolderModel = LoadModelFromMesh(myMesh);
     
     struct _LevelCell levelCells[InitLevelGrid(&levelGrid, LEVEL_GRID_ROWS, LEVEL_GRID_COLS, LEVEL_GRID_CELL_SIZE)];
     // allocate level cells
@@ -193,14 +194,14 @@ int main(void) // @init ========================================================
         
         // @COLLISION ==========================================================================
 
-        OctreeNode* root = CreateOctreeNode(-8, -8, -8, 8, 8, 8);
+        OctreeNode* root = CreateOctreeNode(-OCT, -OCT, -OCT, OCT, OCT, OCT, OCT);
         
         Point* p1 = (Point*)malloc(sizeof(Point));
-        p1->x = testpoint.x; p1->y = testpoint.y; p1->z = testpoint.z;
+        p1->x = 0; p1->y = 0; p1->z = 0;
         InsertPointOctree(root, p1);
 
         Point* p2 = (Point*)malloc(sizeof(Point));
-        p2->x = 6; p2->y = 6; p2->z = 6;
+        p2->x = testpoint.x; p2->y = testpoint.y; p2->z = testpoint.z;
         InsertPointOctree(root, p2);
         
         // for (int i = 0; i < sizeof(levelCells) / sizeof(levelCells[0]); i++){
@@ -301,7 +302,8 @@ int main(void) // @init ========================================================
                                               (cameraMode == CAMERA_THIRD_PERSON) ? "THIRD_PERSON" :
                                               (cameraMode == CAMERA_ORBITAL) ? "ORBITAL" : "CUSTOM"), 1090, 30, 10, BLACK);
             DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f", camera.target.x, camera.target.y, camera.target.z), 1090, 45, 10, BLACK);
-            DrawText(TextFormat("TestPoint = %0.1f - %0.1f - %0.1f", testpoint.x,testpoint.y,testpoint.z), 1090, 75, 10, BLACK);
+            DrawText(TextFormat("TestPoint = %0.1f  %0.1f  %0.1f", testpoint.x,testpoint.y,testpoint.z), 1090, 75, 10, BLACK);
+            DrawText(TextFormat("TestPoint Octant = %d", GetOctant(root,p2)), 1090, 95, 10, BLACK);
 
         EndDrawing();
 

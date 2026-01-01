@@ -17,10 +17,12 @@ typedef struct OctreeNode {
     // Bounding box information (min and max corners) is often included
     int minX, minY, minZ;
     int maxX, maxY, maxZ;
+    int size; // length of one edge of the cube
+    Vector3 center; // midpoint
 } OctreeNode;
 
 // Function to create a new OctreeNode
-OctreeNode* CreateOctreeNode(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+OctreeNode* CreateOctreeNode(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int newSize) {
     OctreeNode* node = (OctreeNode*)malloc(sizeof(OctreeNode));
     node->point = NULL; // Initially no point stored
     for (int i = 0; i < 8; i++) {
@@ -32,6 +34,8 @@ OctreeNode* CreateOctreeNode(int minX, int minY, int minZ, int maxX, int maxY, i
     node->maxX = maxX;
     node->maxY = maxY;
     node->maxZ = maxZ;
+    node->size = newSize;
+    node->center = (Vector3){0,0,0}; // calculated afterwards
     return node;
 }
 
@@ -43,19 +47,19 @@ int GetOctant(OctreeNode* node, Point* p) {
 
     if (p->x <= midX) {
         if (p->y <= midY) {
-            if (p->z <= midZ) return 0; // TopLeftFront
-            else return 4; // TopLeftBottom
+            if (p->z <= midZ) return 0; // 
+            else return 4; // 
         } else {
-            if (p->z <= midZ) return 2; // BottomLeftFront
-            else return 6; // BottomLeftBack
+            if (p->z <= midZ) return 2; // 
+            else return 6; // 
         }
     } else {
         if (p->y <= midY) {
-            if (p->z <= midZ) return 1; // TopRightFront
-            else return 5; // TopRightBottom
+            if (p->z <= midZ) return 1; // 
+            else return 5; // 
         } else {
-            if (p->z <= midZ) return 3; // BottomRightFront
-            else return 7; // BottomRightBack
+            if (p->z <= midZ) return 3; // 
+            else return 7; // 
         }
     }
 }
@@ -85,37 +89,110 @@ void InsertPointOctree(OctreeNode* node, Point* p) {
         // Create new child node with appropriate bounds (omitted for brevity)
         // This is where bounds calculation for the 8 sub-regions would go
         switch (octant) {
-            case 0: 
-                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
-                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+            case 0: // BLB
+                node->children[octant] = CreateOctreeNode(node->center.x - node->size,
+                                                        node->center.y - node->size,
+                                                        node->center.z - node->size,
+                                                        node->center.x,
+                                                        node->center.y,
+                                                        node->center.z,
+                                                        node->size/2);
+
+                node->children[octant]->center = (Vector3){node->center.x - node->size/2,
+                                                        node->center.y - node->size/2,
+                                                        node->center.z - node->size/2};
                 break;
-            case 1: 
-                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
-                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+            case 1: // BRB
+                node->children[octant] = CreateOctreeNode(node->center.x,
+                                                        node->center.y - node->size,
+                                                        node->center.z - node->size,
+                                                        node->center.x + node->size,
+                                                        node->center.y,
+                                                        node->center.z,
+                                                        node->size/2);
+
+                node->children[octant]->center = (Vector3){node->center.x + node->size/2,
+                                                        node->center.y - node->size/2,
+                                                        node->center.z - node->size/2};
                 break;
-            case 2: 
-                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
-                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+            case 2: // TLB
+                node->children[octant] = CreateOctreeNode(node->center.x - node->size,
+                                                        node->center.y,
+                                                        node->center.z - node->size,
+                                                        node->center.x,
+                                                        node->center.y + node->size,
+                                                        node->center.z,
+                                                        node->size/2);
+                
+                node->children[octant]->center = (Vector3){node->center.x - node->size/2,
+                                                        node->center.y + node->size/2,
+                                                        node->center.z - node->size/2};
                 break;
-            case 3:
-                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
-                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+            case 3: // TRB
+                node->children[octant] = CreateOctreeNode(node->center.x,
+                                                        node->center.y,
+                                                        node->center.z - node->size,
+                                                        node->center.x + node->size,
+                                                        node->center.y + node->size,
+                                                        node->center.z,
+                                                        node->size/2);
+                
+                node->children[octant]->center = (Vector3){node->center.x + node->size/2,
+                                                        node->center.y + node->size/2,
+                                                        node->center.z - node->size/2};
                 break;
-            case 4: 
-                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
-                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+            case 4: // BLF
+                node->children[octant] = CreateOctreeNode(node->center.x - node->size,
+                                                        node->center.y - node->size,
+                                                        node->center.z + node->size,
+                                                        node->center.x,
+                                                        node->center.y,
+                                                        node->center.z,
+                                                        node->size/2);
+
+                node->children[octant]->center = (Vector3){node->center.x - node->size/2,
+                                                        node->center.y - node->size/2,
+                                                        node->center.z + node->size/2}; 
                 break;
-            case 5: 
-                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
-                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+            case 5: // BRF
+                node->children[octant] = CreateOctreeNode(node->center.x,
+                                                        node->center.y - node->size,
+                                                        node->center.z,
+                                                        node->center.x + node->size,
+                                                        node->center.y,
+                                                        node->center.z + node->size,
+                                                        node->size/2);
+
+                node->children[octant]->center = (Vector3){node->center.x + node->size/2,
+                                                        node->center.y - node->size/2,
+                                                        node->center.z + node->size/2};
+                
                 break;
-            case 6: 
-                node->children[octant] = CreateOctreeNode(node->minX/2, node->minY/2, node->minZ/2,
-                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+            case 6: // TLF
+                node->children[octant] = CreateOctreeNode(node->center.x - node->size,
+                                                        node->center.y,
+                                                        node->center.z,
+                                                        node->center.x,
+                                                        node->center.y + node->size,
+                                                        node->center.z + node->size,
+                                                        node->size/2);
+                
+                node->children[octant]->center = (Vector3){node->center.x - node->size/2,
+                                                        node->center.y + node->size/2,
+                                                        node->center.z + node->size/2};
                 break;
             case 7: // TRF
-                node->children[octant] = CreateOctreeNode(node->minX*(3/4), node->minY*(3/4), node->minZ*(3/4),
-                                                  node->maxX/2, node->maxY/2, node->maxZ/2);
+                node->children[octant] = CreateOctreeNode(node->center.x,
+                                                        node->center.y,
+                                                        node->center.z,
+                                                        node->center.x + node->size,
+                                                        node->center.y + node->size,
+                                                        node->center.z + node->size,
+                                                        node->size/2);
+
+                node->children[octant]->center = (Vector3){node->center.x + node->size/2,
+                                                        node->center.y + node->size/2,
+                                                        node->center.z + node->size/2};
                 break;
             default:
                 break;
