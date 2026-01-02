@@ -19,6 +19,7 @@ typedef struct OctreeNode {
     int maxX, maxY, maxZ;
     int size; // length of one edge of the cube
     Vector3 center; // midpoint
+    BoundingBox bb;
 } OctreeNode;
 
 // Function to create a new OctreeNode
@@ -36,6 +37,8 @@ OctreeNode* CreateOctreeNode(int minX, int minY, int minZ, int maxX, int maxY, i
     node->maxZ = maxZ;
     node->size = newSize;
     node->center = (Vector3){0,0,0}; // calculated afterwards
+    node->bb.min = (Vector3){(float)minX, (float)minY, (float)minZ};
+    node->bb.max = (Vector3){(float)maxX, (float)maxY, (float)maxZ};
     return node;
 }
 
@@ -197,9 +200,14 @@ void InsertPointOctree(OctreeNode* node, Point* p) {
             default:
                 break;
         }        
-
-        // For this example, we stop at the point limit of 1 per leaf
-        return;
+        
+        if (node->size >= 1){
+            // In a complete implementation, we would handle splitting the node here
+            // and re-inserting the existing point into the appropriate child
+        } else {
+            // Reached minimum size, cannot subdivide further
+            return;
+        }
     }
     InsertPointOctree(node->children[octant], p);
 }
@@ -208,13 +216,7 @@ void DrawOctreeNode(OctreeNode* node) {
     if (node == NULL) return;
 
     // Draw the bounding box of the current node
-    DrawCubeWires(
-        (Vector3){(node->minX + node->maxX) / 2.0f, (node->minY + node->maxY) / 2.0f, (node->minZ + node->maxZ) / 2.0f},
-        node->maxX - node->minX,
-        node->maxY - node->minY,
-        node->maxZ - node->minZ,
-        WHITE
-    );
+    DrawBoundingBox(node->bb, WHITE);
 
     // Recursively draw child nodes
     for (int i = 0; i < 8; i++) {

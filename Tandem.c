@@ -6,8 +6,7 @@
 
 #include "poly.h"
 #include "cube.h"
-#include "levelgrid.h"
-#include "octree.h"
+#include "myOctree.h"
 #include "entity.c"
 
 #define RAYMATH_IMPLEMENTATION
@@ -42,11 +41,9 @@ const int LEVEL_GRID_ROWS = 10;
 const int LEVEL_GRID_COLS = 10;
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 
-struct _LevelGrid levelGrid;
+
 struct Entity* hall_entities[ENTITY_LIMIT];
 struct Entity* block_entities[ENTITY_LIMIT];
-
-Vector3 testpoint = {0,0,0};
 
 int FindFreeEntitySlot(struct Entity* entityArr[], int arrSize){
     for (int i = 0; i < ENTITY_LIMIT; i++){
@@ -79,6 +76,11 @@ int main(void) // @init ========================================================
     for (int i = 0; i < CUBE_LIMIT; i++){
         cubes[i].exist = 0;
     }
+
+    // @GRID
+    const int GRID_SIZE = 10;
+    bool grid3d[GRID_SIZE][GRID_SIZE][GRID_SIZE];
+    Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
     
     struct Ray r1;
     r1.position = (Vector3){0,0,0};
@@ -87,28 +89,6 @@ int main(void) // @init ========================================================
 
     //Mesh myMesh = GenMeshCube(1, 1, 1);
     //Model placeHolderModel = LoadModelFromMesh(myMesh);
-    
-    struct _LevelCell levelCells[InitLevelGrid(&levelGrid, LEVEL_GRID_ROWS, LEVEL_GRID_COLS, LEVEL_GRID_CELL_SIZE)];
-    // allocate level cells
-    for (int r = -5; r < 5; r++){
-        for (int c = -5; c < 5; c++){
-            levelCells[levelGrid.cellCount].exist = true;
-            levelCells[levelGrid.cellCount].color = WHITE;
-            levelCells[levelGrid.cellCount].position = (Vector3){r+0.5f,0,c+0.5f};
-            levelCells[levelGrid.cellCount].size = (Vector3){ LEVEL_GRID_CELL_SIZE, LEVEL_GRID_CELL_SIZE, LEVEL_GRID_CELL_SIZE};
-            levelCells[levelGrid.cellCount].bb.min = Vector3Add(levelCells[levelGrid.cellCount].position, 
-                                            (Vector3){-(levelCells[levelGrid.cellCount].size.x/2),
-                                                    -(levelCells[levelGrid.cellCount].size.y/2),
-                                                    -(levelCells[levelGrid.cellCount].size.z/2)});
-            levelCells[levelGrid.cellCount].bb.max = Vector3Add(levelCells[levelGrid.cellCount].position, 
-                                            (Vector3){(levelCells[levelGrid.cellCount].size.x/2),
-                                                    (levelCells[levelGrid.cellCount].size.y/2),
-                                                    (levelCells[levelGrid.cellCount].size.z/2)});
-
-            levelGrid.cellCount++;
-        }
-    }
-
     //Model myModel = LoadModel("resources/models/myCube.obj");
     
     // struct BoundingBox b1;
@@ -116,9 +96,9 @@ int main(void) // @init ========================================================
     // b1.max = (Vector3){5,5,5};
     
     // READY ==========================================================================
-    printf("\n");
-    printf(TextFormat("%d", sizeof(levelCells) / sizeof(levelCells[0])));
-    printf("\n");
+    // printf("\n");
+    // printf(TextFormat("%d", sizeof(levelCells) / sizeof(levelCells[0])));
+    // printf("\n");
 
     // MAIN GAME LOOP ==========================================================================
     while (!WindowShouldClose())        // Detect window close button or ESC key
@@ -128,12 +108,12 @@ int main(void) // @init ========================================================
         
         // @INPUT ==========================================================================
 
-        if (IsKeyDown(KEY_KP_8)){ testpoint.z -= 0.2f; }
-        if (IsKeyDown(KEY_KP_5)){ testpoint.z += 0.2f; }
-        if (IsKeyDown(KEY_KP_4)){ testpoint.x -= 0.2f; }
-        if (IsKeyDown(KEY_KP_6)){ testpoint.x += 0.2f; }
-        if (IsKeyDown(KEY_KP_7)){ testpoint.y += 0.2f; }
-        if (IsKeyDown(KEY_KP_1)){ testpoint.y -= 0.2f; }
+        // if (IsKeyDown(KEY_KP_8)){ testpoint.z -= 0.2f; }
+        // if (IsKeyDown(KEY_KP_5)){ testpoint.z += 0.2f; }
+        // if (IsKeyDown(KEY_KP_4)){ testpoint.x -= 0.2f; }
+        // if (IsKeyDown(KEY_KP_6)){ testpoint.x += 0.2f; }
+        // if (IsKeyDown(KEY_KP_7)){ testpoint.y += 0.2f; }
+        // if (IsKeyDown(KEY_KP_1)){ testpoint.y -= 0.2f; }
 
         // Switch camera mode
         if (IsKeyPressed(KEY_ONE)){ myDebug = !myDebug; }
@@ -183,9 +163,7 @@ int main(void) // @init ========================================================
         
         // @UPDATE ==========================================================================
         
-        for (int i = 0; i < ENTITY_LIMIT; i++){
-            UpdateEntity(hall_entities[i]);
-        }
+        
 
         UpdateCameraPro(&camera, 
             (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
@@ -194,32 +172,19 @@ int main(void) // @init ========================================================
         
         // @COLLISION ==========================================================================
 
-        OctreeNode* root = CreateOctreeNode(-OCT, -OCT, -OCT, OCT, OCT, OCT, OCT);
+        //OctreeNode* root = CreateOctreeNode(-OCT, -OCT, -OCT, OCT, OCT, OCT, OCT);
         
-        Point* p1 = (Point*)malloc(sizeof(Point));
-        p1->x = 0; p1->y = 0; p1->z = 0;
-        InsertPointOctree(root, p1);
+        //CheckRayOctree(root, r1);
 
-        Point* p2 = (Point*)malloc(sizeof(Point));
-        p2->x = testpoint.x; p2->y = testpoint.y; p2->z = testpoint.z;
-        InsertPointOctree(root, p2);
+        // Point* p1 = (Point*)malloc(sizeof(Point));
+        // p1->x = 0; p1->y = 0; p1->z = 0;
+        // InsertPointOctree(root, p1);
+
+        // Point* p2 = (Point*)malloc(sizeof(Point));
+        // p2->x = testpoint.x; p2->y = testpoint.y; p2->z = testpoint.z;
+        // InsertPointOctree(root, p2);
         
-        // for (int i = 0; i < sizeof(levelCells) / sizeof(levelCells[0]); i++){
-        //     levelCells[i].targeted = false;
-        //     levelCells[i].color = WHITE;
-        // }
-
-        // for (int i = 0; i < sizeof(levelCells) / sizeof(levelCells[0]); i++){
-        //     if (levelCells[i].exist == 1) {
-                
-        //         if (GetRayCollisionBox(r1, levelCells[i].bb).hit){
-        //             levelCells[i].color = GREEN;
-        //             levelCells[i].targeted = true;
-        //         } else {
-        //             levelCells[i].color = WHITE;
-        //         }
-        //     }
-        // }
+        
         
         // @DRAW ==========================================================================
 
@@ -230,21 +195,22 @@ int main(void) // @init ========================================================
             // North Star
             DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW); 
             DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE);
+
+            DrawGrid(10, 1.0f);
+            DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
             
-            // @Grid
-            // Level Grid Cells
-            DrawLevelGrid(&levelGrid);
-            // for (int i = 0; i < LEVEL_GRID_ROWS * LEVEL_GRID_COLS; i++){
-            //     DrawCell(&levelCells[i]);
-            // }
-
-            DrawOctreeNode(root);
-            DrawPoint(p1);
-            DrawPoint(p2);
-
-            // for (int i = 0; i < ENTITY_LIMIT; i++){
-            //     DrawEntity(block_entities[i]);
-            // }  
+            for (int x = 0; x < GRID_SIZE; x++)
+            {
+                for (int y = 0; y < GRID_SIZE; y++)
+                {
+                    for (int z = 0; z < GRID_SIZE; z++)
+                    {
+                        grid3d[x][y][z] = true;
+                        DrawCube((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, 1, 1, 1, GRAY);
+                        DrawCubeWires((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, 1, 1, 1, BLACK);
+                    }
+                }
+            }
             
             // Debug axis
             if (myDebug){   
@@ -302,15 +268,11 @@ int main(void) // @init ========================================================
                                               (cameraMode == CAMERA_THIRD_PERSON) ? "THIRD_PERSON" :
                                               (cameraMode == CAMERA_ORBITAL) ? "ORBITAL" : "CUSTOM"), 1090, 30, 10, BLACK);
             DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f", camera.target.x, camera.target.y, camera.target.z), 1090, 45, 10, BLACK);
-            DrawText(TextFormat("TestPoint = %0.1f  %0.1f  %0.1f", testpoint.x,testpoint.y,testpoint.z), 1090, 75, 10, BLACK);
-            DrawText(TextFormat("TestPoint Octant = %d", GetOctant(root,p2)), 1090, 95, 10, BLACK);
 
         EndDrawing();
 
         // @CLEANUP =================================================================
-        DestroyOctreeNode(root);
-        free(p1);
-        free(p2);
+        //DestroyOctreeNode(root);
         // ==========================================================================
     }
 

@@ -1,6 +1,7 @@
 
--octree
-    -need 2 points
+-raycast on voxel grid to build level
+
+-octree for projectiles collision
 
 - build levels with mouse?
     - grid with cells that highlight when targeted with player ray
