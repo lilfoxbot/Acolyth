@@ -6,7 +6,7 @@
 
 #include "poly.h"
 #include "cube.h"
-#include "myOctree.h"
+#include "boxtree.h"
 #include "entity.c"
 
 #define RAYMATH_IMPLEMENTATION
@@ -70,7 +70,6 @@ int main(void) // @init ========================================================
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 60.0f;                                // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
-
     int cameraMode = CAMERA_CUSTOM;
 
     for (int i = 0; i < CUBE_LIMIT; i++){
@@ -78,7 +77,7 @@ int main(void) // @init ========================================================
     }
 
     // @GRID
-    const int GRID_SIZE = 10;
+    const int GRID_SIZE = 5;
     bool grid3d[GRID_SIZE][GRID_SIZE][GRID_SIZE];
     Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
     
@@ -86,6 +85,16 @@ int main(void) // @init ========================================================
     r1.position = (Vector3){0,0,0};
     r1.direction = (Vector3){10,10,0};
     Color r1Color = WHITE;
+
+    BoxtreeNode* boxtreeRoot = BuildBoxtree((Vector3){0,0,0}, 16, 4);
+
+    BoundingBox bb1;
+    bb1.min = (Vector3){-5.0f, -5.0f, -5.0f};
+    bb1.max = (Vector3){-4.0f, -4.0f, -4.0f};
+
+    BoundingBox bb2;
+    bb2.min = (Vector3){4.0f, 4.0f, 4.0f};
+    bb2.max = (Vector3){5.0f, 5.0f, 5.0f};
 
     //Mesh myMesh = GenMeshCube(1, 1, 1);
     //Model placeHolderModel = LoadModelFromMesh(myMesh);
@@ -114,6 +123,8 @@ int main(void) // @init ========================================================
         // if (IsKeyDown(KEY_KP_6)){ testpoint.x += 0.2f; }
         // if (IsKeyDown(KEY_KP_7)){ testpoint.y += 0.2f; }
         // if (IsKeyDown(KEY_KP_1)){ testpoint.y -= 0.2f; }
+
+        r1Color = (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) ? RED : WHITE;
 
         // Switch camera mode
         if (IsKeyPressed(KEY_ONE)){ myDebug = !myDebug; }
@@ -162,8 +173,6 @@ int main(void) // @init ========================================================
         float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
         
         // @UPDATE ==========================================================================
-        
-        
 
         UpdateCameraPro(&camera, 
             (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
@@ -171,6 +180,11 @@ int main(void) // @init ========================================================
             0.0f); // zoom
         
         // @COLLISION ==========================================================================
+        
+        ResetBoxtree(boxtreeRoot);
+        CheckBoxtree_Ray(boxtreeRoot, r1);
+
+        
 
         //OctreeNode* root = CreateOctreeNode(-OCT, -OCT, -OCT, OCT, OCT, OCT, OCT);
         
@@ -198,19 +212,24 @@ int main(void) // @init ========================================================
 
             DrawGrid(10, 1.0f);
             DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
+
+            DrawBoxtreeNode(boxtreeRoot);
+
+            CheckBoxtree_Box(boxtreeRoot, bb1);
+            CheckBoxtree_Box(boxtreeRoot, bb2);
             
-            for (int x = 0; x < GRID_SIZE; x++)
-            {
-                for (int y = 0; y < GRID_SIZE; y++)
-                {
-                    for (int z = 0; z < GRID_SIZE; z++)
-                    {
-                        grid3d[x][y][z] = true;
-                        DrawCube((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, 1, 1, 1, GRAY);
-                        DrawCubeWires((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, 1, 1, 1, BLACK);
-                    }
-                }
-            }
+            // for (int x = 0; x < GRID_SIZE; x++)
+            // {
+            //     for (int y = 0; y < GRID_SIZE; y++)
+            //     {
+            //         for (int z = 0; z < GRID_SIZE; z++)
+            //         {
+            //             grid3d[x][y][z] = true;
+            //             DrawCube((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, 1, 1, 1, GRAY);
+            //             DrawCubeWires((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, 1, 1, 1, BLACK);
+            //         }
+            //     }
+            // }
             
             // Debug axis
             if (myDebug){   
@@ -240,7 +259,6 @@ int main(void) // @init ========================================================
             
             r1.position = myTargetBegin;
             r1.direction = camF;
-            r1Color = (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) ? RED : WHITE;
             DrawRay(r1,r1Color);
             
             EndMode3D(); // ==========================================================================
@@ -262,11 +280,6 @@ int main(void) // @init ========================================================
             DrawRectangle(1080, 5, 195, 100, Fade(SKYBLUE, 0.5f));
             DrawRectangleLines(1080, 5, 195, 100, BLUE);
 
-            DrawText("Camera status:", 1090, 15, 10, BLACK);
-            DrawText(TextFormat("- Mode: %s", (cameraMode == CAMERA_FREE) ? "FREE" :
-                                              (cameraMode == CAMERA_FIRST_PERSON) ? "FIRST_PERSON" :
-                                              (cameraMode == CAMERA_THIRD_PERSON) ? "THIRD_PERSON" :
-                                              (cameraMode == CAMERA_ORBITAL) ? "ORBITAL" : "CUSTOM"), 1090, 30, 10, BLACK);
             DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f", camera.target.x, camera.target.y, camera.target.z), 1090, 45, 10, BLACK);
 
         EndDrawing();

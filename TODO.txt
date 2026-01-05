@@ -1,4 +1,6 @@
 
+- "check in" a few bounding boxes into the box tree, test collision with them
+
 -raycast on voxel grid to build level
 
 -octree for projectiles collision
