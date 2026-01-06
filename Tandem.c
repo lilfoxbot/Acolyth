@@ -7,6 +7,7 @@
 #include "poly.h"
 #include "cube.h"
 #include "boxtree.h"
+#include "voxel.h"
 #include "entity.c"
 
 #define RAYMATH_IMPLEMENTATION
@@ -33,14 +34,11 @@ float dt = 0;
 float timePassed = 0;
 int saveIndex = 0;
 
-struct _Cube cubes[CUBE_LIMIT];
-struct _Poly polys[POLY_LIMIT];
-
 const int OCT = 8; //octree root size
 const int LEVEL_GRID_ROWS = 10;
-const int LEVEL_GRID_COLS = 10;
+const int LEVEL_GRID_COLS = 2;
+const int LEVEL_GRID_DEPTH = 5;
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
-
 
 struct Entity* hall_entities[ENTITY_LIMIT];
 struct Entity* block_entities[ENTITY_LIMIT];
@@ -52,6 +50,24 @@ int FindFreeEntitySlot(struct Entity* entityArr[], int arrSize){
         }
     }
     return -1;
+}
+
+void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode) {
+    if (voxel == NULL) return;
+    if (btnode == NULL) return;
+
+    if (CheckCollisionBoxes(voxel->bb, btnode->bb)){
+        if (btnode->depth == 1) {
+            btnode->voxels[btnode->voxelCount] = voxel;
+            btnode->voxelCount++;
+        }
+    }
+
+    if (btnode->depth == 1) return;
+
+    for (int i = 0; i < 8; i++) {
+        PlaceVoxelInBoxtree(voxel, btnode->children[i]);
+    }
 }
 
 int main(void) // @init ========================================================================
@@ -72,21 +88,28 @@ int main(void) // @init ========================================================
     camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
     int cameraMode = CAMERA_CUSTOM;
 
-    for (int i = 0; i < CUBE_LIMIT; i++){
-        cubes[i].exist = 0;
-    }
+    BoxtreeNode* boxtreeRoot = BuildBoxtree((Vector3){0,0,0}, 16, 4);
 
     // @GRID
-    const int GRID_SIZE = 5;
-    bool grid3d[GRID_SIZE][GRID_SIZE][GRID_SIZE];
     Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
+    int gridIndex = 0;
+    struct Voxel* grid3d[LEVEL_GRID_ROWS*LEVEL_GRID_COLS*LEVEL_GRID_DEPTH];
+    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+        for (int y = 0; y < LEVEL_GRID_COLS; y++){
+            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+                Voxel* newVoxel = CreateVoxel((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, 1, GRAY);
+                newVoxel->coordinates = (Vector3){x, y, z};
+                grid3d[gridIndex] = newVoxel;
+                PlaceVoxelInBoxtree(newVoxel, boxtreeRoot);
+                gridIndex++;
+            }
+        }
+    }
     
     struct Ray r1;
     r1.position = (Vector3){0,0,0};
     r1.direction = (Vector3){10,10,0};
     Color r1Color = WHITE;
-
-    BoxtreeNode* boxtreeRoot = BuildBoxtree((Vector3){0,0,0}, 16, 4);
 
     BoundingBox bb1;
     bb1.min = (Vector3){-5.0f, -5.0f, -5.0f};
@@ -174,6 +197,10 @@ int main(void) // @init ========================================================
         
         // @UPDATE ==========================================================================
 
+        for (int x = 0; x < gridIndex; x++){
+            grid3d[x]->color = BLACK;
+        }
+
         UpdateCameraPro(&camera, 
             (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
             (Vector3){ newYaw, newPitch, 0.0f }, // added rot
@@ -182,7 +209,7 @@ int main(void) // @init ========================================================
         // @COLLISION ==========================================================================
         
         ResetBoxtree(boxtreeRoot);
-        CheckBoxtree_Ray(boxtreeRoot, r1);
+        CheckBoxtree_Ray(r1, boxtreeRoot);
 
         
 
@@ -215,22 +242,11 @@ int main(void) // @init ========================================================
 
             DrawBoxtreeNode(boxtreeRoot);
 
-            CheckBoxtree_Box(boxtreeRoot, bb1);
-            CheckBoxtree_Box(boxtreeRoot, bb2);
+            CheckBoxtree_Box(bb1, boxtreeRoot);
+            CheckBoxtree_Box(bb2, boxtreeRoot);
             
-            // for (int x = 0; x < GRID_SIZE; x++)
-            // {
-            //     for (int y = 0; y < GRID_SIZE; y++)
-            //     {
-            //         for (int z = 0; z < GRID_SIZE; z++)
-            //         {
-            //             grid3d[x][y][z] = true;
-            //             DrawCube((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, 1, 1, 1, GRAY);
-            //             DrawCubeWires((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, 1, 1, 1, BLACK);
-            //         }
-            //     }
-            // }
-            
+            for (int i = 0; i < gridIndex; i++) DrawVoxel(grid3d[i]);
+
             // Debug axis
             if (myDebug){   
                 // draw an axis with cubes

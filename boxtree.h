@@ -5,13 +5,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "voxel.h"
 
 typedef struct BoxtreeNode {
-    BoundingBox box;
+    BoundingBox bb;
     Vector3 position;
     int size;
     struct BoxtreeNode* children[8];
-    struct BoundingBox* voxels[16];
+    struct Voxel* voxels[30];
+    int voxelCount;
     int depth;
     Color debugColor;
     bool isRayHit;
@@ -21,11 +23,11 @@ BoxtreeNode* CreateBoxtreeNode(Vector3 center, int size, int depth) {
     BoxtreeNode* node = (BoxtreeNode*)malloc(sizeof(BoxtreeNode));
     node->position = center;
     node->size = size;
-    node->box.min = Vector3Subtract(center, (Vector3){size/2.0f, size/2.0f, size/2.0f});
-    node->box.max = Vector3Add(center, (Vector3){size/2.0f, size/2.0f, size/2.0f});
-    for (int i = 0; i < 8; i++) {
-        node->children[i] = NULL;
-    }
+    node->bb.min = Vector3Subtract(center, (Vector3){size/2.0f, size/2.0f, size/2.0f});
+    node->bb.max = Vector3Add(center, (Vector3){size/2.0f, size/2.0f, size/2.0f});
+    for (int i = 0; i < 8; i++) { node->children[i] = NULL; }
+    for (int i = 0; i < 30; i++) { node->voxels[i] = NULL; }
+    node->voxelCount = 0;
 
     node->debugColor = WHITE;
     node->isRayHit = false;
@@ -77,31 +79,43 @@ void ResetBoxtree(BoxtreeNode* node) {
     }
 }
 
-void CheckBoxtree_Ray(BoxtreeNode* node, Ray ray) {
+void CheckBoxtree_Ray(Ray ray, BoxtreeNode* node) {
     if (node == NULL) return;
 
-    if (GetRayCollisionBox(ray, node->box).hit){
-        if (node->depth == 1) node->isRayHit = true;
+    if (GetRayCollisionBox(ray, node->bb).hit){
+        if (node->depth == 1) {
+            node->isRayHit = true;
+
+            for (int i = 0; i < node->voxelCount; i++){
+                if (node->voxels[i] != NULL){
+                    RayCollision rc = GetRayCollisionBox(ray, node->voxels[i]->bb);
+                    if (rc.hit){
+                        node->voxels[i]->color = YELLOW;
+                    }
+                }
+            }
+
+            return;
+        }
 
         for (int i = 0; i < 8; i++) {
-            CheckBoxtree_Ray(node->children[i], ray);
+            CheckBoxtree_Ray(ray,node->children[i]);
         }
     }
 }
 
-void CheckBoxtree_Box(BoxtreeNode* node, BoundingBox bb){
+void CheckBoxtree_Box(BoundingBox bb, BoxtreeNode* node){
     if (node == NULL) return;
 
-    if (CheckCollisionBoxes(node->box, bb)){
+    if (CheckCollisionBoxes(node->bb, bb)){
         if (node->depth == 1) {
-            node->voxels[0] = &bb;
             if (node->isRayHit) {
                 DrawBoundingBox(bb, WHITE);
             }
         } 
 
         for (int i = 0; i < 8; i++) {
-            CheckBoxtree_Box(node->children[i], bb);
+            CheckBoxtree_Box(bb, node->children[i]);
         }
     }
 }
