@@ -10,17 +10,19 @@ typedef struct Voxel {
     Vector3 position;
     float size;
     BoundingBox bb;
+    Color bbColor;
     Color color;
     bool isActive;
 } Voxel;
 
-Voxel* CreateVoxel(Vector3 position, float size, Color color) {
+Voxel* CreateVoxel(Vector3 position, float size) {
     Voxel* voxel = (Voxel*)malloc(sizeof(Voxel));
     voxel->position = position;
     voxel->size = size;
     voxel->bb.min = (Vector3){position.x - size / 2, position.y - size / 2, position.z - size / 2};
     voxel->bb.max = (Vector3){position.x + size / 2, position.y + size / 2, position.z + size / 2};
-    voxel->color = color;
+    voxel->bbColor = BLACK;
+    voxel->color = DARKGREEN;
     voxel->isActive = true;
     return voxel;
 }
@@ -28,9 +30,8 @@ Voxel* CreateVoxel(Vector3 position, float size, Color color) {
 void DrawVoxel(Voxel* voxel) {
     if (voxel == NULL || !voxel->isActive) return;
 
-    //DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, voxel->color);
-    //DrawCubeWires(voxel->position, voxel->size, voxel->size, voxel->size, BLACK);
-    DrawBoundingBox(voxel->bb, voxel->color);
+    DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, voxel->color);
+    DrawBoundingBox(voxel->bb, voxel->bbColor);
 }
 
 void DestroyVoxel(Voxel* voxel) {

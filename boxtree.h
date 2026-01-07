@@ -12,7 +12,7 @@ typedef struct BoxtreeNode {
     Vector3 position;
     int size;
     struct BoxtreeNode* children[8];
-    struct Voxel* voxels[30];
+    struct Voxel* voxels[32];
     int voxelCount;
     int depth;
     Color debugColor;
@@ -79,29 +79,45 @@ void ResetBoxtree(BoxtreeNode* node) {
     }
 }
 
-void CheckBoxtree_Ray(Ray ray, BoxtreeNode* node) {
-    if (node == NULL) return;
+// to return an array, pass it as a parameter:
+// void foo(char *buf, int count) {
+//     for(int i = 0; i < count; ++i)
+//         buf[i] = i;
+// }
+
+Voxel* GetRayVoxel(Ray ray, BoxtreeNode* node, float* closestHitDistance) {
+    Voxel* closestHitVoxel = NULL;
+    if (node == NULL) return closestHitVoxel;
 
     if (GetRayCollisionBox(ray, node->bb).hit){
         if (node->depth == 1) {
             node->isRayHit = true;
 
             for (int i = 0; i < node->voxelCount; i++){
-                if (node->voxels[i] != NULL){
-                    RayCollision rc = GetRayCollisionBox(ray, node->voxels[i]->bb);
-                    if (rc.hit){
-                        node->voxels[i]->color = YELLOW;
+                if (!node->voxels[i]->isActive) continue;
+
+                node->voxels[i]->bbColor = BLACK;
+                RayCollision rc = GetRayCollisionBox(ray, node->voxels[i]->bb);
+                if (rc.hit){
+                    
+                    if (rc.distance < *closestHitDistance) {
+                        closestHitVoxel = node->voxels[i];
+                        *closestHitDistance = rc.distance;
                     }
                 }
             }
-
-            return;
-        }
-
-        for (int i = 0; i < 8; i++) {
-            CheckBoxtree_Ray(ray,node->children[i]);
+            return closestHitVoxel;
+        } else {
+            for (int i = 0; i < 8; i++) {
+                Voxel* potentialNewVoxel = GetRayVoxel(ray, node->children[i], closestHitDistance);
+                if (potentialNewVoxel != NULL) {
+                    closestHitVoxel = potentialNewVoxel;
+                }
+            }
+            return closestHitVoxel;
         }
     }
+    return closestHitVoxel;
 }
 
 void CheckBoxtree_Box(BoundingBox bb, BoxtreeNode* node){

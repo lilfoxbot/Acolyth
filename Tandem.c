@@ -70,6 +70,10 @@ void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode) {
     }
 }
 
+void GetVoxelByCoordinates(int x, int y, int z){
+    //organize voxels in a 3d array for easy access
+}
+
 int main(void) // @init ========================================================================
 {
     const int screenWidth = 1280;
@@ -93,13 +97,13 @@ int main(void) // @init ========================================================
     // @GRID
     Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
     int gridIndex = 0;
-    struct Voxel* grid3d[LEVEL_GRID_ROWS*LEVEL_GRID_COLS*LEVEL_GRID_DEPTH];
+    struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
     for (int x = 0; x < LEVEL_GRID_ROWS; x++){
         for (int y = 0; y < LEVEL_GRID_COLS; y++){
             for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                Voxel* newVoxel = CreateVoxel((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, 1, GRAY);
+                Voxel* newVoxel = CreateVoxel((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, 1);
                 newVoxel->coordinates = (Vector3){x, y, z};
-                grid3d[gridIndex] = newVoxel;
+                grid3d[x][y][z] = newVoxel;
                 PlaceVoxelInBoxtree(newVoxel, boxtreeRoot);
                 gridIndex++;
             }
@@ -111,13 +115,13 @@ int main(void) // @init ========================================================
     r1.direction = (Vector3){10,10,0};
     Color r1Color = WHITE;
 
-    BoundingBox bb1;
-    bb1.min = (Vector3){-5.0f, -5.0f, -5.0f};
-    bb1.max = (Vector3){-4.0f, -4.0f, -4.0f};
+    // BoundingBox bb1;
+    // bb1.min = (Vector3){-5.0f, -5.0f, -5.0f};
+    // bb1.max = (Vector3){-4.0f, -4.0f, -4.0f};
 
-    BoundingBox bb2;
-    bb2.min = (Vector3){4.0f, 4.0f, 4.0f};
-    bb2.max = (Vector3){5.0f, 5.0f, 5.0f};
+    // BoundingBox bb2;
+    // bb2.min = (Vector3){4.0f, 4.0f, 4.0f};
+    // bb2.max = (Vector3){5.0f, 5.0f, 5.0f};
 
     //Mesh myMesh = GenMeshCube(1, 1, 1);
     //Model placeHolderModel = LoadModelFromMesh(myMesh);
@@ -198,7 +202,7 @@ int main(void) // @init ========================================================
         // @UPDATE ==========================================================================
 
         for (int x = 0; x < gridIndex; x++){
-            grid3d[x]->color = BLACK;
+            //grid3d[x]->color = BLACK;
         }
 
         UpdateCameraPro(&camera, 
@@ -209,21 +213,26 @@ int main(void) // @init ========================================================
         // @COLLISION ==========================================================================
         
         ResetBoxtree(boxtreeRoot);
-        CheckBoxtree_Ray(r1, boxtreeRoot);
-
         
+        Vector3 rayhitNormal = (Vector3){0,0,0};
+        float closestVoxelDist = 100;
+        struct Voxel* closestHitVoxel = NULL;
+        closestHitVoxel = GetRayVoxel(r1, boxtreeRoot, &closestVoxelDist);
+        if (closestHitVoxel != NULL) {
+            closestHitVoxel->bbColor = ORANGE;
 
-        //OctreeNode* root = CreateOctreeNode(-OCT, -OCT, -OCT, OCT, OCT, OCT, OCT);
-        
-        //CheckRayOctree(root, r1);
+            RayCollision rc = GetRayCollisionBox(r1, closestHitVoxel->bb);
+            rayhitNormal = rc.normal;
 
-        // Point* p1 = (Point*)malloc(sizeof(Point));
-        // p1->x = 0; p1->y = 0; p1->z = 0;
-        // InsertPointOctree(root, p1);
-
-        // Point* p2 = (Point*)malloc(sizeof(Point));
-        // p2->x = testpoint.x; p2->y = testpoint.y; p2->z = testpoint.z;
-        // InsertPointOctree(root, p2);
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){ 
+                closestHitVoxel->isActive = false;
+            }
+            if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
+                // new voxel coordinates
+                Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayhitNormal);
+                grid3d[(int)NVC.x][(int)NVC.y][(int)NVC.z]->isActive = true;
+            }
+        }
         
         
         
@@ -242,10 +251,17 @@ int main(void) // @init ========================================================
 
             DrawBoxtreeNode(boxtreeRoot);
 
-            CheckBoxtree_Box(bb1, boxtreeRoot);
-            CheckBoxtree_Box(bb2, boxtreeRoot);
+            // CheckBoxtree_Box(bb1, boxtreeRoot);
+            // CheckBoxtree_Box(bb2, boxtreeRoot);
             
-            for (int i = 0; i < gridIndex; i++) DrawVoxel(grid3d[i]);
+            //for (int i = 0; i < gridIndex; i++) DrawVoxel(grid3d[i]);
+            for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+                for (int y = 0; y < LEVEL_GRID_COLS; y++){
+                    for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+                        DrawVoxel(grid3d[x][y][z]);
+                    }
+                }
+            }
 
             // Debug axis
             if (myDebug){   
@@ -296,7 +312,11 @@ int main(void) // @init ========================================================
             DrawRectangle(1080, 5, 195, 100, Fade(SKYBLUE, 0.5f));
             DrawRectangleLines(1080, 5, 195, 100, BLUE);
 
+            DrawText(TextFormat("Closest Voxel Dist - %0.2f", closestVoxelDist), 1090, 15, 10, BLACK);
+            if (closestHitVoxel != NULL)
+            DrawText(TextFormat("Hit Voxel Coor - %0.1f - %0.1f - %0.1f", closestHitVoxel->coordinates.x, closestHitVoxel->coordinates.y, closestHitVoxel->coordinates.z), 1090, 30, 10, BLACK);
             DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f", camera.target.x, camera.target.y, camera.target.z), 1090, 45, 10, BLACK);
+            DrawText(TextFormat("hitnormal - %0.2f - %0.2f - %0.2f", rayhitNormal.x, rayhitNormal.y, rayhitNormal.z), 1090, 60, 10, BLACK);
 
         EndDrawing();
 
