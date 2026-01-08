@@ -12,7 +12,7 @@ typedef struct BoxtreeNode {
     Vector3 position;
     int size;
     struct BoxtreeNode* children[8];
-    struct Voxel* voxels[32];
+    struct Voxel* voxels[50];
     int voxelCount;
     int depth;
     Color debugColor;
@@ -26,7 +26,7 @@ BoxtreeNode* CreateBoxtreeNode(Vector3 center, int size, int depth) {
     node->bb.min = Vector3Subtract(center, (Vector3){size/2.0f, size/2.0f, size/2.0f});
     node->bb.max = Vector3Add(center, (Vector3){size/2.0f, size/2.0f, size/2.0f});
     for (int i = 0; i < 8; i++) { node->children[i] = NULL; }
-    for (int i = 0; i < 30; i++) { node->voxels[i] = NULL; }
+    for (int i = 0; i < 50; i++) { node->voxels[i] = NULL; }
     node->voxelCount = 0;
 
     node->debugColor = WHITE;
@@ -79,45 +79,38 @@ void ResetBoxtree(BoxtreeNode* node) {
     }
 }
 
-// to return an array, pass it as a parameter:
-// void foo(char *buf, int count) {
-//     for(int i = 0; i < count; ++i)
-//         buf[i] = i;
-// }
+void GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int maxHits) {
+    if (node == NULL) return;
 
-Voxel* GetRayVoxel(Ray ray, BoxtreeNode* node, float* closestHitDistance) {
-    Voxel* closestHitVoxel = NULL;
-    if (node == NULL) return closestHitVoxel;
+    if (node->position.x == -3 && node->position.y == 3 && node->position.z == -1){
+        printf("here");
+    }
 
     if (GetRayCollisionBox(ray, node->bb).hit){
+        node->isRayHit = true;
         if (node->depth == 1) {
-            node->isRayHit = true;
-
+            
             for (int i = 0; i < node->voxelCount; i++){
                 if (!node->voxels[i]->isActive) continue;
-
-                node->voxels[i]->bbColor = BLACK;
                 RayCollision rc = GetRayCollisionBox(ray, node->voxels[i]->bb);
                 if (rc.hit){
-                    
-                    if (rc.distance < *closestHitDistance) {
-                        closestHitVoxel = node->voxels[i];
-                        *closestHitDistance = rc.distance;
+                    node->voxels[i]->bbColor = WHITE;
+                    // add to hit list
+                    for (int j = 0; j < maxHits; j++){
+                        if (hitVoxels[j] == NULL){
+                            hitVoxels[j] = node->voxels[i];
+                            break;
+                        }
                     }
                 }
             }
-            return closestHitVoxel;
         } else {
             for (int i = 0; i < 8; i++) {
-                Voxel* potentialNewVoxel = GetRayVoxel(ray, node->children[i], closestHitDistance);
-                if (potentialNewVoxel != NULL) {
-                    closestHitVoxel = potentialNewVoxel;
-                }
+                GetRayVoxels(ray, node->children[i], hitVoxels, maxHits);
+                
             }
-            return closestHitVoxel;
         }
     }
-    return closestHitVoxel;
 }
 
 void CheckBoxtree_Box(BoundingBox bb, BoxtreeNode* node){
@@ -140,7 +133,12 @@ void DrawBoxtreeNode(BoxtreeNode* node) {
     if (node == NULL) return;
 
     if (node->isRayHit) {
-        DrawCubeWires(node->position,node->size-0.1f,node->size-0.1f,node->size-0.1f, RED);
+        if(node->depth == 1){
+            DrawCubeWires(node->position,node->size-0.1f,node->size-0.1f,node->size-0.1f, YELLOW);
+        } else {
+            DrawCubeWires(node->position,node->size-0.1f,node->size-0.1f,node->size-0.1f, RED);
+        }
+        
     } else {
         node->debugColor = WHITE;
     }

@@ -35,8 +35,8 @@ float timePassed = 0;
 int saveIndex = 0;
 
 const int OCT = 8; //octree root size
-const int LEVEL_GRID_ROWS = 10;
-const int LEVEL_GRID_COLS = 2;
+const int LEVEL_GRID_ROWS = 5;
+const int LEVEL_GRID_COLS = 5;
 const int LEVEL_GRID_DEPTH = 5;
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 
@@ -55,6 +55,10 @@ int FindFreeEntitySlot(struct Entity* entityArr[], int arrSize){
 void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode) {
     if (voxel == NULL) return;
     if (btnode == NULL) return;
+
+    if (btnode->position.x == -3 && btnode->position.y == 3 && btnode->position.z == -1){
+        printf("here");
+    }
 
     if (CheckCollisionBoxes(voxel->bb, btnode->bb)){
         if (btnode->depth == 1) {
@@ -101,8 +105,7 @@ int main(void) // @init ========================================================
     for (int x = 0; x < LEVEL_GRID_ROWS; x++){
         for (int y = 0; y < LEVEL_GRID_COLS; y++){
             for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                Voxel* newVoxel = CreateVoxel((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, 1);
-                newVoxel->coordinates = (Vector3){x, y, z};
+                Voxel* newVoxel = CreateVoxel((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, (Vector3){x, y, z}, 1);
                 grid3d[x][y][z] = newVoxel;
                 PlaceVoxelInBoxtree(newVoxel, boxtreeRoot);
                 gridIndex++;
@@ -213,28 +216,45 @@ int main(void) // @init ========================================================
         // @COLLISION ==========================================================================
         
         ResetBoxtree(boxtreeRoot);
-        
+        Voxel* voxelHits[50] = {NULL};
+        GetRayVoxels(r1, boxtreeRoot, voxelHits, 50);
+
         Vector3 rayhitNormal = (Vector3){0,0,0};
         float closestVoxelDist = 100;
         struct Voxel* closestHitVoxel = NULL;
-        closestHitVoxel = GetRayVoxel(r1, boxtreeRoot, &closestVoxelDist);
+
+        for (int i = 0; i < 50; i++){
+            if (voxelHits[i] == NULL){
+                break;
+            } else {
+                float dist = Vector3Distance(r1.position, voxelHits[i]->position);
+                if (dist < closestVoxelDist){
+                    closestVoxelDist = dist;
+                    closestHitVoxel = voxelHits[i];
+                }
+            }
+        }
+
         if (closestHitVoxel != NULL) {
-            closestHitVoxel->bbColor = ORANGE;
+            closestHitVoxel->bbColor = WHITE;
 
             RayCollision rc = GetRayCollisionBox(r1, closestHitVoxel->bb);
             rayhitNormal = rc.normal;
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){ 
-                closestHitVoxel->isActive = false;
+                DestroyVoxel(closestHitVoxel);
             }
             if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
                 // new voxel coordinates
                 Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayhitNormal);
-                grid3d[(int)NVC.x][(int)NVC.y][(int)NVC.z]->isActive = true;
+                grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)][(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)][(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)]->isActive = true;
+                
+            }
+            if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
+                // middle click action
+                printf("debug mode");
             }
         }
-        
-        
         
         // @DRAW ==========================================================================
 
@@ -249,36 +269,36 @@ int main(void) // @init ========================================================
             DrawGrid(10, 1.0f);
             DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
 
-            DrawBoxtreeNode(boxtreeRoot);
+            if (myDebug)DrawBoxtreeNode(boxtreeRoot);
 
             // CheckBoxtree_Box(bb1, boxtreeRoot);
             // CheckBoxtree_Box(bb2, boxtreeRoot);
             
-            //for (int i = 0; i < gridIndex; i++) DrawVoxel(grid3d[i]);
             for (int x = 0; x < LEVEL_GRID_ROWS; x++){
                 for (int y = 0; y < LEVEL_GRID_COLS; y++){
                     for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
                         DrawVoxel(grid3d[x][y][z]);
+                        ResetVoxel(grid3d[x][y][z]);
                     }
                 }
             }
 
             // Debug axis
-            if (myDebug){   
-                // draw an axis with cubes
-                // CENTER
-                DrawCube(camera.target, axisSize, axisSize, axisSize, WHITE);
-                DrawCubeWires(camera.target, axisSize, axisSize, axisSize, BLACK);
-                // RIGHT
-                DrawCube((Vector3){camera.target.x + 0.5f, camera.target.y, camera.target.z}, axisSize, axisSize, axisSize, RED);
-                DrawCubeWires((Vector3){camera.target.x + 0.5f, camera.target.y, camera.target.z}, axisSize, axisSize, axisSize, BLACK);
-                // UP
-                DrawCube((Vector3){camera.target.x, camera.target.y + 0.5f, camera.target.z}, axisSize, axisSize, axisSize, GREEN);
-                DrawCubeWires((Vector3){camera.target.x, camera.target.y + 0.5f, camera.target.z}, axisSize, axisSize, axisSize, BLACK);
-                // BACK
-                DrawCube((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLUE);
-                DrawCubeWires((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLACK);
-            }
+            // if (myDebug){   
+            //     // draw an axis with cubes
+            //     // CENTER
+            //     DrawCube(camera.target, axisSize, axisSize, axisSize, WHITE);
+            //     DrawCubeWires(camera.target, axisSize, axisSize, axisSize, BLACK);
+            //     // RIGHT
+            //     DrawCube((Vector3){camera.target.x + 0.5f, camera.target.y, camera.target.z}, axisSize, axisSize, axisSize, RED);
+            //     DrawCubeWires((Vector3){camera.target.x + 0.5f, camera.target.y, camera.target.z}, axisSize, axisSize, axisSize, BLACK);
+            //     // UP
+            //     DrawCube((Vector3){camera.target.x, camera.target.y + 0.5f, camera.target.z}, axisSize, axisSize, axisSize, GREEN);
+            //     DrawCubeWires((Vector3){camera.target.x, camera.target.y + 0.5f, camera.target.z}, axisSize, axisSize, axisSize, BLACK);
+            //     // BACK
+            //     DrawCube((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLUE);
+            //     DrawCubeWires((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLACK);
+            // }
             
             Vector3 camF = GetCameraForward(&camera);
             //Vector3 camR = GetCameraRight(&camera);
@@ -287,7 +307,7 @@ int main(void) // @init ========================================================
             // Cursor Ray
             Vector3 myTargetBegin = GetCameraRight(&camera);
             myTargetBegin = Vector3Scale(myTargetBegin, 0.5f);
-            myTargetBegin = Vector3Add(myTargetBegin, Vector3Add(camera.position, (Vector3){0,-0.5f,0}));
+            myTargetBegin = Vector3Add(myTargetBegin, Vector3Add(camera.position, (Vector3){0,-0.2f,0}));
             
             r1.position = myTargetBegin;
             r1.direction = camF;
@@ -305,7 +325,7 @@ int main(void) // @init ========================================================
             DrawRectangleLines(5, 5, 330, 100, BLUE);
             
             DrawText("Move keys: W, A, S, D, Space, Left-Ctrl", 15, 15, 10, BLACK);
-            DrawText(TextFormat("Time Passed - %0.2f", timePassed),15, 30, 10, BLACK);
+            DrawText(TextFormat("Time Passed - %0.2f", timePassed), 15, 30, 10, BLACK);
             DrawText(TextFormat("Current FPS - %d", GetFPS()), 15, 45, 10, BLACK);
             
             //Right side
@@ -316,7 +336,7 @@ int main(void) // @init ========================================================
             if (closestHitVoxel != NULL)
             DrawText(TextFormat("Hit Voxel Coor - %0.1f - %0.1f - %0.1f", closestHitVoxel->coordinates.x, closestHitVoxel->coordinates.y, closestHitVoxel->coordinates.z), 1090, 30, 10, BLACK);
             DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f", camera.target.x, camera.target.y, camera.target.z), 1090, 45, 10, BLACK);
-            DrawText(TextFormat("hitnormal - %0.2f - %0.2f - %0.2f", rayhitNormal.x, rayhitNormal.y, rayhitNormal.z), 1090, 60, 10, BLACK);
+            DrawText(TextFormat("hitnormal - %0.1f - %0.1f - %0.1f", rayhitNormal.x, rayhitNormal.y, rayhitNormal.z), 1090, 60, 10, BLACK);
 
         EndDrawing();
 
