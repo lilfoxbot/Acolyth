@@ -23,6 +23,7 @@
 float entitySpawnTick = 1.0f;
 
 bool myDebug = false;
+bool editMode = false;
 float lookSensitivity = 40.0f;
 float camSpeed = 2.0f;
 float axisSize = 0.2f;
@@ -35,9 +36,9 @@ float timePassed = 0;
 int saveIndex = 0;
 
 const int OCT = 8; //octree root size
-const int LEVEL_GRID_ROWS = 5;
+const int LEVEL_GRID_ROWS = 10;
 const int LEVEL_GRID_COLS = 5;
-const int LEVEL_GRID_DEPTH = 5;
+const int LEVEL_GRID_DEPTH = 10;
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 
 struct Entity* hall_entities[ENTITY_LIMIT];
@@ -56,8 +57,8 @@ void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode) {
     if (voxel == NULL) return;
     if (btnode == NULL) return;
 
-    if (btnode->position.x == -3 && btnode->position.y == 3 && btnode->position.z == -1){
-        printf("here");
+    if (voxel->coordinates.y > 0){
+        voxel->isActive = false;
     }
 
     if (CheckCollisionBoxes(voxel->bb, btnode->bb)){
@@ -155,11 +156,15 @@ int main(void) // @init ========================================================
         // if (IsKeyDown(KEY_KP_1)){ testpoint.y -= 0.2f; }
 
         r1Color = (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) ? RED : WHITE;
+        if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
+                // middle click action
+                printf("\nenter debug mode\n");
+            }
 
-        // Switch camera mode
         if (IsKeyPressed(KEY_ONE)){ myDebug = !myDebug; }
         if (IsKeyPressed(KEY_TWO)){ SetTargetFPS(60); }
         if (IsKeyPressed(KEY_THREE)){ SetTargetFPS(120); }
+        if (IsKeyPressed(KEY_E)){ editMode = !editMode; }
 
         // Switch camera projection
         if (IsKeyPressed(KEY_P)){
@@ -223,6 +228,10 @@ int main(void) // @init ========================================================
         float closestVoxelDist = 100;
         struct Voxel* closestHitVoxel = NULL;
 
+        if (editMode){
+
+        }
+
         for (int i = 0; i < 50; i++){
             if (voxelHits[i] == NULL){
                 break;
@@ -236,10 +245,11 @@ int main(void) // @init ========================================================
         }
 
         if (closestHitVoxel != NULL) {
-            closestHitVoxel->bbColor = WHITE;
-
             RayCollision rc = GetRayCollisionBox(r1, closestHitVoxel->bb);
             rayhitNormal = rc.normal;
+
+            closestHitVoxel->selected = true;
+            closestHitVoxel->selectedNormal = rayhitNormal;
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){ 
                 DestroyVoxel(closestHitVoxel);
@@ -250,10 +260,7 @@ int main(void) // @init ========================================================
                 grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)][(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)][(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)]->isActive = true;
                 
             }
-            if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-                // middle click action
-                printf("debug mode");
-            }
+            
         }
         
         // @DRAW ==========================================================================
@@ -337,6 +344,7 @@ int main(void) // @init ========================================================
             DrawText(TextFormat("Hit Voxel Coor - %0.1f - %0.1f - %0.1f", closestHitVoxel->coordinates.x, closestHitVoxel->coordinates.y, closestHitVoxel->coordinates.z), 1090, 30, 10, BLACK);
             DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f", camera.target.x, camera.target.y, camera.target.z), 1090, 45, 10, BLACK);
             DrawText(TextFormat("hitnormal - %0.1f - %0.1f - %0.1f", rayhitNormal.x, rayhitNormal.y, rayhitNormal.z), 1090, 60, 10, BLACK);
+            DrawText(TextFormat("Edit Mode - %s", (editMode) ? "ON" : "OFF"), 1090, 75, 10, BLACK);
 
         EndDrawing();
 

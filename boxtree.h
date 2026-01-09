@@ -12,7 +12,7 @@ typedef struct BoxtreeNode {
     Vector3 position;
     int size;
     struct BoxtreeNode* children[8];
-    struct Voxel* voxels[50];
+    struct Voxel* voxels[64];
     int voxelCount;
     int depth;
     Color debugColor;
@@ -94,7 +94,7 @@ void GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int maxHits) {
                 if (!node->voxels[i]->isActive) continue;
                 RayCollision rc = GetRayCollisionBox(ray, node->voxels[i]->bb);
                 if (rc.hit){
-                    node->voxels[i]->bbColor = WHITE;
+                    //node->voxels[i]->bbColor = WHITE;
                     // add to hit list
                     for (int j = 0; j < maxHits; j++){
                         if (hitVoxels[j] == NULL){
