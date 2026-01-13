@@ -8,6 +8,7 @@
 #include "cube.h"
 #include "boxtree.h"
 #include "voxel.h"
+#include "bullet.h"
 #include "entity.c"
 
 #define RAYMATH_IMPLEMENTATION
@@ -18,6 +19,9 @@
 #define TRI_LIMIT 50
 #define POLY_LIMIT 100
 #define ENTITY_LIMIT 100
+#define PLAYER_BULLET_LIMIT 3
+
+#define BOXTREE_INITIAL_SIZE 16
 
 #define ENTITY_SPAWN_TIMER 1.0f
 float entitySpawnTick = 1.0f;
@@ -43,6 +47,7 @@ const float LEVEL_GRID_CELL_SIZE = 1.0f;
 
 struct Entity* hall_entities[ENTITY_LIMIT];
 struct Entity* block_entities[ENTITY_LIMIT];
+struct Bullet* player_bullets[PLAYER_BULLET_LIMIT];
 
 int FindFreeEntitySlot(struct Entity* entityArr[], int arrSize){
     for (int i = 0; i < ENTITY_LIMIT; i++){
@@ -54,29 +59,24 @@ int FindFreeEntitySlot(struct Entity* entityArr[], int arrSize){
 }
 
 void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode) {
-    if (voxel == NULL) return;
-    if (btnode == NULL) return;
+    if (voxel == NULL || btnode == NULL) return;
 
     if (voxel->coordinates.y > 0){
         voxel->isActive = false;
     }
 
     if (CheckCollisionBoxes(voxel->bb, btnode->bb)){
-        if (btnode->depth == 1) {
+        if (btnode->depth == MAX_BOXTREE_DEPTH) {
             btnode->voxels[btnode->voxelCount] = voxel;
             btnode->voxelCount++;
         }
     }
 
-    if (btnode->depth == 1) return;
+    if (btnode->depth == MAX_BOXTREE_DEPTH) return;
 
     for (int i = 0; i < 8; i++) {
         PlaceVoxelInBoxtree(voxel, btnode->children[i]);
     }
-}
-
-void GetVoxelByCoordinates(int x, int y, int z){
-    //organize voxels in a 3d array for easy access
 }
 
 int main(void) // @init ========================================================================
@@ -97,7 +97,7 @@ int main(void) // @init ========================================================
     camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
     int cameraMode = CAMERA_CUSTOM;
 
-    BoxtreeNode* boxtreeRoot = BuildBoxtree((Vector3){0,0,0}, 16, 4);
+    BoxtreeNode* boxtreeRoot = BuildBoxtree((Vector3){0,0,0}, BOXTREE_INITIAL_SIZE, 1);
 
     // @GRID
     Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
@@ -119,23 +119,12 @@ int main(void) // @init ========================================================
     r1.direction = (Vector3){10,10,0};
     Color r1Color = WHITE;
 
-    // BoundingBox bb1;
-    // bb1.min = (Vector3){-5.0f, -5.0f, -5.0f};
-    // bb1.max = (Vector3){-4.0f, -4.0f, -4.0f};
-
-    // BoundingBox bb2;
-    // bb2.min = (Vector3){4.0f, 4.0f, 4.0f};
-    // bb2.max = (Vector3){5.0f, 5.0f, 5.0f};
-
     //Mesh myMesh = GenMeshCube(1, 1, 1);
     //Model placeHolderModel = LoadModelFromMesh(myMesh);
     //Model myModel = LoadModel("resources/models/myCube.obj");
     
-    // struct BoundingBox b1;
-    // b1.min = (Vector3){0,0,0};
-    // b1.max = (Vector3){5,5,5};
-    
     // READY ==========================================================================
+    
     // printf("\n");
     // printf(TextFormat("%d", sizeof(levelCells) / sizeof(levelCells[0])));
     // printf("\n");
@@ -209,14 +198,28 @@ int main(void) // @init ========================================================
         
         // @UPDATE ==========================================================================
 
-        for (int x = 0; x < gridIndex; x++){
-            //grid3d[x]->color = BLACK;
+        for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
+            if (UpdateBullet(player_bullets[i], dt) == 0){
+                player_bullets[i] = NULL;
+            }
         }
 
         UpdateCameraPro(&camera, 
             (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
             (Vector3){ newYaw, newPitch, 0.0f }, // added rot
             0.0f); // zoom
+        
+        Vector3 camF = GetCameraForward(&camera);
+        Vector3 camR = GetCameraRight(&camera);
+        Vector3 camU = GetCameraUp(&camera);
+
+        // Cursor Ray
+        Vector3 aimRay = Vector3Add(camR, camU);
+        aimRay = Vector3Scale(aimRay, 0.2f);
+        aimRay = Vector3Add(aimRay, Vector3Add(camera.position, (Vector3){0,-0.2f,0}));
+        
+        r1.position = aimRay;
+        r1.direction = camF;
         
         // @COLLISION ==========================================================================
         
@@ -229,38 +232,45 @@ int main(void) // @init ========================================================
         struct Voxel* closestHitVoxel = NULL;
 
         if (editMode){
-
-        }
-
-        for (int i = 0; i < 50; i++){
-            if (voxelHits[i] == NULL){
-                break;
-            } else {
-                float dist = Vector3Distance(r1.position, voxelHits[i]->position);
-                if (dist < closestVoxelDist){
-                    closestVoxelDist = dist;
-                    closestHitVoxel = voxelHits[i];
+            for (int i = 0; i < 50; i++){
+                if (voxelHits[i] == NULL){
+                    break;
+                } else {
+                    float dist = Vector3Distance(r1.position, voxelHits[i]->position);
+                    if (dist < closestVoxelDist){
+                        closestVoxelDist = dist;
+                        closestHitVoxel = voxelHits[i];
+                    }
                 }
             }
-        }
 
-        if (closestHitVoxel != NULL) {
-            RayCollision rc = GetRayCollisionBox(r1, closestHitVoxel->bb);
-            rayhitNormal = rc.normal;
+            if (closestHitVoxel != NULL) {
+                RayCollision rc = GetRayCollisionBox(r1, closestHitVoxel->bb);
+                rayhitNormal = rc.normal;
 
-            closestHitVoxel->selected = true;
-            closestHitVoxel->selectedNormal = rayhitNormal;
+                closestHitVoxel->selected = true;
+                closestHitVoxel->selectedNormal = rayhitNormal;
 
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){ 
-                DestroyVoxel(closestHitVoxel);
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){ 
+                    DestroyVoxel(closestHitVoxel);
+                }
+                if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
+                    // new voxel coordinates
+                    Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayhitNormal);
+                    grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)][(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)][(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)]->isActive = true;
+                }
             }
-            if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
-                // new voxel coordinates
-                Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayhitNormal);
-                grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)][(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)][(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)]->isActive = true;
-                
+        } else {
+            // shoot a projectile
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+                //find empty slot for boolits
+                for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
+                    if (player_bullets[i] == NULL){
+                        player_bullets[i] = CreateBullet(r1.position,r1.direction);
+                        break;
+                    }
+                }
             }
-            
         }
         
         // @DRAW ==========================================================================
@@ -270,7 +280,7 @@ int main(void) // @init ========================================================
             BeginMode3D(camera);
             
             // North Star
-            DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW); 
+            DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW);
             DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE);
 
             DrawGrid(10, 1.0f);
@@ -280,6 +290,12 @@ int main(void) // @init ========================================================
 
             // CheckBoxtree_Box(bb1, boxtreeRoot);
             // CheckBoxtree_Box(bb2, boxtreeRoot);
+
+            // draw boolit
+            
+            for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
+                DrawBullet(player_bullets[i]);
+            }
             
             for (int x = 0; x < LEVEL_GRID_ROWS; x++){
                 for (int y = 0; y < LEVEL_GRID_COLS; y++){
@@ -307,17 +323,6 @@ int main(void) // @init ========================================================
             //     DrawCubeWires((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLACK);
             // }
             
-            Vector3 camF = GetCameraForward(&camera);
-            //Vector3 camR = GetCameraRight(&camera);
-            //Vector3 camU = GetCameraUp(&camera);
-            
-            // Cursor Ray
-            Vector3 myTargetBegin = GetCameraRight(&camera);
-            myTargetBegin = Vector3Scale(myTargetBegin, 0.5f);
-            myTargetBegin = Vector3Add(myTargetBegin, Vector3Add(camera.position, (Vector3){0,-0.2f,0}));
-            
-            r1.position = myTargetBegin;
-            r1.direction = camF;
             DrawRay(r1,r1Color);
             
             EndMode3D(); // ==========================================================================

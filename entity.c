@@ -23,9 +23,9 @@ void DestroyEntity(Entity* entity) {
 }
 
 void UpdateEntity(Entity* entity) {
-    if (entity != NULL && entity->isActive) {
-        entity->position = Vector3Add(entity->position, entity->velocity);
-    }
+    if (entity == NULL) return;
+    
+    entity->position = Vector3Add(entity->position, entity->velocity);
 }
 
 void DrawEntity(const Entity* entity) {

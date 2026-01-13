@@ -1,8 +1,10 @@
+- selected voxel edge case
 
-- edit/shoot modes
+- projectile collision
 
-- instantiate initial grid with active/inactive voxels
 - save/reset level build
 
-- shoot projectiles
-- projectile collision
+// NOTES ---
+
+When setting up new environment, add to ENV PATH variable:
+C:\raylib\w64devkit\bin
