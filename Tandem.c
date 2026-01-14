@@ -230,7 +230,34 @@ int main(void) // @init ========================================================
         Vector3 rayhitNormal = (Vector3){0,0,0};
         float closestVoxelDist = 100;
         struct Voxel* closestHitVoxel = NULL;
+        
+        // BULLET STUFF
+        for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
+            ResetBullet(player_bullets[i]);
+            GetBulletNodes(player_bullets[i], boxtreeRoot);
+        }
+        // CHECK BULLET COLLISION
+        for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
+            // Bullets
+            if (player_bullets[i] == NULL){ continue; }
+            for (int j = 0; j < player_bullets[i]->nodeCount; j++){
+                // Nodes
+                for (int k = 0; k < player_bullets[i]->nodes[j]->voxelCount; k++){
+                    // Voxels
+                    if (CheckCollisionBoxes(player_bullets[i]->bb, player_bullets[i]->nodes[j]->voxels[k]->bb)){
+                        if (player_bullets[i]->nodes[j]->voxels[k]->isActive){
+                            
+                            player_bullets[i]->nodes[j]->voxels[k]->color = WHITE;
 
+                            player_bullets[i]->color = WHITE;
+                            player_bullets[i]->destroyFlag = true;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // PLAYER STUFF
         if (editMode){
             for (int i = 0; i < 50; i++){
                 if (voxelHits[i] == NULL){
@@ -263,10 +290,10 @@ int main(void) // @init ========================================================
         } else {
             // shoot a projectile
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                //find empty slot for boolits
+                // find empty slot for boolits
                 for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
                     if (player_bullets[i] == NULL){
-                        player_bullets[i] = CreateBullet(r1.position,r1.direction);
+                        player_bullets[i] = CreateBullet(r1.position, r1.direction);
                         break;
                     }
                 }
@@ -276,7 +303,7 @@ int main(void) // @init ========================================================
         // @DRAW ==========================================================================
 
         BeginDrawing();
-            ClearBackground(DARKBLUE);
+            ClearBackground(GRAY);
             BeginMode3D(camera);
             
             // North Star
@@ -286,13 +313,8 @@ int main(void) // @init ========================================================
             DrawGrid(10, 1.0f);
             DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
 
-            if (myDebug)DrawBoxtreeNode(boxtreeRoot);
+            if (myDebug) DrawBoxtreeNode(boxtreeRoot);
 
-            // CheckBoxtree_Box(bb1, boxtreeRoot);
-            // CheckBoxtree_Box(bb2, boxtreeRoot);
-
-            // draw boolit
-            
             for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
                 DrawBullet(player_bullets[i]);
             }
@@ -305,23 +327,6 @@ int main(void) // @init ========================================================
                     }
                 }
             }
-
-            // Debug axis
-            // if (myDebug){   
-            //     // draw an axis with cubes
-            //     // CENTER
-            //     DrawCube(camera.target, axisSize, axisSize, axisSize, WHITE);
-            //     DrawCubeWires(camera.target, axisSize, axisSize, axisSize, BLACK);
-            //     // RIGHT
-            //     DrawCube((Vector3){camera.target.x + 0.5f, camera.target.y, camera.target.z}, axisSize, axisSize, axisSize, RED);
-            //     DrawCubeWires((Vector3){camera.target.x + 0.5f, camera.target.y, camera.target.z}, axisSize, axisSize, axisSize, BLACK);
-            //     // UP
-            //     DrawCube((Vector3){camera.target.x, camera.target.y + 0.5f, camera.target.z}, axisSize, axisSize, axisSize, GREEN);
-            //     DrawCubeWires((Vector3){camera.target.x, camera.target.y + 0.5f, camera.target.z}, axisSize, axisSize, axisSize, BLACK);
-            //     // BACK
-            //     DrawCube((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLUE);
-            //     DrawCubeWires((Vector3){camera.target.x, camera.target.y, camera.target.z + 0.5f}, axisSize, axisSize, axisSize, BLACK);
-            // }
             
             DrawRay(r1,r1Color);
             

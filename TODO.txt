@@ -1,6 +1,8 @@
-- selected voxel edge case
+- autonomous bullet shooter
 
-- projectile collision
+- multiple bullets colliding
+
+- particle explosion on bullet hit
 
 - save/reset level build
 

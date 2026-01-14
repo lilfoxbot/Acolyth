@@ -14,13 +14,16 @@ typedef struct BoxtreeNode {
     BoundingBox bb;
     Vector3 position;
     int size;
-    struct BoxtreeNode* children[8];
-    struct Voxel* voxels[64];
-    struct Bullet* bullets[32];
     int voxelCount;
+    int bulletCount;
     int depth;
     Color debugColor;
     bool isRayHit;
+    bool isBulletHit;
+    struct BoxtreeNode* children[8];
+
+    struct Voxel* voxels[64];
+    struct Bullet* bullets[32];
 } BoxtreeNode;
 
 BoxtreeNode* CreateBoxtreeNode(Vector3 center, int size, int depth) {
@@ -33,6 +36,7 @@ BoxtreeNode* CreateBoxtreeNode(Vector3 center, int size, int depth) {
     for (int i = 0; i < 64; i++) { node->voxels[i] = NULL; }
     for (int i = 0; i < 32; i++) { node->bullets[i] = NULL; }
     node->voxelCount = 0;
+    node->bulletCount = 0;
 
     node->debugColor = WHITE;
     node->isRayHit = false;
@@ -78,6 +82,7 @@ void ResetBoxtree(BoxtreeNode* node) {
     if (node == NULL) return;
 
     node->isRayHit = false;
+    node->isBulletHit = false;
 
     for (int i = 0; i < 8; i++) {
         ResetBoxtree(node->children[i]);
@@ -90,13 +95,11 @@ void GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int maxHits) {
     if (GetRayCollisionBox(ray, node->bb).hit){
         node->isRayHit = true;
         if (node->depth == MAX_BOXTREE_DEPTH) {
-            
             for (int i = 0; i < node->voxelCount; i++){
                 if (!node->voxels[i]->isActive) continue;
                 RayCollision rc = GetRayCollisionBox(ray, node->voxels[i]->bb);
                 if (rc.hit){
-                    //node->voxels[i]->bbColor = WHITE;
-                    // add to hit list
+                    
                     for (int j = 0; j < maxHits; j++){
                         if (hitVoxels[j] == NULL){
                             hitVoxels[j] = node->voxels[i];
@@ -108,40 +111,41 @@ void GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int maxHits) {
         } else {
             for (int i = 0; i < 8; i++) {
                 GetRayVoxels(ray, node->children[i], hitVoxels, maxHits);
-                
             }
         }
     }
 }
 
-void CheckInBullet(BoxtreeNode* node, Bullet* bullet){
+void GetBulletNodes(Bullet* bullet, BoxtreeNode* node){
     if (node == NULL || bullet == NULL) return;
     
-    //place bullet into overlapping nodes
+    // place nodes into bullet's array
     if (CheckCollisionBoxes(node->bb, bullet->bb)){
         if (node->depth == MAX_BOXTREE_DEPTH) {
+            node->isBulletHit = true;
+            bullet->nodes[bullet->nodeCount] = node;
+            bullet->nodeCount++;
 
         } else {
             for (int i = 0; i < 8; i++) {
-                CheckInBullet(node->children[i], bullet);
+                GetBulletNodes(bullet, node->children[i]);
             }
         }
     }
-
 }
 
 void DrawBoxtreeNode(BoxtreeNode* node) {
     if (node == NULL) return;
-
-    if (node->isRayHit) {
-        if(node->depth == MAX_BOXTREE_DEPTH){
-            DrawCubeWires(node->position,node->size-0.1f,node->size-0.1f,node->size-0.1f, YELLOW);
-        } else {
-            DrawCubeWires(node->position,node->size-0.1f,node->size-0.1f,node->size-0.1f, RED);
+    
+    if(node->depth == MAX_BOXTREE_DEPTH){
+        if (node->isBulletHit){
+            DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, SKYBLUE);
+        } else if (node->isRayHit){
+            DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, YELLOW);
         }
         
     } else {
-        node->debugColor = WHITE;
+        DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, RED);
     }
 
     for (int i = 0; i < 8; i++) {
