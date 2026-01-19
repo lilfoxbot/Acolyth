@@ -9,22 +9,13 @@
 #include "boxtree.h"
 #include "voxel.h"
 #include "bullet.h"
-#include "entity.c"
 
 #define RAYMATH_IMPLEMENTATION
 
 #define MOUSE_MOVE_SENSITIVITY 0.001f
 
-#define CUBE_LIMIT 10
-#define TRI_LIMIT 50
-#define POLY_LIMIT 100
-#define ENTITY_LIMIT 100
-#define PLAYER_BULLET_LIMIT 3
-
+#define WORLD_BULLET_LIMIT 50
 #define BOXTREE_INITIAL_SIZE 16
-
-#define ENTITY_SPAWN_TIMER 1.0f
-float entitySpawnTick = 1.0f;
 
 bool myDebug = false;
 bool editMode = false;
@@ -45,18 +36,8 @@ const int LEVEL_GRID_COLS = 5;
 const int LEVEL_GRID_DEPTH = 10;
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 
-struct Entity* hall_entities[ENTITY_LIMIT];
-struct Entity* block_entities[ENTITY_LIMIT];
-struct Bullet* player_bullets[PLAYER_BULLET_LIMIT];
-
-int FindFreeEntitySlot(struct Entity* entityArr[], int arrSize){
-    for (int i = 0; i < ENTITY_LIMIT; i++){
-        if (entityArr[i] == NULL){
-            return i;
-        }
-    }
-    return -1;
-}
+struct Bullet* worldBullets[WORLD_BULLET_LIMIT];
+int worldBulletCount = 0;
 
 void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode) {
     if (voxel == NULL || btnode == NULL) return;
@@ -79,7 +60,7 @@ void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode) {
     }
 }
 
-int main(void) // @init ========================================================================
+int main(void) // @INIT ========================================================================
 {
     const int screenWidth = 1280;
     const int screenHeight = 720;
@@ -112,6 +93,11 @@ int main(void) // @init ========================================================
                 gridIndex++;
             }
         }
+    }
+
+    // @BULLETS
+    for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
+        worldBullets[i] = CreateBullet();
     }
     
     struct Ray r1;
@@ -198,11 +184,17 @@ int main(void) // @init ========================================================
         
         // @UPDATE ==========================================================================
 
-        for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
-            if (UpdateBullet(player_bullets[i], dt) == 0){
-                player_bullets[i] = NULL;
-            }
+        // for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
+        //     if (UpdateBullet(player_bullets[i], dt) == 0){
+        //         player_bullets[i] = NULL;
+        //     }
+        // }
+        
+        for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
+            UpdateBullet(worldBullets[i], dt);
+            
         }
+
 
         UpdateCameraPro(&camera, 
             (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
@@ -232,25 +224,27 @@ int main(void) // @init ========================================================
         struct Voxel* closestHitVoxel = NULL;
         
         // BULLET STUFF
-        for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
-            ResetBullet(player_bullets[i]);
-            GetBulletNodes(player_bullets[i], boxtreeRoot);
+        for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
+            if (!worldBullets[i]->isActive) continue;
+            ResetBullet(worldBullets[i]);
+            GetBulletNodes(worldBullets[i], boxtreeRoot);
         }
-        // CHECK BULLET COLLISION
-        for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
-            // Bullets
-            if (player_bullets[i] == NULL){ continue; }
-            for (int j = 0; j < player_bullets[i]->nodeCount; j++){
-                // Nodes
-                for (int k = 0; k < player_bullets[i]->nodes[j]->voxelCount; k++){
-                    // Voxels
-                    if (CheckCollisionBoxes(player_bullets[i]->bb, player_bullets[i]->nodes[j]->voxels[k]->bb)){
-                        if (player_bullets[i]->nodes[j]->voxels[k]->isActive){
-                            
-                            player_bullets[i]->nodes[j]->voxels[k]->color = WHITE;
 
-                            player_bullets[i]->color = WHITE;
-                            player_bullets[i]->destroyFlag = true;
+        // CHECK BULLET COLLISION
+        for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
+            // Bullets
+            if (!worldBullets[i]->isActive){ continue; }
+            for (int j = 0; j < worldBullets[i]->nodeCount; j++){
+                // Nodes
+                for (int k = 0; k < worldBullets[i]->nodes[j]->voxelCount; k++){
+                    // Voxels
+                    if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->voxels[k]->bb)){
+                        if (worldBullets[i]->nodes[j]->voxels[k]->isActive){
+                            
+                            worldBullets[i]->nodes[j]->voxels[k]->color = WHITE;
+
+                            worldBullets[i]->color = WHITE;
+                            worldBullets[i]->destroyFlag = true;
                         }
                     }
                 }
@@ -291,9 +285,11 @@ int main(void) // @init ========================================================
             // shoot a projectile
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                 // find empty slot for boolits
-                for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
-                    if (player_bullets[i] == NULL){
-                        player_bullets[i] = CreateBullet(r1.position, r1.direction);
+                for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
+                    if (worldBullets[i]->isActive){
+                        worldBullets[i]->isActive = true;
+                        worldBullets[i]->position = r1.position;
+                        worldBullets[i]->direction = r1.direction;
                         break;
                     }
                 }
@@ -315,8 +311,8 @@ int main(void) // @init ========================================================
 
             if (myDebug) DrawBoxtreeNode(boxtreeRoot);
 
-            for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
-                DrawBullet(player_bullets[i]);
+            for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
+                DrawBullet(worldBullets[i]);
             }
             
             for (int x = 0; x < LEVEL_GRID_ROWS; x++){

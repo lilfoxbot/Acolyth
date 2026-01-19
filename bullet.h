@@ -6,56 +6,64 @@
 #include <stdlib.h>
 
 typedef struct Bullet {
+    bool isActive;
+
     Vector3 position;
     Vector3 direction;
     float speed;
     Vector3 velocity;
+
     float size;
     BoundingBox bb;
+
     Color bbColor;
     Color color;
     Color defaultColor;
-    bool isActive;
+    
     float lifeSpan;
     bool destroyFlag;
-    int nodeCount;
 
+    int nodeCount;
     struct BoxtreeNode* nodes[8];
 } Bullet;
 
-Bullet* CreateBullet(Vector3 position, Vector3 direction) {
+Bullet* CreateBullet() {
     Bullet* bullet = (Bullet*)malloc(sizeof(Bullet));
-    bullet->position = position;
-    bullet->direction = direction;
+    bullet->position = (Vector3){0,0,0};
+    bullet->direction = (Vector3){0,0,0};
     bullet->speed = 0.1f;
-    bullet->velocity = Vector3Scale(direction, bullet->speed);
+    bullet->velocity = (Vector3){0,0,0};
     bullet->size = 0.1f;
-    bullet->bb.min = (Vector3){position.x - bullet->size / 2, position.y - bullet->size / 2, position.z - bullet->size / 2};
-    bullet->bb.max = (Vector3){position.x + bullet->size / 2, position.y + bullet->size / 2, position.z + bullet->size / 2};
+    bullet->bb.min = (Vector3){0,0,0};
+    bullet->bb.max = (Vector3){0,0,0};
     bullet->bbColor = BLACK;
     bullet->defaultColor = RED;
     bullet->color = bullet->defaultColor;
-    bullet->isActive = true;
     bullet->lifeSpan = 3;
     bullet->destroyFlag = false;
+    bullet->isActive = false;
     return bullet;
 }
 
 void DestroyBullet(Bullet* bullet) {
-    if (bullet == NULL) return;
+    if (bullet == NULL || !bullet->isActive) return;
     
-    free(bullet);
+    bullet->isActive = false; 
+
+    //free(bullet);
 }
 
 void ResetBullet(Bullet* bullet){
-    if (bullet == NULL) return;
+    if (bullet == NULL || !bullet->isActive) return;
 
     bullet->nodeCount = 0;
     memset(bullet->nodes, 0, sizeof(bullet->nodes));
 }
 
-int UpdateBullet(Bullet* bullet, float deltatime){
-    if (bullet == NULL) return 1;
+void UpdateBullet(Bullet* bullet, float deltatime){
+    if (bullet == NULL || !bullet->isActive) return;
+
+    bullet->velocity = Vector3Scale(bullet->direction, bullet->speed);
 
     // update position
     Vector3 newPos = Vector3Add(bullet->position, bullet->velocity);
@@ -67,17 +75,13 @@ int UpdateBullet(Bullet* bullet, float deltatime){
     bullet->lifeSpan -= deltatime;
     if (bullet->lifeSpan <= 0){
         DestroyBullet(bullet);
-        return 0;
     } else if (bullet->destroyFlag){
         DestroyBullet(bullet);
-        return 0;
-    } 
-
-    return 1;
+    }
 }
 
 void DrawBullet(Bullet* bullet) {
-    if (bullet == NULL) return;
+    if (bullet == NULL || !bullet->isActive) return;
 
     DrawCube(bullet->position, bullet->size, bullet->size, bullet->size, bullet->color);
     DrawBoundingBox(bullet->bb, bullet->bbColor);
