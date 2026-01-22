@@ -76,7 +76,6 @@ int main(void) // @INIT ========================================================
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 60.0f;                                // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
-    int cameraMode = CAMERA_CUSTOM;
 
     BoxtreeNode* boxtreeRoot = BuildBoxtree((Vector3){0,0,0}, BOXTREE_INITIAL_SIZE, 1);
 
@@ -140,30 +139,6 @@ int main(void) // @INIT ========================================================
         if (IsKeyPressed(KEY_TWO)){ SetTargetFPS(60); }
         if (IsKeyPressed(KEY_THREE)){ SetTargetFPS(120); }
         if (IsKeyPressed(KEY_E)){ editMode = !editMode; }
-
-        // Switch camera projection
-        if (IsKeyPressed(KEY_P)){
-            if (camera.projection == CAMERA_PERSPECTIVE){
-                // Create isometric view
-                cameraMode = CAMERA_THIRD_PERSON;
-                // Note: The target distance is related to the render distance in the orthographic projection
-                camera.position = (Vector3){ 0.0f, 2.0f, -100.0f };
-                camera.target = (Vector3){ 0.0f, 2.0f, 0.0f };
-                camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
-                camera.projection = CAMERA_ORTHOGRAPHIC;
-                camera.fovy = 20.0f; // near plane width in CAMERA_ORTHOGRAPHIC
-                CameraYaw(&camera, -135 * DEG2RAD, true);
-                CameraPitch(&camera, -45 * DEG2RAD, true, true, false);
-            } else if (camera.projection == CAMERA_ORTHOGRAPHIC) {
-                // Reset to default view
-                cameraMode = CAMERA_THIRD_PERSON;
-                camera.position = (Vector3){ 0.0f, 2.0f, 10.0f };
-                camera.target = (Vector3){ 0.0f, 2.0f, 0.0f };
-                camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
-                camera.projection = CAMERA_PERSPECTIVE;
-                camera.fovy = 60.0f;
-            }
-        }
         
         // camera movement/input
         camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
@@ -286,10 +261,8 @@ int main(void) // @INIT ========================================================
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                 // find empty slot for boolits
                 for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
-                    if (worldBullets[i]->isActive){
-                        worldBullets[i]->isActive = true;
-                        worldBullets[i]->position = r1.position;
-                        worldBullets[i]->direction = r1.direction;
+                    if (!worldBullets[i]->isActive){
+                        SpawnBullet(worldBullets[i], r1.position, r1.direction);
                         break;
                     }
                 }

@@ -1,5 +1,3 @@
-- rework boolit
-
 - "game object" struct
 - autonomous bullet shooter
 

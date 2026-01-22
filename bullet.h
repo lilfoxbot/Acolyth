@@ -29,39 +29,60 @@ typedef struct Bullet {
 
 Bullet* CreateBullet() {
     Bullet* bullet = (Bullet*)malloc(sizeof(Bullet));
+    bullet->isActive = false;
+
     bullet->position = (Vector3){0,0,0};
     bullet->direction = (Vector3){0,0,0};
     bullet->speed = 0.1f;
     bullet->velocity = (Vector3){0,0,0};
+
     bullet->size = 0.1f;
     bullet->bb.min = (Vector3){0,0,0};
     bullet->bb.max = (Vector3){0,0,0};
+
     bullet->bbColor = BLACK;
     bullet->defaultColor = RED;
     bullet->color = bullet->defaultColor;
+
     bullet->lifeSpan = 3;
     bullet->destroyFlag = false;
-    bullet->isActive = false;
+    
+    bullet->nodeCount = 0;
+    memset(bullet->nodes, 0, sizeof(bullet->nodes));
+
     return bullet;
 }
 
+void SpawnBullet(Bullet* bullet, Vector3 newPos, Vector3 newDir){
+    bullet->isActive = true;
+    bullet->lifeSpan = 3;
+    bullet->position = newPos;
+
+    bullet->bb.min = (Vector3){newPos.x - bullet->size / 2, newPos.y - bullet->size / 2, newPos.z - bullet->size / 2};
+    bullet->bb.max = (Vector3){newPos.x + bullet->size / 2, newPos.y + bullet->size / 2, newPos.z + bullet->size / 2};
+
+    bullet->direction = newDir;
+}
+
 void DestroyBullet(Bullet* bullet) {
-    if (bullet == NULL || !bullet->isActive) return;
+    if (!bullet->isActive) return;
     
     bullet->isActive = false; 
+    bullet->destroyFlag = false;
+    bullet->color = bullet->defaultColor;
 
     //free(bullet);
 }
 
 void ResetBullet(Bullet* bullet){
-    if (bullet == NULL || !bullet->isActive) return;
+    if (!bullet->isActive) return;
 
     bullet->nodeCount = 0;
     memset(bullet->nodes, 0, sizeof(bullet->nodes));
 }
 
 void UpdateBullet(Bullet* bullet, float deltatime){
-    if (bullet == NULL || !bullet->isActive) return;
+    if (!bullet->isActive) return;
 
     bullet->velocity = Vector3Scale(bullet->direction, bullet->speed);
 
@@ -81,7 +102,7 @@ void UpdateBullet(Bullet* bullet, float deltatime){
 }
 
 void DrawBullet(Bullet* bullet) {
-    if (bullet == NULL || !bullet->isActive) return;
+    if (!bullet->isActive) return;
 
     DrawCube(bullet->position, bullet->size, bullet->size, bullet->size, bullet->color);
     DrawBoundingBox(bullet->bb, bullet->bbColor);
