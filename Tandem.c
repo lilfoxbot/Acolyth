@@ -9,11 +9,13 @@
 #include "boxtree.h"
 #include "voxel.h"
 #include "bullet.h"
+#include "pawn.h"
 
 #define RAYMATH_IMPLEMENTATION
 
 #define MOUSE_MOVE_SENSITIVITY 0.001f
 
+#define WORLD_PAWN_LIMIT 10
 #define WORLD_BULLET_LIMIT 50
 #define BOXTREE_INITIAL_SIZE 16
 
@@ -36,6 +38,7 @@ const int LEVEL_GRID_COLS = 5;
 const int LEVEL_GRID_DEPTH = 10;
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 
+struct Pawn* worldPawns[WORLD_PAWN_LIMIT];
 struct Bullet* worldBullets[WORLD_BULLET_LIMIT];
 int worldBulletCount = 0;
 
@@ -79,7 +82,7 @@ int main(void) // @INIT ========================================================
 
     BoxtreeNode* boxtreeRoot = BuildBoxtree((Vector3){0,0,0}, BOXTREE_INITIAL_SIZE, 1);
 
-    // @GRID
+    // @GRID init
     Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
     int gridIndex = 0;
     struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
@@ -94,9 +97,14 @@ int main(void) // @INIT ========================================================
         }
     }
 
-    // @BULLETS
+    // @BULLET init
     for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
         worldBullets[i] = CreateBullet();
+    }
+
+    // @PAWN init
+    for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
+        worldPawns[i] = CreatePawn();
     }
     
     struct Ray r1;
@@ -109,6 +117,9 @@ int main(void) // @INIT ========================================================
     //Model myModel = LoadModel("resources/models/myCube.obj");
     
     // READY ==========================================================================
+
+    SpawnPawn(worldPawns[0], SEEKER, (Vector3){0,6,0});
+    SpawnPawn(worldPawns[1], SHOOTER, (Vector3){2,6,0});
     
     // printf("\n");
     // printf(TextFormat("%d", sizeof(levelCells) / sizeof(levelCells[0])));
@@ -158,18 +169,10 @@ int main(void) // @INIT ========================================================
         float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
         
         // @UPDATE ==========================================================================
-
-        // for (int i = 0; i < PLAYER_BULLET_LIMIT; i++){
-        //     if (UpdateBullet(player_bullets[i], dt) == 0){
-        //         player_bullets[i] = NULL;
-        //     }
-        // }
         
-        for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
-            UpdateBullet(worldBullets[i], dt);
-            
-        }
+        for (int i = 0; i < WORLD_BULLET_LIMIT; i++){ UpdateBullet(worldBullets[i], dt); }
 
+        for (int i = 0; i < WORLD_PAWN_LIMIT; i++){ UpdatePawn(worldPawns[i], dt); }
 
         UpdateCameraPro(&camera, 
             (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
@@ -197,15 +200,22 @@ int main(void) // @INIT ========================================================
         Vector3 rayhitNormal = (Vector3){0,0,0};
         float closestVoxelDist = 100;
         struct Voxel* closestHitVoxel = NULL;
+
+        // pawn checkin
+        for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
+            if (!worldPawns[i]->isActive) continue;
+            ResetPawn(worldPawns[i]);
+            GetPawnNodes(worldPawns[i], boxtreeRoot);
+        }
         
-        // BULLET STUFF
+        // bullet checkin
         for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
             if (!worldBullets[i]->isActive) continue;
             ResetBullet(worldBullets[i]);
             GetBulletNodes(worldBullets[i], boxtreeRoot);
         }
 
-        // CHECK BULLET COLLISION
+        // bullet collision
         for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
             // Bullets
             if (!worldBullets[i]->isActive){ continue; }
@@ -226,7 +236,7 @@ int main(void) // @INIT ========================================================
             }
         }
         
-        // PLAYER STUFF
+        // player collision
         if (editMode){
             for (int i = 0; i < 50; i++){
                 if (voxelHits[i] == NULL){
@@ -283,6 +293,10 @@ int main(void) // @INIT ========================================================
             DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
 
             if (myDebug) DrawBoxtreeNode(boxtreeRoot);
+
+            for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
+                DrawPawn(worldPawns[i]);
+            }
 
             for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
                 DrawBullet(worldBullets[i]);

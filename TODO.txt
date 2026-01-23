@@ -1,4 +1,8 @@
-- "game object" struct
+- "pawn" struct
+    - behaviour determined by switch statement
+
+- slide voxels between colors? eg
+
 - autonomous bullet shooter
 
 - multiple bullets colliding

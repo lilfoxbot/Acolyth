@@ -4,6 +4,7 @@
 #include "raymath.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct Bullet {
     bool isActive;
@@ -70,8 +71,6 @@ void DestroyBullet(Bullet* bullet) {
     bullet->isActive = false; 
     bullet->destroyFlag = false;
     bullet->color = bullet->defaultColor;
-
-    //free(bullet);
 }
 
 void ResetBullet(Bullet* bullet){

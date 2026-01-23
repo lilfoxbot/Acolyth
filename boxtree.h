@@ -7,6 +7,7 @@
 
 #include "voxel.h"
 #include "bullet.h"
+#include "pawn.h"
 
 const int MAX_BOXTREE_DEPTH = 4;
 
@@ -89,6 +90,27 @@ void ResetBoxtree(BoxtreeNode* node) {
     }
 }
 
+void DrawBoxtreeNode(BoxtreeNode* node) {
+    if (node == NULL) return;
+    
+    if(node->depth == MAX_BOXTREE_DEPTH){
+        if (node->isBulletHit){
+            DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, SKYBLUE);
+        } else if (node->isRayHit){
+            DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, YELLOW);
+        }
+        
+    } else {
+        DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, RED);
+    }
+
+    for (int i = 0; i < 8; i++) {
+        DrawBoxtreeNode(node->children[i]);
+    }
+}
+
+// @CHECKIN ===
+
 void GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int maxHits) {
     if (node == NULL) return;
 
@@ -117,7 +139,7 @@ void GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int maxHits) {
 }
 
 void GetBulletNodes(Bullet* bullet, BoxtreeNode* node){
-    if (node == NULL || bullet == NULL) return;
+    if (node == NULL || !bullet->isActive) return;
     
     // place nodes into bullet's array
     if (CheckCollisionBoxes(node->bb, bullet->bb)){
@@ -134,21 +156,20 @@ void GetBulletNodes(Bullet* bullet, BoxtreeNode* node){
     }
 }
 
-void DrawBoxtreeNode(BoxtreeNode* node) {
-    if (node == NULL) return;
-    
-    if(node->depth == MAX_BOXTREE_DEPTH){
-        if (node->isBulletHit){
-            DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, SKYBLUE);
-        } else if (node->isRayHit){
-            DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, YELLOW);
-        }
-        
-    } else {
-        DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, RED);
-    }
 
-    for (int i = 0; i < 8; i++) {
-        DrawBoxtreeNode(node->children[i]);
+void GetPawnNodes(Pawn* pawn, BoxtreeNode* node){
+    if (node == NULL || !pawn->isActive) return;
+
+    if (CheckCollisionBoxes(node->bb, pawn->bb)){
+        if (node->depth == MAX_BOXTREE_DEPTH) {
+            node->isBulletHit = true;
+            pawn->nodes[pawn->nodeCount] = node;
+            pawn->nodeCount++;
+
+        } else {
+            for (int i = 0; i < 8; i++) {
+                GetPawnNodes(pawn, node->children[i]);
+            }
+        }
     }
 }
