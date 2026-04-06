@@ -1,11 +1,8 @@
-- "pawn" struct
-    - behaviour determined by switch statement
 
-- slide voxels between colors? eg
 
 - autonomous bullet shooter
 
-- multiple bullets colliding
+- bullet collision
 
 - particle explosion on bullet hit
 
@@ -15,8 +12,10 @@
 
 ▼ NEW ENVIRONMENT SETUP ▼
 
-add to ENV PATH variable:
+1 - install raylib
+
+2 - add to ENV PATH variable:
 C:\raylib\w64devkit\bin
 
-Fix build path in tasks.json:
+3 - Fix build path in tasks.json:
 tasks.json > tasks > windows > command -> "C:/raylib/w64devkit/bin/mingw32-make.exe" instead of "mingw32-make.exe"

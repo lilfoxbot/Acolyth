@@ -227,6 +227,7 @@ int main(void) // @INIT ========================================================
                         if (worldBullets[i]->nodes[j]->voxels[k]->isActive){
                             
                             worldBullets[i]->nodes[j]->voxels[k]->color = WHITE;
+                            worldBullets[i]->nodes[j]->voxels[k]->fading = true;
 
                             worldBullets[i]->color = WHITE;
                             worldBullets[i]->destroyFlag = true;

@@ -34,7 +34,7 @@ Bullet* CreateBullet() {
 
     bullet->position = (Vector3){0,0,0};
     bullet->direction = (Vector3){0,0,0};
-    bullet->speed = 0.1f;
+    bullet->speed = 3.0f;
     bullet->velocity = (Vector3){0,0,0};
 
     bullet->size = 0.1f;
@@ -45,7 +45,7 @@ Bullet* CreateBullet() {
     bullet->defaultColor = RED;
     bullet->color = bullet->defaultColor;
 
-    bullet->lifeSpan = 3;
+    bullet->lifeSpan = 5;
     bullet->destroyFlag = false;
     
     bullet->nodeCount = 0;
@@ -83,7 +83,7 @@ void ResetBullet(Bullet* bullet){
 void UpdateBullet(Bullet* bullet, float deltatime){
     if (!bullet->isActive) return;
 
-    bullet->velocity = Vector3Scale(bullet->direction, bullet->speed);
+    bullet->velocity = Vector3Scale(Vector3Scale(bullet->direction, bullet->speed), deltatime);
 
     // update position
     Vector3 newPos = Vector3Add(bullet->position, bullet->velocity);

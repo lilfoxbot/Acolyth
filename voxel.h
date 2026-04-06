@@ -16,6 +16,7 @@ typedef struct Voxel {
     bool isActive;
     bool selected;
     Vector3 selectedNormal;
+    bool fading;
 } Voxel;
 
 Voxel* CreateVoxel(Vector3 position, Vector3 coordinates, float size) {
@@ -31,6 +32,7 @@ Voxel* CreateVoxel(Vector3 position, Vector3 coordinates, float size) {
     voxel->isActive = true;
     voxel->selected = false;
     voxel->selectedNormal = (Vector3){0,0,0};
+    voxel->fading = false;
     return voxel;
 }
 
@@ -52,16 +54,40 @@ void DrawVoxel(Voxel* voxel) {
         if (voxel->selectedNormal.z < 1 && voxel->selectedNormal.z > -1 && voxel->selectedNormal.z != 0){ cursorSizeZ = 0; }
         
         DrawCubeWires(Vector3Add(voxel->position,Vector3Scale(voxel->selectedNormal,0.55)), cursorSizeX, cursorSizeY, cursorSizeZ, RAYWHITE);
-        DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, (Color){voxel->color.r+50,voxel->color.g+50,voxel->color.b+50,255});
+        DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, (Color){voxel->defaultColor.r+50,voxel->defaultColor.g+50,voxel->defaultColor.b+50,255});
     } else {
-        DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, voxel->color);
+        if (voxel->fading){
+            // update fade
+            int newR = voxel->color.r;
+            int newG = voxel->color.g;
+            int newB = voxel->color.b;
+
+            if (voxel->color.r <= voxel->defaultColor.r && 
+                voxel->color.g <= voxel->defaultColor.g &&
+                voxel->color.b <= voxel->defaultColor.b)
+            {
+                voxel->color = voxel->defaultColor;
+                voxel->fading = false;
+            } else {
+                if (voxel->color.r > voxel->defaultColor.r) newR--;
+                if (voxel->color.g > voxel->defaultColor.g) newG--;
+                if (voxel->color.b > voxel->defaultColor.b) newB--;
+
+                voxel->color = (Color){newR,newG,newB,voxel->color.a};
+            }
+
+            DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, voxel->color);
+        } else {
+            DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, voxel->color);
+        }
     }
+
     DrawBoundingBox(voxel->bb, voxel->bbColor);
 }
 
 void ResetVoxel(Voxel* voxel) {
     if (voxel == NULL) return;
-    voxel->color = voxel->defaultColor;
+    //voxel->color = voxel->defaultColor;
     voxel->selected = false;
 }
 

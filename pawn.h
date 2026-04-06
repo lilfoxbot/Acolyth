@@ -99,7 +99,16 @@ void ResetPawn(Pawn* pawn){
 void UpdatePawn(Pawn* pawn, float deltatime){
     if (!pawn->isActive) return;
 
-    // what kind of pawn?
+    switch(pawn->type){
+        case SEEKER:
+            pawn->velocity = Vector3Scale((Vector3){0,0.1f,0}, deltatime);
+            break;
+        case SHOOTER:
+            pawn->velocity = Vector3Scale((Vector3){0,0.1f,0}, deltatime);
+            break;
+        default:
+            break;
+    }
 
     // update position
     Vector3 newPos = Vector3Add(pawn->position, pawn->velocity);
