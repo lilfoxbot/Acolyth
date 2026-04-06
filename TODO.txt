@@ -13,5 +13,10 @@
 
 // NOTES ---
 
-When setting up new environment, add to ENV PATH variable:
+▼ NEW ENVIRONMENT SETUP ▼
+
+add to ENV PATH variable:
 C:\raylib\w64devkit\bin
+
+Fix build path in tasks.json:
+tasks.json > tasks > windows > command -> "C:/raylib/w64devkit/bin/mingw32-make.exe" instead of "mingw32-make.exe"
