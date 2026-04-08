@@ -20,12 +20,15 @@ typedef struct Pawn {
     float speed;
     Vector3 velocity;
 
+    struct Ray aimRay;
+
     float size;
     BoundingBox bb;
 
     Color bbColor;
     Color color;
     Color defaultColor;
+    Color aimRayColor;
     
     int health;
     bool destroyFlag;
@@ -44,6 +47,8 @@ Pawn* CreatePawn() {
     pawn->speed = 0.1f;
     pawn->velocity = (Vector3){0,0,0};
 
+    pawn->aimRay;
+
     pawn->size = 0.5f;
     pawn->bb.min = (Vector3){0,0,0};
     pawn->bb.max = (Vector3){0,0,0};
@@ -51,6 +56,7 @@ Pawn* CreatePawn() {
     pawn->bbColor = BLACK;
     pawn->defaultColor = GRAY;
     pawn->color = pawn->defaultColor;
+    pawn->aimRayColor = WHITE;
 
     pawn->health = 3;
     pawn->destroyFlag = false;
@@ -104,7 +110,9 @@ void UpdatePawn(Pawn* pawn, float deltatime){
             pawn->velocity = Vector3Scale((Vector3){0,0.1f,0}, deltatime);
             break;
         case SHOOTER:
-            pawn->velocity = Vector3Scale((Vector3){0,0.1f,0}, deltatime);
+            //pawn->velocity = Vector3Scale((Vector3){0,0.1f,0}, deltatime);
+            pawn->aimRay.position = pawn->position;
+            pawn->aimRay.direction = (Vector3){0,0,1};
             break;
         default:
             break;
@@ -128,4 +136,5 @@ void DrawPawn(Pawn* pawn) {
 
     DrawCube(pawn->position, pawn->size, pawn->size, pawn->size, pawn->color);
     DrawBoundingBox(pawn->bb, pawn->bbColor);
+    DrawRay(pawn->aimRay,WHITE);
 }

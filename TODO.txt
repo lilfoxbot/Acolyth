@@ -1,6 +1,7 @@
+static array of bullets for pawns to access?
 
-
-- autonomous bullet shooter
+- autonomous bullet shooter:
+    - forward ray from shooter pawn
 
 - bullet collision
 
