@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bullet.h"
+
 typedef enum {
     SEEKER,
     SHOOTER
@@ -14,6 +16,9 @@ typedef enum {
 typedef struct Pawn {
     bool isActive;
     PawnType type;
+
+    float shootDelay;
+    float shootTick;
 
     Vector3 position;
     Vector3 direction;
@@ -42,12 +47,16 @@ Pawn* CreatePawn() {
     pawn->isActive = false;
     pawn->type = SEEKER;
 
+    pawn->shootDelay = 1;
+    pawn->shootTick = 1;
+
     pawn->position = (Vector3){0,0,0};
     pawn->direction = (Vector3){0,0,0};
     pawn->speed = 0.1f;
     pawn->velocity = (Vector3){0,0,0};
 
-    pawn->aimRay;
+    pawn->aimRay.position = pawn->position;
+    pawn->aimRay.direction = (Vector3){0,0,1};
 
     pawn->size = 0.5f;
     pawn->bb.min = (Vector3){0,0,0};
@@ -102,19 +111,32 @@ void ResetPawn(Pawn* pawn){
     memset(pawn->nodes, 0, sizeof(pawn->nodes));
 }
 
-void UpdatePawn(Pawn* pawn, float deltatime){
-    if (!pawn->isActive) return;
+int UpdatePawn(Pawn* pawn, float deltaTime){
+    if (!pawn->isActive) return 0;
 
     switch(pawn->type){
         case SEEKER:
-            pawn->velocity = Vector3Scale((Vector3){0,0.1f,0}, deltatime);
+            pawn->velocity = Vector3Scale((Vector3){0,0.1f,0}, deltaTime);
+
+            pawn->aimRay.position = pawn->position;
+            pawn->aimRay.direction = (Vector3){0,0,1};
+            return 0;
             break;
         case SHOOTER:
             //pawn->velocity = Vector3Scale((Vector3){0,0.1f,0}, deltatime);
             pawn->aimRay.position = pawn->position;
             pawn->aimRay.direction = (Vector3){0,0,1};
+
+            pawn->shootTick -= deltaTime;
+            if (pawn->shootTick <= 0){
+                pawn->shootTick = pawn->shootDelay;
+                // shoot
+                return 1;
+            }
+            return 0;
             break;
         default:
+            return 0;
             break;
     }
 

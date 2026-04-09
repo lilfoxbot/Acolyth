@@ -63,6 +63,16 @@ void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode) {
     }
 }
 
+void SpawnWorldBullet(Ray ray){
+    // find empty slot in bullet object pool
+    for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
+        if (!worldBullets[i]->isActive){
+            SpawnBullet(worldBullets[i], ray.position, ray.direction);
+            break;
+        }
+    }
+}
+
 int main(void) // @INIT ========================================================================
 {
     const int screenWidth = 1280;
@@ -172,7 +182,16 @@ int main(void) // @INIT ========================================================
         
         for (int i = 0; i < WORLD_BULLET_LIMIT; i++){ UpdateBullet(worldBullets[i], dt); }
 
-        for (int i = 0; i < WORLD_PAWN_LIMIT; i++){ UpdatePawn(worldPawns[i], dt); }
+        for (int i = 0; i < WORLD_PAWN_LIMIT; i++){ 
+            int pawnAction = UpdatePawn(worldPawns[i], dt);
+            switch (pawnAction){
+                case 1:
+                    SpawnWorldBullet(worldPawns[i]->aimRay);
+                    break;
+                default:
+                    break;
+            }
+        }
 
         UpdateCameraPro(&camera, 
             (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
@@ -270,13 +289,7 @@ int main(void) // @INIT ========================================================
         } else {
             // shoot a projectile
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                // find empty slot for boolits
-                for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
-                    if (!worldBullets[i]->isActive){
-                        SpawnBullet(worldBullets[i], r1.position, r1.direction);
-                        break;
-                    }
-                }
+                SpawnWorldBullet(r1);
             }
         }
         
