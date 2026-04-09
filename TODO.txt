@@ -1,11 +1,12 @@
-static array of bullets for pawns to access?
-
-- autonomous bullet shooter:
-    - forward ray from shooter pawn
-
-- bullet collision
 
 - particle explosion on bullet hit
+
+- "player" collision and movement
+
+- shooter model
+
+- shooter pawn structure (occupies tiles)
+- pawn spawning
 
 - save/reset level build
 

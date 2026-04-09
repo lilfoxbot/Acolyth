@@ -17,6 +17,8 @@
 
 #define WORLD_PAWN_LIMIT 10
 #define WORLD_BULLET_LIMIT 50
+#define WORLD_POLY_LIMIT 100
+
 #define BOXTREE_INITIAL_SIZE 16
 
 bool myDebug = false;
@@ -129,7 +131,7 @@ int main(void) // @INIT ========================================================
     // READY ==========================================================================
 
     SpawnPawn(worldPawns[0], SEEKER, (Vector3){0,6,0});
-    SpawnPawn(worldPawns[1], SHOOTER, (Vector3){2,6,0});
+    SpawnPawn(worldPawns[1], SHOOTER, (Vector3){2,2,-3});
     
     // printf("\n");
     // printf(TextFormat("%d", sizeof(levelCells) / sizeof(levelCells[0])));
@@ -237,19 +239,34 @@ int main(void) // @INIT ========================================================
         // bullet collision
         for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
             // Bullets
-            if (!worldBullets[i]->isActive){ continue; }
+            if (!worldBullets[i]->isActive) continue;
+            // Nodes
             for (int j = 0; j < worldBullets[i]->nodeCount; j++){
-                // Nodes
+                // Voxels
                 for (int k = 0; k < worldBullets[i]->nodes[j]->voxelCount; k++){
-                    // Voxels
+                    
                     if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->voxels[k]->bb)){
-                        if (worldBullets[i]->nodes[j]->voxels[k]->isActive){
-                            
+                        if (worldBullets[i]->nodes[j]->voxels[k]->isActive) {
                             worldBullets[i]->nodes[j]->voxels[k]->color = WHITE;
                             worldBullets[i]->nodes[j]->voxels[k]->fading = true;
 
                             worldBullets[i]->color = WHITE;
                             worldBullets[i]->destroyFlag = true;
+                            //break;
+                        }
+                    }
+                }
+                // Other Bullets
+                for (int l = 0; l < worldBullets[i]->nodes[j]->bulletCount; l++){
+                    // check bullet if self
+                    if (worldBullets[i] == worldBullets[i]->nodes[j]->bullets[l]) continue;
+
+                    if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->bullets[l]->bb)){
+                        if (worldBullets[i]->nodes[j]->bullets[l]->isActive){
+
+                            worldBullets[i]->color = WHITE;
+                            worldBullets[i]->destroyFlag = true;
+                            //break;
                         }
                     }
                 }

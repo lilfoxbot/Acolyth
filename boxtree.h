@@ -85,6 +85,9 @@ void ResetBoxtree(BoxtreeNode* node) {
     node->isRayHit = false;
     node->isBulletHit = false;
 
+    node->bulletCount = 0;
+    memset(node->bullets, 0, sizeof(node->bullets));
+
     for (int i = 0; i < 8; i++) {
         ResetBoxtree(node->children[i]);
     }
@@ -141,12 +144,17 @@ void GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int maxHits) {
 void GetBulletNodes(Bullet* bullet, BoxtreeNode* node){
     if (node == NULL || !bullet->isActive) return;
     
-    // place nodes into bullet's array
     if (CheckCollisionBoxes(node->bb, bullet->bb)){
         if (node->depth == MAX_BOXTREE_DEPTH) {
             node->isBulletHit = true;
+
+            // place node into bullet
             bullet->nodes[bullet->nodeCount] = node;
             bullet->nodeCount++;
+
+            // place bullet into node
+            node->bullets[node->bulletCount] = bullet;
+            node->bulletCount++;
 
         } else {
             for (int i = 0; i < 8; i++) {
