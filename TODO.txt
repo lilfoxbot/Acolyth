@@ -1,5 +1,6 @@
+- Scene Reset Function
 
-- "player" collision and movement
+- player collision and movement
 
 - shooter model
 
@@ -8,7 +9,7 @@
 
 - save/reset level build
 
-// NOTES ---
+--- NOTES ---
 
 ▼ NEW ENVIRONMENT SETUP ▼
 
