@@ -10,6 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+const int RAND_RANGE = 5;
+const float RAND_MULTI = 0.001f;
+const float SHRINK_RATE = 0.99f;
+
 typedef struct Poly{
     bool isActive;
 
@@ -24,12 +28,17 @@ typedef struct Poly{
     Vector3 one;
     Vector3 two;
     Vector3 three;
+
+    Vector3 onePos;
+    Vector3 twoPos;
+    Vector3 threePos;
+
     float size;
     Color polyColor;
     Color polyOutlineColor;
 } Poly;
 
-Vector3 PGetRandomVector(int range, float multiplier){
+Vector3 GetRandomVector(int range, float multiplier){
     return (Vector3){ GetRandomValue(-range,range)*(multiplier),
     GetRandomValue(-range,range)*(multiplier), 
     GetRandomValue(-range,range)*(multiplier)};
@@ -47,52 +56,68 @@ Poly* CreatePoly(){
     poly->lifetime = 0;
     poly->endtime = 3;
 
-    poly->one = (Vector3){0,0,0};
-    poly->two = (Vector3){0,0,0};
-    poly->three = (Vector3){0,0,0};
-    poly->size = 0;
-    poly->polyColor = YELLOW;
+    poly->size = 0.1f;
+    poly->polyColor = BLACK;
     poly->polyOutlineColor = WHITE;
 
     return poly;
 }
 
-// collide, update, draw
-// void Poly_CUD(struct _Poly *polyArr, int arrSize){
-//     //int arrSize = sizeof(myArray) / sizeof(myArray[0]);
-//     for (int i = 0; i < arrSize; i++){
-//         if (polyArr[i].exist == 1){
-//             // Collide
-            
-//             // Update
-//             polyArr[i].lifetime += GetFrameTime();
-//             if (polyArr[i].lifetime > polyArr[i].endtime){
-//                 polyArr[i].exist = 0;
-//             }
-//             polyArr[i].center = Vector3Add(polyArr[i].center, polyArr[i].velocity);
-//             // move towards sky
-            
-//             polyArr[i].center = Vector3Add(polyArr[i].center, (Vector3){0,polyArr[i].lifetime*(0.2f),0});
-            
-//             // jitter
-//             polyArr[i].one = Vector3Add(polyArr[i].one, PGetRandomVector(5,0.005f));
-//             polyArr[i].two = Vector3Add(polyArr[i].two, PGetRandomVector(5,0.005f));
-//             polyArr[i].three = Vector3Add(polyArr[i].three, PGetRandomVector(5,0.005f));
-//             // shrink
-//             polyArr[i].one = Vector3Scale(polyArr[i].one, 0.95f);
-//             polyArr[i].two = Vector3Scale(polyArr[i].two, 0.95f);
-//             polyArr[i].three = Vector3Scale(polyArr[i].three, 0.95f);
-            
-//             Vector3 newOne = Vector3Add(polyArr[i].center, polyArr[i].one);
-//             Vector3 newTwo = Vector3Add(polyArr[i].center, polyArr[i].two);
-//             Vector3 newThree = Vector3Add(polyArr[i].center, polyArr[i].three);
-            
-//             // Draw
-//             DrawTriangle3D(newOne, newTwo, newThree, polyArr[i].polyColor);
-//             DrawTriangle3D(newOne, newThree, newTwo, polyArr[i].polyColor);
-//             DrawLine3D(newOne, newTwo, polyArr[i].polyOutline);
-//             DrawLine3D(newTwo, newThree, polyArr[i].polyOutline);
-//             DrawLine3D(newThree, newOne, polyArr[i].polyOutline);
-//         }
-//     }   
-// }
+void SpawnPoly(Poly* poly, Vector3 newPos){
+    poly->isActive = true;
+
+    poly->position = newPos;
+    poly->lifetime = 0;
+    poly->velocity = (Vector3){GetRandomValue(-3,3)*(0.005f), GetRandomValue(-3,3)*(0.005f), GetRandomValue(-3,3)*(0.005f)};
+
+    poly->one = (Vector3){GetRandomValue(-5,5)*(0.01),0,0};
+    poly->two = (Vector3){GetRandomValue(-5,5)*(0.01),0,0};
+    poly->three = (Vector3){0,GetRandomValue(-5,5)*(0.01),0};
+
+    poly->onePos = Vector3Add(poly->position, poly->one);
+    poly->twoPos = Vector3Add(poly->position, poly->two);
+    poly->threePos = Vector3Add(poly->position, poly->three);
+}
+
+void DestroyPoly(Poly* poly){
+    if (!poly->isActive) return;
+
+    poly->isActive = false;
+}
+
+void UpdatePoly(Poly* poly, float deltaTime){
+    if (!poly->isActive) return;
+
+    poly->lifetime += deltaTime;
+    if (poly->lifetime > poly->endtime) poly->isActive = false;
+
+    // TODO: add vertical speed
+    poly->velocity = Vector3Add(poly->velocity, (Vector3){0,0.01f*deltaTime,0});
+    poly->position = Vector3Add(poly->position, poly->velocity);
+
+    // jitter
+    poly->one = Vector3Add(poly->one, GetRandomVector(RAND_RANGE,RAND_MULTI));
+    poly->two = Vector3Add(poly->two, GetRandomVector(RAND_RANGE,RAND_MULTI));
+    poly->three = Vector3Add(poly->three, GetRandomVector(RAND_RANGE,RAND_MULTI));
+
+    // shrink
+    poly->one = Vector3Scale(poly->one, SHRINK_RATE);
+    poly->two = Vector3Scale(poly->two, SHRINK_RATE);
+    poly->three = Vector3Scale(poly->three, SHRINK_RATE);
+
+    // new positions
+    poly->onePos = Vector3Add(poly->position, poly->one);
+    poly->twoPos = Vector3Add(poly->position, poly->two);
+    poly->threePos = Vector3Add(poly->position, poly->three);
+    
+}
+
+void Draw_Poly(Poly* poly){
+    if (!poly->isActive) return;
+
+    DrawTriangle3D(poly->onePos, poly->twoPos, poly->threePos, poly->polyColor);
+    DrawTriangle3D(poly->onePos, poly->threePos, poly->twoPos, poly->polyColor);
+    DrawLine3D(poly->onePos, poly->twoPos, poly->polyOutlineColor);
+    DrawLine3D(poly->twoPos, poly->threePos, poly->polyOutlineColor);
+    DrawLine3D(poly->threePos, poly->onePos, poly->polyOutlineColor);
+}

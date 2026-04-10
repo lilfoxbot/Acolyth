@@ -42,9 +42,10 @@ const float LEVEL_GRID_CELL_SIZE = 1.0f;
 
 struct Pawn* worldPawns[WORLD_PAWN_LIMIT];
 struct Bullet* worldBullets[WORLD_BULLET_LIMIT];
+struct Poly* worldPolys[WORLD_POLY_LIMIT];
 int worldBulletCount = 0;
 
-void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode) {
+void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
     if (voxel == NULL || btnode == NULL) return;
 
     if (voxel->coordinates.y > 0){
@@ -73,6 +74,23 @@ void SpawnWorldBullet(Ray ray){
             break;
         }
     }
+}
+
+void SpawnWorldPoly(Vector3 newPos){
+    for (int i = 0; i < WORLD_POLY_LIMIT; i++){
+        if (!worldPolys[i]->isActive){
+            SpawnPoly(worldPolys[i], newPos);
+            break;
+        }
+    }
+}
+
+// void pointer (Thinking Emoji)
+int GetEmptyArraySlot(void *arr[], int limit){
+    for (int i = 0; i < limit; i++){
+        if (arr[i] == NULL) return i;
+    }
+    return -1;
 }
 
 int main(void) // @INIT ========================================================================
@@ -109,6 +127,8 @@ int main(void) // @INIT ========================================================
         }
     }
 
+    // OBJECT POOLS
+
     // @BULLET init
     for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
         worldBullets[i] = CreateBullet();
@@ -117,6 +137,11 @@ int main(void) // @INIT ========================================================
     // @PAWN init
     for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
         worldPawns[i] = CreatePawn();
+    }
+
+    // @POLY init
+    for (int i = 0; i < WORLD_POLY_LIMIT; i++){
+        worldPolys[i] = CreatePoly();
     }
     
     struct Ray r1;
@@ -145,16 +170,8 @@ int main(void) // @INIT ========================================================
         
         // @INPUT ==========================================================================
 
-        // if (IsKeyDown(KEY_KP_8)){ testpoint.z -= 0.2f; }
-        // if (IsKeyDown(KEY_KP_5)){ testpoint.z += 0.2f; }
-        // if (IsKeyDown(KEY_KP_4)){ testpoint.x -= 0.2f; }
-        // if (IsKeyDown(KEY_KP_6)){ testpoint.x += 0.2f; }
-        // if (IsKeyDown(KEY_KP_7)){ testpoint.y += 0.2f; }
-        // if (IsKeyDown(KEY_KP_1)){ testpoint.y -= 0.2f; }
-
         r1Color = (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) ? RED : WHITE;
         if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-                // middle click action
                 printf("\nenter debug mode\n");
             }
 
@@ -181,6 +198,8 @@ int main(void) // @INIT ========================================================
         float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
         
         // @UPDATE ==========================================================================
+
+        for (int i = 0; i < WORLD_POLY_LIMIT; i++){ UpdatePoly(worldPolys[i], dt); }
         
         for (int i = 0; i < WORLD_BULLET_LIMIT; i++){ UpdateBullet(worldBullets[i], dt); }
 
@@ -246,13 +265,19 @@ int main(void) // @INIT ========================================================
                 for (int k = 0; k < worldBullets[i]->nodes[j]->voxelCount; k++){
                     
                     if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->voxels[k]->bb)){
-                        if (worldBullets[i]->nodes[j]->voxels[k]->isActive) {
+                        if (worldBullets[i]->nodes[j]->voxels[k]->isActive){
                             worldBullets[i]->nodes[j]->voxels[k]->color = WHITE;
                             worldBullets[i]->nodes[j]->voxels[k]->fading = true;
-
+                            
                             worldBullets[i]->color = WHITE;
-                            worldBullets[i]->destroyFlag = true;
-                            //break;
+                            if (!worldBullets[i]->destroyFlag){
+                                worldBullets[i]->destroyFlag = true;
+                                SpawnWorldPoly(worldBullets[i]->position);
+                                SpawnWorldPoly(worldBullets[i]->position);
+                                SpawnWorldPoly(worldBullets[i]->position);
+                                SpawnWorldPoly(worldBullets[i]->position);
+                                SpawnWorldPoly(worldBullets[i]->position);
+                            }
                         }
                     }
                 }
@@ -265,8 +290,12 @@ int main(void) // @INIT ========================================================
                         if (worldBullets[i]->nodes[j]->bullets[l]->isActive){
 
                             worldBullets[i]->color = WHITE;
-                            worldBullets[i]->destroyFlag = true;
-                            //break;
+                            if (!worldBullets[i]->destroyFlag){
+                                worldBullets[i]->destroyFlag = true;
+                                SpawnWorldPoly(worldBullets[i]->position);
+                                SpawnWorldPoly(worldBullets[i]->position);
+                                SpawnWorldPoly(worldBullets[i]->position);
+                            }
                         }
                     }
                 }
@@ -324,6 +353,10 @@ int main(void) // @INIT ========================================================
             DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
 
             if (myDebug) DrawBoxtreeNode(boxtreeRoot);
+
+            for (int i = 0; i < WORLD_POLY_LIMIT; i++){
+                Draw_Poly(worldPolys[i]);
+            }
 
             for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
                 DrawPawn(worldPawns[i]);

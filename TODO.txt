@@ -1,6 +1,4 @@
 
-- particle explosion on bullet hit
-
 - "player" collision and movement
 
 - shooter model
