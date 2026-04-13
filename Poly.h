@@ -1,7 +1,3 @@
-/*
-*   single poly struct and functions
-*/
-
 #pragma once
 
 #include "raylib.h"

@@ -21,6 +21,11 @@
 
 #define BOXTREE_INITIAL_SIZE 16
 
+Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 2.0f, 0.0f };
+Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0.0f, 2.0f, -2.0f };
+
+float screenFade = 0.2f;
+bool screenFading = false;
 bool myDebug = false;
 bool editMode = false;
 float lookSensitivity = 40.0f;
@@ -104,8 +109,8 @@ int main(void) // @INIT ========================================================
 
     // Define the camera to look into our 3d world (position, target, up vector)
     Camera camera = { 0 };
-    camera.position = (Vector3){ 0.0f, 2.0f, 0.0f };    // Camera position
-    camera.target = (Vector3){ 0.0f, 2.0f, -2.0f };      // Camera looking at point
+    camera.position = CAM_DEFAULT_POS;    // Camera position
+    camera.target = CAM_DEFAULT_TARGET;      // Camera looking at point
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 60.0f;                                // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
@@ -179,6 +184,12 @@ int main(void) // @INIT ========================================================
         if (IsKeyPressed(KEY_TWO)){ SetTargetFPS(60); }
         if (IsKeyPressed(KEY_THREE)){ SetTargetFPS(120); }
         if (IsKeyPressed(KEY_E)){ editMode = !editMode; }
+        if (IsKeyPressed(KEY_R)){ 
+            // TODO: reset
+            // make screen black
+            // run "INIT" function again
+            screenFading = true;
+        }
         
         // camera movement/input
         camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
@@ -203,7 +214,7 @@ int main(void) // @INIT ========================================================
         
         for (int i = 0; i < WORLD_BULLET_LIMIT; i++){ UpdateBullet(worldBullets[i], dt); }
 
-        for (int i = 0; i < WORLD_PAWN_LIMIT; i++){ 
+        for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
             int pawnAction = UpdatePawn(worldPawns[i], dt);
             switch (pawnAction){
                 case 1:
@@ -392,7 +403,7 @@ int main(void) // @INIT ========================================================
             DrawText(TextFormat("Time Passed - %0.2f", timePassed), 15, 30, 10, BLACK);
             DrawText(TextFormat("Current FPS - %d", GetFPS()), 15, 45, 10, BLACK);
             
-            //Right side
+            // Right side
             DrawRectangle(1080, 5, 195, 100, Fade(SKYBLUE, 0.5f));
             DrawRectangleLines(1080, 5, 195, 100, BLUE);
 
@@ -402,6 +413,42 @@ int main(void) // @INIT ========================================================
             DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f", camera.target.x, camera.target.y, camera.target.z), 1090, 45, 10, BLACK);
             DrawText(TextFormat("hitnormal - %0.1f - %0.1f - %0.1f", rayhitNormal.x, rayhitNormal.y, rayhitNormal.z), 1090, 60, 10, BLACK);
             DrawText(TextFormat("Edit Mode - %s", (editMode) ? "ON" : "OFF"), 1090, 75, 10, BLACK);
+
+            // Screen Fade
+            if (screenFading){
+                screenFade += 2*dt;
+                DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, screenFade));
+                if (screenFade >= 1){ 
+                    screenFading = false;
+                    screenFade = 0;
+
+                    // Do Scene Reset
+                    
+                    camera.position = CAM_DEFAULT_POS;
+                    camera.target = CAM_DEFAULT_TARGET;
+
+                    for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
+                        worldBullets[i]->isActive = false;
+                    }
+
+                    for (int i = 0; i < WORLD_POLY_LIMIT; i++){
+                        worldPolys[i]->isActive = false;
+                    }
+
+                    // reset grid
+                    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+                        for (int y = 0; y < LEVEL_GRID_COLS; y++){
+                            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+                                if (y == 0){
+                                    grid3d[x][y][z]->isActive = true;
+                                } else {
+                                    grid3d[x][y][z]->isActive = false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
         EndDrawing();
 
