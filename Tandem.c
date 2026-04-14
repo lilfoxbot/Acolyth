@@ -10,6 +10,7 @@
 #include "voxel.h"
 #include "bullet.h"
 #include "pawn.h"
+#include "player.h"
 
 #define RAYMATH_IMPLEMENTATION
 
@@ -48,6 +49,7 @@ const float LEVEL_GRID_CELL_SIZE = 1.0f;
 struct Pawn* worldPawns[WORLD_PAWN_LIMIT];
 struct Bullet* worldBullets[WORLD_BULLET_LIMIT];
 struct Poly* worldPolys[WORLD_POLY_LIMIT];
+struct Player* player;
 int worldBulletCount = 0;
 
 void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
@@ -148,6 +150,9 @@ int main(void) // @INIT ========================================================
     for (int i = 0; i < WORLD_POLY_LIMIT; i++){
         worldPolys[i] = CreatePoly();
     }
+
+    // @Player init
+    player = CreatePlayer();
     
     struct Ray r1;
     r1.position = (Vector3){0,0,0};
@@ -162,6 +167,8 @@ int main(void) // @INIT ========================================================
 
     SpawnPawn(worldPawns[0], SEEKER, (Vector3){0,6,0});
     SpawnPawn(worldPawns[1], SHOOTER, (Vector3){2,2,-3});
+
+    SpawnPlayer(player, (Vector3){-2,3,0});
     
     // printf("\n");
     // printf(TextFormat("%d", sizeof(levelCells) / sizeof(levelCells[0])));
@@ -224,6 +231,8 @@ int main(void) // @INIT ========================================================
                     break;
             }
         }
+
+        UpdatePlayer(player, dt);
 
         UpdateCameraPro(&camera, 
             (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
@@ -385,6 +394,8 @@ int main(void) // @INIT ========================================================
                     }
                 }
             }
+
+            DrawPlayer(player);
             
             DrawRay(r1,r1Color);
             
