@@ -65,7 +65,7 @@ void SpawnBullet(Bullet* bullet, Vector3 newPos, Vector3 newDir){
     bullet->direction = newDir;
 }
 
-void DestroyBullet(Bullet* bullet) {
+void DestroyBullet(Bullet* bullet){
     if (!bullet->isActive) return;
     
     bullet->isActive = false; 

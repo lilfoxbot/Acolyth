@@ -168,7 +168,7 @@ int main(void) // @INIT ========================================================
     SpawnPawn(worldPawns[0], SEEKER, (Vector3){0,6,0});
     SpawnPawn(worldPawns[1], SHOOTER, (Vector3){2,2,-3});
 
-    SpawnPlayer(player, (Vector3){-2,3,0});
+    SpawnPlayer(player, (Vector3){0,5,-3});
     
     // printf("\n");
     // printf(TextFormat("%d", sizeof(levelCells) / sizeof(levelCells[0])));
@@ -182,21 +182,25 @@ int main(void) // @INIT ========================================================
         
         // @INPUT ==========================================================================
 
+        Vector4 newPlayerVel = (Vector4){0,0,0,0};
+        float ps = 2.0f;
+        
+        if (IsKeyDown(KEY_LEFT)){ newPlayerVel.x += -ps; }
+        if (IsKeyDown(KEY_RIGHT)){ newPlayerVel.x += ps; }
+        if (IsKeyDown(KEY_UP)){ newPlayerVel.z += -ps; }
+        if (IsKeyDown(KEY_DOWN)){ newPlayerVel.z += ps; }
+        if (IsKeyPressed(KEY_RIGHT_CONTROL)){ newPlayerVel.w = 1; }
+
         r1Color = (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) ? RED : WHITE;
         if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-                printf("\nenter debug mode\n");
-            }
+            printf("\nenter debug mode\n");
+        }
 
         if (IsKeyPressed(KEY_ONE)){ myDebug = !myDebug; }
         if (IsKeyPressed(KEY_TWO)){ SetTargetFPS(60); }
         if (IsKeyPressed(KEY_THREE)){ SetTargetFPS(120); }
         if (IsKeyPressed(KEY_E)){ editMode = !editMode; }
-        if (IsKeyPressed(KEY_R)){ 
-            // TODO: reset
-            // make screen black
-            // run "INIT" function again
-            screenFading = true;
-        }
+        if (IsKeyPressed(KEY_R)){ screenFading = true; }
         
         // camera movement/input
         camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
@@ -232,7 +236,7 @@ int main(void) // @INIT ========================================================
             }
         }
 
-        UpdatePlayer(player, dt);
+        UpdatePlayer(player, newPlayerVel, dt);
 
         UpdateCameraPro(&camera, 
             (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
@@ -261,6 +265,10 @@ int main(void) // @INIT ========================================================
         float closestVoxelDist = 100;
         struct Voxel* closestHitVoxel = NULL;
 
+        // player checkin
+        ResetPlayer(player);
+        GetPlayerNodes(player, boxtreeRoot);
+
         // pawn checkin
         for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
             if (!worldPawns[i]->isActive) continue;
@@ -274,6 +282,8 @@ int main(void) // @INIT ========================================================
             ResetBullet(worldBullets[i]);
             GetBulletNodes(worldBullets[i], boxtreeRoot);
         }
+
+        // =====================
 
         // bullet collision
         for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
@@ -321,8 +331,18 @@ int main(void) // @INIT ========================================================
                 }
             }
         }
+
+        // player collision 
+        for (int i = 0; i < player->nodeCount; i++){
+            for (int j = 0; j < player->nodes[i]->voxelCount; j++){
+
+                if(CheckCollisionBoxes(player->bb, player->nodes[i]->voxels[j]->bb)){
+                    // TODO
+                }
+            }
+        }
         
-        // player collision
+        // edit ray collision
         if (editMode){
             for (int i = 0; i < 50; i++){
                 if (voxelHits[i] == NULL){
@@ -458,6 +478,9 @@ int main(void) // @INIT ========================================================
                             }
                         }
                     }
+
+                    player->position = (Vector3){0, 5,-3};
+                    player->velocity = (Vector3){0,0,0};
                 }
             }
 

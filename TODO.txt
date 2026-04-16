@@ -1,6 +1,6 @@
 
-
-- player collision and movement
+▼ player collision and movement ▼
+- collide with voxels
 
 - shooter model
 

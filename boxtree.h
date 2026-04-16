@@ -8,6 +8,7 @@
 #include "voxel.h"
 #include "bullet.h"
 #include "pawn.h"
+#include "player.h"
 
 const int MAX_BOXTREE_DEPTH = 4;
 
@@ -164,19 +165,33 @@ void GetBulletNodes(Bullet* bullet, BoxtreeNode* node){
     }
 }
 
-
 void GetPawnNodes(Pawn* pawn, BoxtreeNode* node){
     if (node == NULL || !pawn->isActive) return;
 
     if (CheckCollisionBoxes(node->bb, pawn->bb)){
-        if (node->depth == MAX_BOXTREE_DEPTH) {
+        if (node->depth == MAX_BOXTREE_DEPTH){
             node->isBulletHit = true;
             pawn->nodes[pawn->nodeCount] = node;
             pawn->nodeCount++;
-
         } else {
             for (int i = 0; i < 8; i++) {
                 GetPawnNodes(pawn, node->children[i]);
+            }
+        }
+    }
+}
+
+void GetPlayerNodes(Player* player, BoxtreeNode* node){
+    if (node == NULL || !player->isActive) return;
+
+    if (CheckCollisionBoxes(node->bb, player->bb)){
+        if (node->depth == MAX_BOXTREE_DEPTH){
+            player->nodes[player->nodeCount] = node;
+            player->nodeCount++;
+            node->isBulletHit = true;
+        } else {
+            for (int i = 0; i < 8; i++) {
+                GetPlayerNodes(player, node->children[i]);
             }
         }
     }
