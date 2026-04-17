@@ -1,6 +1,7 @@
 
-▼ player collision and movement ▼
-- collide with voxels
+
+-player/voxel collision upwarping:
+    - make it better somehow
 
 - shooter model
 

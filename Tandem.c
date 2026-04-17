@@ -159,14 +159,18 @@ int main(void) // @INIT ========================================================
     r1.direction = (Vector3){10,10,0};
     Color r1Color = WHITE;
 
+    struct Ray voxelRay;
+    voxelRay.position = (Vector3){0,0,0};
+    voxelRay.direction = (Vector3){1,1,0};
+
     //Mesh myMesh = GenMeshCube(1, 1, 1);
     //Model placeHolderModel = LoadModelFromMesh(myMesh);
     //Model myModel = LoadModel("resources/models/myCube.obj");
     
     // READY ==========================================================================
 
-    SpawnPawn(worldPawns[0], SEEKER, (Vector3){0,6,0});
-    SpawnPawn(worldPawns[1], SHOOTER, (Vector3){2,2,-3});
+    SpawnPawn(worldPawns[0], SEEKER, (Vector3){3,6,0});
+    SpawnPawn(worldPawns[1], SHOOTER, (Vector3){3,2,-3});
 
     SpawnPlayer(player, (Vector3){0,5,-3});
     
@@ -262,6 +266,7 @@ int main(void) // @INIT ========================================================
         GetRayVoxels(r1, boxtreeRoot, voxelHits, 50);
 
         Vector3 rayhitNormal = (Vector3){0,0,0};
+        Vector3 voxRayNormal = (Vector3){0,0,0};
         float closestVoxelDist = 100;
         struct Voxel* closestHitVoxel = NULL;
 
@@ -337,7 +342,40 @@ int main(void) // @INIT ========================================================
             for (int j = 0; j < player->nodes[i]->voxelCount; j++){
 
                 if(CheckCollisionBoxes(player->bb, player->nodes[i]->voxels[j]->bb)){
-                    // TODO
+                    if (player->nodes[i]->voxels[j]->isActive){
+                        Voxel* touchedVoxel = player->nodes[i]->voxels[j];
+                        touchedVoxel->bbColor = WHITE;
+                        voxelRay.position = (Vector3){player->position.x, player->position.y, player->position.z};
+                        // get direction from player to voxel
+                        voxelRay.direction = Vector3Subtract(touchedVoxel->position, player->position);
+                        RayCollision vrc = GetRayCollisionBox(voxelRay, touchedVoxel->bb);
+                        voxRayNormal = vrc.normal;
+
+                        if (voxRayNormal.y == 1){
+                            // second ray check for vertical collisions
+                            voxelRay.position = (Vector3){player->position.x, player->position.y-0.8f, player->position.z};
+                            RayCollision vrc = GetRayCollisionBox(voxelRay, touchedVoxel->bb);
+                            voxRayNormal = vrc.normal;
+
+                            if (voxRayNormal.y == 1){
+                                player->position.y = touchedVoxel->position.y + 0.5f + player->height/2;
+                                player->velocity.y = 0;
+                            }
+                            
+                        } else if (voxRayNormal.x == 1){
+                            player->position.x = touchedVoxel->position.x + 0.5f + player->width/2;
+                            player->velocity.x = 0;
+                        } else if (voxRayNormal.x == -1){
+                            player->position.x = touchedVoxel->position.x - 0.5f - player->width/2;
+                            player->velocity.x = 0;
+                        } else if (voxRayNormal.z == 1){
+                            player->position.z = touchedVoxel->position.z + 0.5f + player->width/2;
+                            player->velocity.z = 0;
+                        } else if (voxRayNormal.z == -1){
+                            player->position.z = touchedVoxel->position.z - 0.5f - player->width/2;
+                            player->velocity.z = 0;
+                        }
+                    }
                 }
             }
         }
@@ -418,6 +456,7 @@ int main(void) // @INIT ========================================================
             DrawPlayer(player);
             
             DrawRay(r1,r1Color);
+            DrawRay(voxelRay, WHITE);
             
             EndMode3D(); // ==========================================================================
             
@@ -438,13 +477,17 @@ int main(void) // @INIT ========================================================
             DrawRectangle(1080, 5, 195, 100, Fade(SKYBLUE, 0.5f));
             DrawRectangleLines(1080, 5, 195, 100, BLUE);
 
-            DrawText(TextFormat("Closest Voxel Dist - %0.2f", closestVoxelDist), 1090, 15, 10, BLACK);
-            if (closestHitVoxel != NULL)
-            DrawText(TextFormat("Hit Voxel Coor - %0.1f - %0.1f - %0.1f", closestHitVoxel->coordinates.x, closestHitVoxel->coordinates.y, closestHitVoxel->coordinates.z), 1090, 30, 10, BLACK);
-            DrawText(TextFormat("camTarget - %0.2f - %0.2f - %0.2f", camera.target.x, camera.target.y, camera.target.z), 1090, 45, 10, BLACK);
-            DrawText(TextFormat("hitnormal - %0.1f - %0.1f - %0.1f", rayhitNormal.x, rayhitNormal.y, rayhitNormal.z), 1090, 60, 10, BLACK);
-            DrawText(TextFormat("Edit Mode - %s", (editMode) ? "ON" : "OFF"), 1090, 75, 10, BLACK);
-
+            //DrawText(TextFormat("Closest Voxel Dist - %0.2f", closestVoxelDist), 1090, 15, 10, BLACK);
+            
+            DrawText(TextFormat("camTarget: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 1090, 45, 10, BLACK);
+            //DrawText(TextFormat("hitnormal: %0.1f _ %0.1f _ %0.1f", rayhitNormal.x, rayhitNormal.y, rayhitNormal.z), 1090, 60, 10, BLACK);
+            DrawText(TextFormat("Edit Mode: %s", (editMode) ? "ON" : "OFF"), 1090, 75, 10, BLACK);
+            
+            DrawText(TextFormat("Hit Voxel Coor: %0.1f _ %0.1f _ %0.1f",
+                voxRayNormal.x, 
+                voxRayNormal.y, 
+                voxRayNormal.z), 1090, 90, 10, BLACK);
+            
             // Screen Fade
             if (screenFading){
                 screenFade += 2*dt;

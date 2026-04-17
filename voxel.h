@@ -88,6 +88,7 @@ void DrawVoxel(Voxel* voxel) {
 void ResetVoxel(Voxel* voxel) {
     if (voxel == NULL) return;
     //voxel->color = voxel->defaultColor;
+    voxel->bbColor = BLACK;
     voxel->selected = false;
 }
 
