@@ -6,14 +6,18 @@
 #include <stdlib.h>
 
 typedef struct Voxel {
+    bool isActive;
+    bool occupied;
+
     Vector3 coordinates;
     Vector3 position;
     float size;
     BoundingBox bb;
-    Color bbColor;
+    
     Color color;
     Color defaultColor;
-    bool isActive;
+    Color bbColor;
+
     bool selected;
     Vector3 selectedNormal;
     bool fading;

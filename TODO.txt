@@ -1,16 +1,18 @@
 
 
--player/voxel collision upwarping:
-    - make it better somehow
-
-- shooter model
-
 - shooter pawn structure (occupies tiles)
 - pawn spawning
 
+- shooter model
+
 - save/reset level build
 
---- NOTES ---
+=== BUGS ===
+
+- player clips through voxels if falling too fast
+- player clips through top level voxels
+
+=== NOTES ===
 
 ▼ NEW ENVIRONMENT SETUP ▼
 

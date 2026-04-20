@@ -40,7 +40,7 @@ float dt = 0;
 float timePassed = 0;
 int saveIndex = 0;
 
-const int OCT = 8; //octree root size
+const int OCT = 8; // octree root size
 const int LEVEL_GRID_ROWS = 10;
 const int LEVEL_GRID_COLS = 5;
 const int LEVEL_GRID_DEPTH = 10;
@@ -99,6 +99,13 @@ int GetEmptyArraySlot(void *arr[], int limit){
     }
     return -1;
 }
+
+typedef enum {
+    SPAWN_VOXEL,
+    SPAWN_TURRET
+} SpawnSelection;
+
+SpawnSelection ss = SPAWN_VOXEL;
 
 int main(void) // @INIT ========================================================================
 {
@@ -200,11 +207,15 @@ int main(void) // @INIT ========================================================
             printf("\nenter debug mode\n");
         }
 
-        if (IsKeyPressed(KEY_ONE)){ myDebug = !myDebug; }
-        if (IsKeyPressed(KEY_TWO)){ SetTargetFPS(60); }
-        if (IsKeyPressed(KEY_THREE)){ SetTargetFPS(120); }
+        if (IsKeyPressed(KEY_P)){ myDebug = !myDebug; }
+        if (IsKeyPressed(KEY_MINUS)){ SetTargetFPS(60); }
+        if (IsKeyPressed(KEY_EQUAL)){ SetTargetFPS(120); }
+
         if (IsKeyPressed(KEY_E)){ editMode = !editMode; }
         if (IsKeyPressed(KEY_R)){ screenFading = true; }
+
+        if (IsKeyPressed(KEY_ONE)){ ss = SPAWN_VOXEL; }
+        if (IsKeyPressed(KEY_TWO)){ ss = SPAWN_TURRET; }
         
         // camera movement/input
         camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
@@ -266,7 +277,7 @@ int main(void) // @INIT ========================================================
         GetRayVoxels(r1, boxtreeRoot, voxelHits, 50);
 
         Vector3 rayhitNormal = (Vector3){0,0,0};
-        Vector3 voxRayNormal = (Vector3){0,0,0};
+        Vector3 playerColNormal = (Vector3){0,0,0};
         float closestVoxelDist = 100;
         struct Voxel* closestHitVoxel = NULL;
 
@@ -337,7 +348,7 @@ int main(void) // @INIT ========================================================
             }
         }
 
-        // player collision 
+        // player collision
         for (int i = 0; i < player->nodeCount; i++){
             for (int j = 0; j < player->nodes[i]->voxelCount; j++){
 
@@ -345,33 +356,38 @@ int main(void) // @INIT ========================================================
                     if (player->nodes[i]->voxels[j]->isActive){
                         Voxel* touchedVoxel = player->nodes[i]->voxels[j];
                         touchedVoxel->bbColor = WHITE;
-                        voxelRay.position = (Vector3){player->position.x, player->position.y, player->position.z};
-                        // get direction from player to voxel
-                        voxelRay.direction = Vector3Subtract(touchedVoxel->position, player->position);
+
+                        voxelRay.position = (Vector3){player->position.x, touchedVoxel->position.y, player->position.z};
+                        voxelRay.direction = Vector3Subtract(touchedVoxel->position, voxelRay.position);
                         RayCollision vrc = GetRayCollisionBox(voxelRay, touchedVoxel->bb);
-                        voxRayNormal = vrc.normal;
+                        playerColNormal = vrc.normal;
 
-                        if (voxRayNormal.y == 1){
-                            // second ray check for vertical collisions
-                            voxelRay.position = (Vector3){player->position.x, player->position.y-0.8f, player->position.z};
-                            RayCollision vrc = GetRayCollisionBox(voxelRay, touchedVoxel->bb);
-                            voxRayNormal = vrc.normal;
+                        if (player->position.y-player->height/2 > touchedVoxel->position.y+0.45f){
+                            if (grid3d[(int)touchedVoxel->coordinates.x][(int)touchedVoxel->coordinates.y+1][(int)touchedVoxel->coordinates.z]->isActive){
 
-                            if (voxRayNormal.y == 1){
+                            } else {
                                 player->position.y = touchedVoxel->position.y + 0.5f + player->height/2;
                                 player->velocity.y = 0;
                             }
                             
-                        } else if (voxRayNormal.x == 1){
+                        } else if (player->position.y+player->height/2 < touchedVoxel->position.y-0.45f){
+                            if (grid3d[(int)touchedVoxel->coordinates.x][(int)touchedVoxel->coordinates.y-1][(int)touchedVoxel->coordinates.z]->isActive){
+
+                            } else {
+                                player->position.y = touchedVoxel->position.y - 0.5f - player->height/2;
+                                player->velocity.y = 0;
+                            }
+                            
+                        } else if (playerColNormal.x == 1){
                             player->position.x = touchedVoxel->position.x + 0.5f + player->width/2;
                             player->velocity.x = 0;
-                        } else if (voxRayNormal.x == -1){
+                        } else if (playerColNormal.x == -1){
                             player->position.x = touchedVoxel->position.x - 0.5f - player->width/2;
                             player->velocity.x = 0;
-                        } else if (voxRayNormal.z == 1){
+                        } else if (playerColNormal.z == 1){
                             player->position.z = touchedVoxel->position.z + 0.5f + player->width/2;
                             player->velocity.z = 0;
-                        } else if (voxRayNormal.z == -1){
+                        } else if (playerColNormal.z == -1){
                             player->position.z = touchedVoxel->position.z - 0.5f - player->width/2;
                             player->velocity.z = 0;
                         }
@@ -401,13 +417,24 @@ int main(void) // @INIT ========================================================
                 closestHitVoxel->selected = true;
                 closestHitVoxel->selectedNormal = rayhitNormal;
 
-                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){ 
-                    DestroyVoxel(closestHitVoxel);
+                switch(ss){
+                    case SPAWN_VOXEL:
+                        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
+                            Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayhitNormal);
+                            grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)]
+                            [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
+                            [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)]->isActive = true;
+                        }
+                        break;
+                    case SPAWN_TURRET:
+                        
+                        break;
+                    default:
+                        break;
                 }
-                if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
-                    // new voxel coordinates
-                    Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayhitNormal);
-                    grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)][(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)][(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)]->isActive = true;
+
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+                    DestroyVoxel(closestHitVoxel);
                 }
             }
         } else {
@@ -459,34 +486,36 @@ int main(void) // @INIT ========================================================
             DrawRay(voxelRay, WHITE);
             
             EndMode3D(); // ==========================================================================
-            
-            // Draw Crosshair
-            //DrawLine(screenWidth/2 - 5, screenHeight/2, screenWidth/2 + 4, screenHeight/2, BLACK);
-            //DrawLine(screenWidth/2, screenHeight/2 - 5, screenWidth/2, screenHeight/2 + 6, BLACK);
 
             // Draw HUD
             // Left side
-            DrawRectangle(5, 5, 330, 100, Fade(SKYBLUE, 0.5f));
-            DrawRectangleLines(5, 5, 330, 100, BLUE);
+            DrawRectangle(5, 5, 250, 100, Fade(SKYBLUE, 0.5f));
+            DrawRectangleLines(5, 5, 250, 100, BLUE);
             
-            DrawText("Move keys: W, A, S, D, Space, Left-Ctrl", 15, 15, 10, BLACK);
-            DrawText(TextFormat("Time Passed - %0.2f", timePassed), 15, 30, 10, BLACK);
-            DrawText(TextFormat("Current FPS - %d", GetFPS()), 15, 45, 10, BLACK);
+            DrawText(TextFormat("Time Passed: %0.2f", timePassed), 15, 15, 10, BLACK);
+            DrawText(TextFormat("Current FPS: %d", GetFPS()), 15, 30, 10, BLACK);
+            DrawText(TextFormat("Cam Target: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 15, 45, 10, BLACK);
+            DrawText(TextFormat("Edit Mode: %s", (editMode) ? "ON" : "OFF"), 15, 75, 10, BLACK);
+
+            switch(ss){
+                case SPAWN_VOXEL:
+                    DrawText(TextFormat("Spawn Selection: Voxel"), 15, 90, 10, BLACK);
+                    break;
+                case SPAWN_TURRET:
+                    DrawText(TextFormat("Spawn Selection: Turret"), 15, 90, 10, BLACK);
+                    break;
+                default:
+                    break;
+            }
             
             // Right side
             DrawRectangle(1080, 5, 195, 100, Fade(SKYBLUE, 0.5f));
             DrawRectangleLines(1080, 5, 195, 100, BLUE);
-
-            //DrawText(TextFormat("Closest Voxel Dist - %0.2f", closestVoxelDist), 1090, 15, 10, BLACK);
             
-            DrawText(TextFormat("camTarget: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 1090, 45, 10, BLACK);
-            //DrawText(TextFormat("hitnormal: %0.1f _ %0.1f _ %0.1f", rayhitNormal.x, rayhitNormal.y, rayhitNormal.z), 1090, 60, 10, BLACK);
-            DrawText(TextFormat("Edit Mode: %s", (editMode) ? "ON" : "OFF"), 1090, 75, 10, BLACK);
-            
-            DrawText(TextFormat("Hit Voxel Coor: %0.1f _ %0.1f _ %0.1f",
-                voxRayNormal.x, 
-                voxRayNormal.y, 
-                voxRayNormal.z), 1090, 90, 10, BLACK);
+            DrawText(TextFormat("Player Col Normal: %0.1f _ %0.1f _ %0.1f",
+                playerColNormal.x,
+                playerColNormal.y,
+                playerColNormal.z), 1090, 15, 10, BLACK);
             
             // Screen Fade
             if (screenFading){
