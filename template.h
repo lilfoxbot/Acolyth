@@ -12,8 +12,9 @@ typedef struct Template{
     Vector3 velocity;
     
     float size;
+    BoundingBox bb;
     Color color;
-    Color outlineColor;
+    Color bbColor;
 } Template;
 
 Template* Create_This(){
@@ -25,7 +26,7 @@ Template* Create_This(){
 
     temp->size = 1;
     temp->color = BLACK;
-    temp->outlineColor = WHITE;
+    temp->bbColor = WHITE;
 
     return temp;
 }
@@ -51,5 +52,5 @@ void Draw_This(Template* temp){
     if (!temp->isActive) return;
 
     DrawCube(temp->position, temp->size, temp->size, temp->size, temp->color);
-    DrawCubeWires(temp->position, temp->size, temp->size, temp->size, temp->outlineColor);
+    DrawBoundingBox(temp->bb, temp->bbColor);
 }

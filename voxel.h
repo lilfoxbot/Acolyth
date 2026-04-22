@@ -23,7 +23,7 @@ typedef struct Voxel {
     bool fading;
 } Voxel;
 
-Voxel* CreateVoxel(Vector3 position, Vector3 coordinates, float size) {
+Voxel* Create_Voxel(Vector3 position, Vector3 coordinates, float size) {
     Voxel* voxel = (Voxel*)malloc(sizeof(Voxel));
     voxel->position = position;
     voxel->coordinates = coordinates;
@@ -40,7 +40,7 @@ Voxel* CreateVoxel(Vector3 position, Vector3 coordinates, float size) {
     return voxel;
 }
 
-void DrawVoxel(Voxel* voxel) {
+void Draw_Voxel(Voxel* voxel) {
     if (voxel == NULL || !voxel->isActive) return;
 
     if (voxel->selected) {
@@ -89,13 +89,13 @@ void DrawVoxel(Voxel* voxel) {
     DrawBoundingBox(voxel->bb, voxel->bbColor);
 }
 
-void ResetVoxel(Voxel* voxel) {
+void Reset_Voxel(Voxel* voxel) {
     if (voxel == NULL) return;
     //voxel->color = voxel->defaultColor;
     voxel->bbColor = BLACK;
     voxel->selected = false;
 }
 
-void DestroyVoxel(Voxel* voxel) {
+void Destroy_Voxel(Voxel* voxel) {
     voxel->isActive = false;
 }

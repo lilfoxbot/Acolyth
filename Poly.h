@@ -40,7 +40,7 @@ Vector3 GetRandomVector(int range, float multiplier){
     GetRandomValue(-range,range)*(multiplier)};
 }
 
-Poly* CreatePoly(){
+Poly* Create_Poly(){
     Poly* poly = (Poly*)malloc(sizeof(Poly));
     poly->isActive = false;
 
@@ -59,7 +59,7 @@ Poly* CreatePoly(){
     return poly;
 }
 
-void SpawnPoly(Poly* poly, Vector3 newPos){
+void Spawn_Poly(Poly* poly, Vector3 newPos){
     poly->isActive = true;
 
     poly->position = newPos;
@@ -75,13 +75,13 @@ void SpawnPoly(Poly* poly, Vector3 newPos){
     poly->threePos = Vector3Add(poly->position, poly->three);
 }
 
-void DestroyPoly(Poly* poly){
+void Destroy_Poly(Poly* poly){
     if (!poly->isActive) return;
 
     poly->isActive = false;
 }
 
-void UpdatePoly(Poly* poly, float deltaTime){
+void Update_Poly(Poly* poly, float deltaTime){
     if (!poly->isActive) return;
 
     poly->lifetime += deltaTime;

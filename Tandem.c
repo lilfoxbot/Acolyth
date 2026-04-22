@@ -77,7 +77,7 @@ void SpawnWorldBullet(Ray ray){
     // find empty slot in bullet object pool
     for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
         if (!worldBullets[i]->isActive){
-            SpawnBullet(worldBullets[i], ray.position, ray.direction);
+            Spawn_Bullet(worldBullets[i], ray.position, ray.direction);
             break;
         }
     }
@@ -86,7 +86,7 @@ void SpawnWorldBullet(Ray ray){
 void SpawnWorldPoly(Vector3 newPos){
     for (int i = 0; i < WORLD_POLY_LIMIT; i++){
         if (!worldPolys[i]->isActive){
-            SpawnPoly(worldPolys[i], newPos);
+            Spawn_Poly(worldPolys[i], newPos);
             break;
         }
     }
@@ -133,7 +133,7 @@ int main(void) // @INIT ========================================================
     for (int x = 0; x < LEVEL_GRID_ROWS; x++){
         for (int y = 0; y < LEVEL_GRID_COLS; y++){
             for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                Voxel* newVoxel = CreateVoxel((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, (Vector3){x, y, z}, 1);
+                Voxel* newVoxel = Create_Voxel((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, (Vector3){x, y, z}, 1);
                 grid3d[x][y][z] = newVoxel;
                 PlaceVoxelInBoxtree(newVoxel, boxtreeRoot);
                 gridIndex++;
@@ -145,21 +145,21 @@ int main(void) // @INIT ========================================================
 
     // @BULLET init
     for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
-        worldBullets[i] = CreateBullet();
+        worldBullets[i] = Create_Bullet();
     }
 
     // @PAWN init
     for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
-        worldPawns[i] = CreatePawn();
+        worldPawns[i] = Create_Pawn();
     }
 
     // @POLY init
     for (int i = 0; i < WORLD_POLY_LIMIT; i++){
-        worldPolys[i] = CreatePoly();
+        worldPolys[i] = Create_Poly();
     }
 
     // @Player init
-    player = CreatePlayer();
+    player = Create_Player();
     
     struct Ray r1;
     r1.position = (Vector3){0,0,0};
@@ -176,10 +176,10 @@ int main(void) // @INIT ========================================================
     
     // READY ==========================================================================
 
-    SpawnPawn(worldPawns[0], SEEKER, (Vector3){3,6,0});
-    SpawnPawn(worldPawns[1], SHOOTER, (Vector3){3,2,-3});
+    Spawn_Pawn(worldPawns[0], SEEKER, (Vector3){3,6,0});
+    Spawn_Pawn(worldPawns[1], SHOOTER, (Vector3){3,2,-3});
 
-    SpawnPlayer(player, (Vector3){0,5,-3});
+    Spawn_Player(player, (Vector3){0,5,-3});
     
     // printf("\n");
     // printf(TextFormat("%d", sizeof(levelCells) / sizeof(levelCells[0])));
@@ -236,12 +236,12 @@ int main(void) // @INIT ========================================================
         
         // @UPDATE ==========================================================================
 
-        for (int i = 0; i < WORLD_POLY_LIMIT; i++){ UpdatePoly(worldPolys[i], dt); }
+        for (int i = 0; i < WORLD_POLY_LIMIT; i++){ Update_Poly(worldPolys[i], dt); }
         
-        for (int i = 0; i < WORLD_BULLET_LIMIT; i++){ UpdateBullet(worldBullets[i], dt); }
+        for (int i = 0; i < WORLD_BULLET_LIMIT; i++){ Update_Bullet(worldBullets[i], dt); }
 
         for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
-            int pawnAction = UpdatePawn(worldPawns[i], dt);
+            int pawnAction = Update_Pawn(worldPawns[i], dt);
             switch (pawnAction){
                 case 1:
                     SpawnWorldBullet(worldPawns[i]->aimRay);
@@ -251,7 +251,7 @@ int main(void) // @INIT ========================================================
             }
         }
 
-        UpdatePlayer(player, newPlayerVel, dt);
+        Update_Player(player, newPlayerVel, dt);
 
         UpdateCameraPro(&camera, 
             (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
@@ -282,20 +282,20 @@ int main(void) // @INIT ========================================================
         struct Voxel* closestHitVoxel = NULL;
 
         // player checkin
-        ResetPlayer(player);
+        Reset_Player(player);
         GetPlayerNodes(player, boxtreeRoot);
 
         // pawn checkin
         for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
             if (!worldPawns[i]->isActive) continue;
-            ResetPawn(worldPawns[i]);
+            Reset_Pawn(worldPawns[i]);
             GetPawnNodes(worldPawns[i], boxtreeRoot);
         }
         
         // bullet checkin
         for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
             if (!worldBullets[i]->isActive) continue;
-            ResetBullet(worldBullets[i]);
+            Reset_Bullet(worldBullets[i]);
             GetBulletNodes(worldBullets[i], boxtreeRoot);
         }
 
@@ -434,7 +434,7 @@ int main(void) // @INIT ========================================================
                 }
 
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                    DestroyVoxel(closestHitVoxel);
+                    Destroy_Voxel(closestHitVoxel);
                 }
             }
         } else {
@@ -464,23 +464,23 @@ int main(void) // @INIT ========================================================
             }
 
             for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
-                DrawPawn(worldPawns[i]);
+                Draw_Pawn(worldPawns[i]);
             }
 
             for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
-                DrawBullet(worldBullets[i]);
+                Draw_Bullet(worldBullets[i]);
             }
             
             for (int x = 0; x < LEVEL_GRID_ROWS; x++){
                 for (int y = 0; y < LEVEL_GRID_COLS; y++){
                     for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                        DrawVoxel(grid3d[x][y][z]);
-                        ResetVoxel(grid3d[x][y][z]);
+                        Draw_Voxel(grid3d[x][y][z]);
+                        Reset_Voxel(grid3d[x][y][z]);
                     }
                 }
             }
 
-            DrawPlayer(player);
+            Draw_Player(player);
             
             DrawRay(r1,r1Color);
             DrawRay(voxelRay, WHITE);

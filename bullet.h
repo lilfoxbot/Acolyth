@@ -28,7 +28,7 @@ typedef struct Bullet {
     struct BoxtreeNode* nodes[8];
 } Bullet;
 
-Bullet* CreateBullet() {
+Bullet* Create_Bullet() {
     Bullet* bullet = (Bullet*)malloc(sizeof(Bullet));
     bullet->isActive = false;
 
@@ -54,7 +54,7 @@ Bullet* CreateBullet() {
     return bullet;
 }
 
-void SpawnBullet(Bullet* bullet, Vector3 newPos, Vector3 newDir){
+void Spawn_Bullet(Bullet* bullet, Vector3 newPos, Vector3 newDir){
     bullet->isActive = true;
     bullet->lifeSpan = 3;
     bullet->position = newPos;
@@ -65,7 +65,7 @@ void SpawnBullet(Bullet* bullet, Vector3 newPos, Vector3 newDir){
     bullet->direction = newDir;
 }
 
-void DestroyBullet(Bullet* bullet){
+void Destroy_Bullet(Bullet* bullet){
     if (!bullet->isActive) return;
     
     bullet->isActive = false; 
@@ -73,14 +73,14 @@ void DestroyBullet(Bullet* bullet){
     bullet->color = bullet->defaultColor;
 }
 
-void ResetBullet(Bullet* bullet){
+void Reset_Bullet(Bullet* bullet){
     if (!bullet->isActive) return;
 
     bullet->nodeCount = 0;
     memset(bullet->nodes, 0, sizeof(bullet->nodes));
 }
 
-void UpdateBullet(Bullet* bullet, float deltatime){
+void Update_Bullet(Bullet* bullet, float deltatime){
     if (!bullet->isActive) return;
 
     bullet->velocity = Vector3Scale(Vector3Scale(bullet->direction, bullet->speed), deltatime);
@@ -94,13 +94,13 @@ void UpdateBullet(Bullet* bullet, float deltatime){
     // update lifetime
     bullet->lifeSpan -= deltatime;
     if (bullet->lifeSpan <= 0){
-        DestroyBullet(bullet);
+        Destroy_Bullet(bullet);
     } else if (bullet->destroyFlag){
-        DestroyBullet(bullet);
+        Destroy_Bullet(bullet);
     }
 }
 
-void DrawBullet(Bullet* bullet) {
+void Draw_Bullet(Bullet* bullet) {
     if (!bullet->isActive) return;
 
     DrawCube(bullet->position, bullet->size, bullet->size, bullet->size, bullet->color);

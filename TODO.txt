@@ -1,5 +1,3 @@
-
-
 - shooter pawn structure (occupies tiles)
 - pawn spawning
 

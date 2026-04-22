@@ -35,7 +35,7 @@ typedef struct Player {
     struct BoxtreeNode* nodes[8];
 } Player;
 
-Player* CreatePlayer(){
+Player* Create_Player(){
     Player* player = (Player*)malloc(sizeof(Player));
     player->isActive = false;
 
@@ -64,12 +64,12 @@ Player* CreatePlayer(){
     return player;
 }
 
-void SpawnPlayer(Player* player, Vector3 newPos){
+void Spawn_Player(Player* player, Vector3 newPos){
     player->isActive = true;
     player->position = newPos;
 }
 
-void UpdatePlayer(Player* player, Vector4 playerInput, float dt){
+void Update_Player(Player* player, Vector4 playerInput, float dt){
     if (!player->isActive) return;
 
     // gravity
@@ -98,20 +98,20 @@ void UpdatePlayer(Player* player, Vector4 playerInput, float dt){
                             player->position.z + player->width / 2};
 }
 
-void DrawPlayer(Player* player){
+void Draw_Player(Player* player){
     if (!player->isActive) return;
 
     DrawCube(player->position, player->width, player->height, player->width, player->color);
     DrawBoundingBox(player->bb, player->bbColor);
 }
 
-void ResetPlayer(Player* player){
+void Reset_Player(Player* player){
     if (!player->isActive) return;
 
     player->nodeCount = 0;
     memset(player->nodes, 0, sizeof(player->nodes));
 }
 
-void DestroyPlayer(Player* player){
+void Destroy_Player(Player* player){
     player->isActive = false;
 }

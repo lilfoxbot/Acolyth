@@ -42,7 +42,7 @@ typedef struct Pawn {
     struct BoxtreeNode* nodes[8];
 } Pawn;
 
-Pawn* CreatePawn() {
+Pawn* Create_Pawn() {
     Pawn* pawn = (Pawn*)malloc(sizeof(Pawn));
     pawn->isActive = false;
     pawn->type = SEEKER;
@@ -76,7 +76,7 @@ Pawn* CreatePawn() {
     return pawn;
 }
 
-void SpawnPawn(Pawn* pawn, PawnType type, Vector3 newPos){
+void Spawn_Pawn(Pawn* pawn, PawnType type, Vector3 newPos){
     pawn->isActive = true;
     pawn->type = type;
     pawn->position = newPos;
@@ -96,7 +96,7 @@ void SpawnPawn(Pawn* pawn, PawnType type, Vector3 newPos){
     pawn->bb.max = (Vector3){newPos.x + pawn->size / 2, newPos.y + pawn->size / 2, newPos.z + pawn->size / 2};
 }
 
-void DestroyPawn(Pawn* pawn) {
+void Destroy_Pawn(Pawn* pawn) {
     if (!pawn->isActive) return;
     
     pawn->isActive = false; 
@@ -104,21 +104,28 @@ void DestroyPawn(Pawn* pawn) {
     pawn->color = pawn->defaultColor;
 }
 
-void ResetPawn(Pawn* pawn){
+void Reset_Pawn(Pawn* pawn){
     if (!pawn->isActive) return;
 
     pawn->nodeCount = 0;
     memset(pawn->nodes, 0, sizeof(pawn->nodes));
 }
 
-int UpdatePawn(Pawn* pawn, float deltaTime){
+int Update_Pawn(Pawn* pawn, float deltaTime){
     if (!pawn->isActive) return 0;
+    if (pawn->destroyFlag){
+        Destroy_Pawn(pawn);
+        return 0;
+    }
+
+    // update position
+    Vector3 newPos = Vector3Add(pawn->position, pawn->velocity);
+    pawn->position = newPos;
+    pawn->bb.min = (Vector3){newPos.x - pawn->size / 2, newPos.y - pawn->size / 2, newPos.z - pawn->size / 2};
+    pawn->bb.max = (Vector3){newPos.x + pawn->size / 2, newPos.y + pawn->size / 2, newPos.z + pawn->size / 2};
 
     switch(pawn->type){
         case SEEKER:
-            pawn->velocity = Vector3Scale((Vector3){0,0.1f,0}, deltaTime);
-
-            pawn->aimRay.position = pawn->position;
             pawn->aimRay.direction = (Vector3){0,0,1};
             return 0;
             break;
@@ -139,21 +146,9 @@ int UpdatePawn(Pawn* pawn, float deltaTime){
             return 0;
             break;
     }
-
-    // update position
-    Vector3 newPos = Vector3Add(pawn->position, pawn->velocity);
-    pawn->position = newPos;
-    pawn->bb.min = (Vector3){newPos.x - pawn->size / 2, newPos.y - pawn->size / 2, newPos.z - pawn->size / 2};
-    pawn->bb.max = (Vector3){newPos.x + pawn->size / 2, newPos.y + pawn->size / 2, newPos.z + pawn->size / 2};
-
-    // update lifetime
-    //pawn->lifeSpan -= deltatime;
-    if (pawn->destroyFlag){
-        DestroyPawn(pawn);
-    }
 }
 
-void DrawPawn(Pawn* pawn) {
+void Draw_Pawn(Pawn* pawn) {
     if (!pawn->isActive) return;
 
     DrawCube(pawn->position, pawn->size, pawn->size, pawn->size, pawn->color);
