@@ -7,7 +7,7 @@
 
 typedef struct Voxel {
     bool isActive;
-    bool occupied;
+    bool isOccupied;
 
     Vector3 coordinates;
     Vector3 position;

@@ -11,6 +11,7 @@
 #include "bullet.h"
 #include "pawn.h"
 #include "player.h"
+#include "turret.h"
 
 #define RAYMATH_IMPLEMENTATION
 
@@ -47,6 +48,7 @@ const int LEVEL_GRID_DEPTH = 10;
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 
 struct Pawn* worldPawns[WORLD_PAWN_LIMIT];
+struct Turret* worldTurrets[WORLD_PAWN_LIMIT];
 struct Bullet* worldBullets[WORLD_BULLET_LIMIT];
 struct Poly* worldPolys[WORLD_POLY_LIMIT];
 struct Player* player;
@@ -92,20 +94,38 @@ void SpawnWorldPoly(Vector3 newPos){
     }
 }
 
+void SpawnWorldTurret(Vector3 newPos){
+    for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
+        if (!worldTurrets[i]->isActive){
+            Spawn_Turret(worldTurrets[i], newPos);
+            break;
+        }
+    }
+}
+
+bool RayHitNormalValid(Vector3 vector){
+    if (vector.x != 0 && vector.x != 1 && vector.x != -1){ return false; }
+    if (vector.y != 0 && vector.y != 1 && vector.y != -1){ return false; }
+    if (vector.z != 0 && vector.z != 1 && vector.z != -1){ return false; }
+
+    return true;
+}
+
 // void pointer (Thinking Emoji)
 int GetEmptyArraySlot(void *arr[], int limit){
     for (int i = 0; i < limit; i++){
         if (arr[i] == NULL) return i;
+        // this wouldn't work, because the arrays are not null (object pool)
     }
     return -1;
 }
 
 typedef enum {
-    SPAWN_VOXEL,
-    SPAWN_TURRET
+    SS_VOXEL,
+    SS_TURRET
 } SpawnSelection;
 
-SpawnSelection ss = SPAWN_VOXEL;
+SpawnSelection ss = SS_VOXEL;
 
 int main(void) // @INIT ========================================================================
 {
@@ -151,6 +171,7 @@ int main(void) // @INIT ========================================================
     // @PAWN init
     for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
         worldPawns[i] = Create_Pawn();
+        worldTurrets[i] = Create_Turret();
     }
 
     // @POLY init
@@ -214,8 +235,8 @@ int main(void) // @INIT ========================================================
         if (IsKeyPressed(KEY_E)){ editMode = !editMode; }
         if (IsKeyPressed(KEY_R)){ screenFading = true; }
 
-        if (IsKeyPressed(KEY_ONE)){ ss = SPAWN_VOXEL; }
-        if (IsKeyPressed(KEY_TWO)){ ss = SPAWN_TURRET; }
+        if (IsKeyPressed(KEY_ONE)){ ss = SS_VOXEL; }
+        if (IsKeyPressed(KEY_TWO)){ ss = SS_TURRET; }
         
         // camera movement/input
         camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
@@ -276,7 +297,7 @@ int main(void) // @INIT ========================================================
         Voxel* voxelHits[50] = {NULL};
         GetRayVoxels(r1, boxtreeRoot, voxelHits, 50);
 
-        Vector3 rayhitNormal = (Vector3){0,0,0};
+        Vector3 rayHitNormal = (Vector3){0,0,0};
         Vector3 playerColNormal = (Vector3){0,0,0};
         float closestVoxelDist = 100;
         struct Voxel* closestHitVoxel = NULL;
@@ -412,22 +433,38 @@ int main(void) // @INIT ========================================================
 
             if (closestHitVoxel != NULL) {
                 RayCollision rc = GetRayCollisionBox(r1, closestHitVoxel->bb);
-                rayhitNormal = rc.normal;
+                rayHitNormal = rc.normal;
 
                 closestHitVoxel->selected = true;
-                closestHitVoxel->selectedNormal = rayhitNormal;
+                closestHitVoxel->selectedNormal = rayHitNormal;
 
                 switch(ss){
-                    case SPAWN_VOXEL:
+                    case SS_VOXEL:
                         if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
-                            Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayhitNormal);
-                            grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)]
+                            Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayHitNormal);
+                            Voxel* targetVoxel = grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)]
                             [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
-                            [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)]->isActive = true;
+                            [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)];
+
+                            if (targetVoxel->isOccupied == false && targetVoxel->isOccupied == false){
+                                targetVoxel->isActive = true;
+                            }
+
                         }
                         break;
-                    case SPAWN_TURRET:
-                        
+                    case SS_TURRET:
+                        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && RayHitNormalValid(rayHitNormal)){
+                            Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayHitNormal);
+                            Voxel* targetVoxel = grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)]
+                            [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
+                            [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)];
+
+                            if (targetVoxel->isOccupied == false && targetVoxel->isOccupied == false){
+                                targetVoxel->isOccupied = true;
+                                SpawnWorldTurret(Vector3Add(closestHitVoxel->position, rayHitNormal));
+                            }
+                            
+                        }
                         break;
                     default:
                         break;
@@ -465,6 +502,7 @@ int main(void) // @INIT ========================================================
 
             for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
                 Draw_Pawn(worldPawns[i]);
+                Draw_Turret(worldTurrets[i]);
             }
 
             for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
@@ -498,10 +536,10 @@ int main(void) // @INIT ========================================================
             DrawText(TextFormat("Edit Mode: %s", (editMode) ? "ON" : "OFF"), 15, 75, 10, BLACK);
 
             switch(ss){
-                case SPAWN_VOXEL:
+                case SS_VOXEL:
                     DrawText(TextFormat("Spawn Selection: Voxel"), 15, 90, 10, BLACK);
                     break;
-                case SPAWN_TURRET:
+                case SS_TURRET:
                     DrawText(TextFormat("Spawn Selection: Turret"), 15, 90, 10, BLACK);
                     break;
                 default:
