@@ -1,6 +1,8 @@
 
 - turret:
-    
+    - collision ?? not working
+    - hp
+    - shoot 
 
 - shooter model
 

@@ -320,6 +320,13 @@ int main(void) // @INIT ========================================================
             GetBulletNodes(worldBullets[i], boxtreeRoot);
         }
 
+        // turret checkin
+        for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
+            if (!worldTurrets[i]->isActive) continue;
+            Reset_Turret(worldTurrets[i]);
+            GetTurretNodes(worldTurrets[i], boxtreeRoot);
+        }
+
         // =====================
 
         // bullet collision
@@ -355,6 +362,22 @@ int main(void) // @INIT ========================================================
 
                     if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->bullets[l]->bb)){
                         if (worldBullets[i]->nodes[j]->bullets[l]->isActive){
+
+                            worldBullets[i]->color = WHITE;
+                            if (!worldBullets[i]->destroyFlag){
+                                worldBullets[i]->destroyFlag = true;
+                                SpawnWorldPoly(worldBullets[i]->position);
+                                SpawnWorldPoly(worldBullets[i]->position);
+                                SpawnWorldPoly(worldBullets[i]->position);
+                            }
+                        }
+                    }
+                }
+                // Turrets (not working)
+                for (int m = 0; m < worldBullets[i]->nodes[j]->turretCount; m++){
+                    if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->turrets[m]->bb)){
+                        if (worldBullets[i]->nodes[j]->turrets[m]->isActive){
+                            worldBullets[i]->nodes[j]->turrets[m]->color = WHITE;
 
                             worldBullets[i]->color = WHITE;
                             if (!worldBullets[i]->destroyFlag){

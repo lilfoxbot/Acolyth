@@ -16,6 +16,8 @@ typedef struct Turret{
     Color color;
     Color bbColor;
 
+    int nodeCount;
+    struct BoxtreeNode* nodes[8];
 } Turret;
 
 Turret* Create_Turret(){
@@ -28,6 +30,9 @@ Turret* Create_Turret(){
     obj->size = 1;
     obj->color = BLACK;
     obj->bbColor = WHITE;
+
+    obj->nodeCount = 0;
+    memset(obj->nodes, 0, sizeof(obj->nodes));
 
     return obj;
 }
@@ -42,6 +47,13 @@ void Spawn_Turret(Turret* obj, Vector3 newPos){
 void Destroy_Turret(Turret* obj){
     if (!obj->isActive) return;
     obj->isActive = false;
+}
+
+void Reset_Turret(Turret* obj){
+    if (!obj->isActive) return;
+
+    obj->nodeCount = 0;
+    memset(obj->nodes, 0, sizeof(obj->nodes));
 }
 
 void Update_Turret(Turret* obj, float deltaTime){

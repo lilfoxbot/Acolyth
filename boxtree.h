@@ -7,6 +7,7 @@
 
 #include "voxel.h"
 #include "bullet.h"
+#include "turret.h"
 #include "pawn.h"
 #include "player.h"
 
@@ -16,16 +17,18 @@ typedef struct BoxtreeNode {
     BoundingBox bb;
     Vector3 position;
     int size;
-    int voxelCount;
-    int bulletCount;
     int depth;
     Color debugColor;
     bool isRayHit;
-    bool isBulletHit;
+    bool nodeTouched;
     struct BoxtreeNode* children[8];
 
+    int voxelCount;
+    int bulletCount;
+    int turretCount;
     struct Voxel* voxels[64];
     struct Bullet* bullets[32];
+    struct Turret* turrets[32];
 } BoxtreeNode;
 
 BoxtreeNode* CreateBoxtreeNode(Vector3 center, int size, int depth) {
@@ -84,7 +87,7 @@ void ResetBoxtree(BoxtreeNode* node) {
     if (node == NULL) return;
 
     node->isRayHit = false;
-    node->isBulletHit = false;
+    node->nodeTouched = false;
 
     node->bulletCount = 0;
     memset(node->bullets, 0, sizeof(node->bullets));
@@ -98,7 +101,7 @@ void DrawBoxtreeNode(BoxtreeNode* node) {
     if (node == NULL) return;
     
     if(node->depth == MAX_BOXTREE_DEPTH){
-        if (node->isBulletHit){
+        if (node->nodeTouched){
             DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, SKYBLUE);
         } else if (node->isRayHit){
             DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, YELLOW);
@@ -147,7 +150,7 @@ void GetBulletNodes(Bullet* bullet, BoxtreeNode* node){
     
     if (CheckCollisionBoxes(node->bb, bullet->bb)){
         if (node->depth == MAX_BOXTREE_DEPTH) {
-            node->isBulletHit = true;
+            node->nodeTouched = true;
 
             // place node into bullet
             bullet->nodes[bullet->nodeCount] = node;
@@ -170,7 +173,7 @@ void GetPawnNodes(Pawn* pawn, BoxtreeNode* node){
 
     if (CheckCollisionBoxes(node->bb, pawn->bb)){
         if (node->depth == MAX_BOXTREE_DEPTH){
-            node->isBulletHit = true;
+            node->nodeTouched = true;
             pawn->nodes[pawn->nodeCount] = node;
             pawn->nodeCount++;
         } else {
@@ -188,7 +191,7 @@ void GetPlayerNodes(Player* player, BoxtreeNode* node){
         if (node->depth == MAX_BOXTREE_DEPTH){
             player->nodes[player->nodeCount] = node;
             player->nodeCount++;
-            node->isBulletHit = true;
+            node->nodeTouched = true;
         } else {
             for (int i = 0; i < 8; i++) {
                 GetPlayerNodes(player, node->children[i]);
@@ -196,3 +199,21 @@ void GetPlayerNodes(Player* player, BoxtreeNode* node){
         }
     }
 }
+
+void GetTurretNodes(Turret* turret, BoxtreeNode* node){
+    if (node == NULL || !turret->isActive) return;
+
+    if (CheckCollisionBoxes(node->bb, turret->bb)){
+        if (node->depth == MAX_BOXTREE_DEPTH){
+            turret->nodes[turret->nodeCount] = node;
+            turret->nodeCount++;
+            node->nodeTouched = true;
+        } else {
+            for (int i = 0; i < 8; i++) {
+                GetTurretNodes(turret, node->children[i]);
+            }
+        }
+    }
+}
+
+// get pawn nodes?
