@@ -24,8 +24,10 @@ typedef struct Bullet {
     float lifeSpan;
     bool destroyFlag;
 
-    int nodeCount;
+    void *hitTargets[8];
+    
     struct BoxtreeNode* nodes[8];
+    int nodeCount;
 } Bullet;
 
 Bullet* Create_Bullet() {

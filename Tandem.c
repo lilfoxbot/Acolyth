@@ -94,11 +94,11 @@ void SpawnWorldPoly(Vector3 newPos){
     }
 }
 
-void SpawnWorldTurret(Vector3 newPos){
+Turret* SpawnWorldTurret(Vector3 newPos){
     for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
         if (!worldTurrets[i]->isActive){
             Spawn_Turret(worldTurrets[i], newPos);
-            break;
+            return worldTurrets[i];
         }
     }
 }
@@ -197,8 +197,8 @@ int main(void) // @INIT ========================================================
     
     // READY ==========================================================================
 
-    Spawn_Pawn(worldPawns[0], SEEKER, (Vector3){3,6,0});
-    Spawn_Pawn(worldPawns[1], SHOOTER, (Vector3){3,2,-3});
+    //Spawn_Pawn(worldPawns[0], SEEKER, (Vector3){3,6,0});
+    //Spawn_Pawn(worldPawns[1], SHOOTER, (Vector3){3,2,-3});
 
     Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -335,6 +335,25 @@ int main(void) // @INIT ========================================================
             if (!worldBullets[i]->isActive) continue;
             // Nodes
             for (int j = 0; j < worldBullets[i]->nodeCount; j++){
+
+                // Other Bullets
+                for (int l = 0; l < worldBullets[i]->nodes[j]->bulletCount; l++){
+                    // check bullet if self
+                    if (worldBullets[i] == worldBullets[i]->nodes[j]->bullets[l]) continue;
+
+                    if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->bullets[l]->bb)){
+                        if (worldBullets[i]->nodes[j]->bullets[l]->isActive){
+
+                            worldBullets[i]->color = WHITE;
+                            if (!worldBullets[i]->destroyFlag){
+                                worldBullets[i]->destroyFlag = true;
+                                SpawnWorldPoly(worldBullets[i]->position);
+                                SpawnWorldPoly(worldBullets[i]->position);
+                                SpawnWorldPoly(worldBullets[i]->position);
+                            }
+                        }
+                    }
+                }
                 // Voxels
                 for (int k = 0; k < worldBullets[i]->nodes[j]->voxelCount; k++){
                     
@@ -355,29 +374,17 @@ int main(void) // @INIT ========================================================
                         }
                     }
                 }
-                // Other Bullets
-                for (int l = 0; l < worldBullets[i]->nodes[j]->bulletCount; l++){
-                    // check bullet if self
-                    if (worldBullets[i] == worldBullets[i]->nodes[j]->bullets[l]) continue;
-
-                    if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->bullets[l]->bb)){
-                        if (worldBullets[i]->nodes[j]->bullets[l]->isActive){
-
-                            worldBullets[i]->color = WHITE;
-                            if (!worldBullets[i]->destroyFlag){
-                                worldBullets[i]->destroyFlag = true;
-                                SpawnWorldPoly(worldBullets[i]->position);
-                                SpawnWorldPoly(worldBullets[i]->position);
-                                SpawnWorldPoly(worldBullets[i]->position);
-                            }
-                        }
-                    }
-                }
-                // Turrets (not working)
+                
+                // Turrets
                 for (int m = 0; m < worldBullets[i]->nodes[j]->turretCount; m++){
                     if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->turrets[m]->bb)){
                         if (worldBullets[i]->nodes[j]->turrets[m]->isActive){
-                            worldBullets[i]->nodes[j]->turrets[m]->color = WHITE;
+                            Turret* hitTurret = worldBullets[i]->nodes[j]->turrets[m];
+
+                            hitTurret->color = WHITE;
+                            Damage_Turret(hitTurret);
+                            // add target to bullet hitTargets // TODO
+                            worldBullets[i]->hitTargets[0] = hitTurret;
 
                             worldBullets[i]->color = WHITE;
                             if (!worldBullets[i]->destroyFlag){
@@ -484,7 +491,8 @@ int main(void) // @INIT ========================================================
 
                             if (targetVoxel->isOccupied == false && targetVoxel->isOccupied == false){
                                 targetVoxel->isOccupied = true;
-                                SpawnWorldTurret(Vector3Add(closestHitVoxel->position, rayHitNormal));
+                                Turret* newTurret = SpawnWorldTurret(Vector3Add(closestHitVoxel->position, rayHitNormal));
+                                newTurret->occupiedVoxels[0] = targetVoxel;
                             }
                             
                         }

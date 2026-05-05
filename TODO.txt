@@ -1,7 +1,8 @@
 
+bullets need void* array of "hit" targets, to prevent hitting them twice in the same frame
+
 - turret:
-    - collision ?? not working
-    - hp
+    - needs array of occupied voxels to occupy/release
     - shoot 
 
 - shooter model

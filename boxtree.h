@@ -37,11 +37,14 @@ BoxtreeNode* CreateBoxtreeNode(Vector3 center, int size, int depth) {
     node->size = size;
     node->bb.min = Vector3Subtract(center, (Vector3){size/2.0f, size/2.0f, size/2.0f});
     node->bb.max = Vector3Add(center, (Vector3){size/2.0f, size/2.0f, size/2.0f});
+
     for (int i = 0; i < 8; i++) { node->children[i] = NULL; }
     for (int i = 0; i < 64; i++) { node->voxels[i] = NULL; }
     for (int i = 0; i < 32; i++) { node->bullets[i] = NULL; }
+    for (int i = 0; i < 32; i++) { node->turrets[i] = NULL; }
     node->voxelCount = 0;
     node->bulletCount = 0;
+    node->turretCount = 0;
 
     node->debugColor = WHITE;
     node->isRayHit = false;
@@ -91,6 +94,9 @@ void ResetBoxtree(BoxtreeNode* node) {
 
     node->bulletCount = 0;
     memset(node->bullets, 0, sizeof(node->bullets));
+
+    node->turretCount = 0;
+    memset(node->turrets, 0, sizeof(node->turrets));
 
     for (int i = 0; i < 8; i++) {
         ResetBoxtree(node->children[i]);
@@ -207,6 +213,9 @@ void GetTurretNodes(Turret* turret, BoxtreeNode* node){
         if (node->depth == MAX_BOXTREE_DEPTH){
             turret->nodes[turret->nodeCount] = node;
             turret->nodeCount++;
+            node->turrets[node->turretCount] = turret;
+            node->turretCount++;
+
             node->nodeTouched = true;
         } else {
             for (int i = 0; i < 8; i++) {
