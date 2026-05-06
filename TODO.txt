@@ -1,11 +1,7 @@
+- tallboi turrets (occupy 2 voxels)
+- turret model
 
-bullets need void* array of "hit" targets, to prevent hitting them twice in the same frame
-
-- turret:
-    - needs array of occupied voxels to occupy/release
-    - shoot 
-
-- shooter model
+- player collision that dont suck
 
 - save/reset level build
 

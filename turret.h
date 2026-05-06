@@ -12,13 +12,16 @@ typedef struct Turret{
 
     Vector3 position;
     Vector3 velocity;
-    
-    float size;
+    Vector3 size;
+
     BoundingBox bb;
     Color color;
     Color defaultColor;
     Color bbColor;
 
+    struct Ray aimRay;
+    float shootDelay;
+    float shootTick;
     int hp;
 
     struct Voxel* occupiedVoxels[4];
@@ -33,11 +36,16 @@ Turret* Create_Turret(){
     obj->position = (Vector3){0,0,0};
     obj->velocity = (Vector3){0,0,0};
 
-    obj->size = 1;
+    obj->aimRay.position = obj->position;
+    obj->aimRay.direction = (Vector3){0,0,-1};
+
+    obj->size = (Vector3){1,1,1};
     obj->color = BLACK;
     obj->defaultColor = BLACK;
     obj->bbColor = WHITE;
 
+    obj->shootDelay = 1;
+    obj->shootTick = 1;
     obj->hp = 3;
 
     for (int i = 0; i < 4; i++){ obj->occupiedVoxels[i] = NULL; }
@@ -50,8 +58,11 @@ Turret* Create_Turret(){
 void Spawn_Turret(Turret* obj, Vector3 newPos){
     obj->isActive = true;
     obj->position = newPos;
-    obj->bb.min = (Vector3){newPos.x - obj->size / 2, newPos.y - obj->size / 2, newPos.z - obj->size / 2};
-    obj->bb.max = (Vector3){newPos.x + obj->size / 2, newPos.y + obj->size / 2, newPos.z + obj->size / 2};
+    obj->bb.min = (Vector3){newPos.x - obj->size.x / 2, newPos.y - obj->size.y / 2, newPos.z - obj->size.z / 2};
+    obj->bb.max = (Vector3){newPos.x + obj->size.x / 2, newPos.y + obj->size.y / 2, newPos.z + obj->size.z / 2};
+
+    obj->aimRay.position = obj->position;
+    obj->aimRay.direction = (Vector3){0,0,-1};
 
     obj->hp = 3;
 }
@@ -73,11 +84,17 @@ void Reset_Turret(Turret* obj){
     memset(obj->nodes, 0, sizeof(obj->nodes));
 }
 
-void Update_Turret(Turret* obj, float deltaTime){
-    if (!obj->isActive) return;
+int Update_Turret(Turret* obj, float deltaTime){
+    if (!obj->isActive) return 0;
 
-    //obj->velocity = (Vector3){0,0,0};
-    //obj->position = Vector3Add(obj->position, obj->velocity);
+    obj->aimRay.direction = (Vector3){0,0,-1};
+
+    obj->shootTick -= deltaTime;
+    if (obj->shootTick <= 0){
+        obj->shootTick = obj->shootDelay;
+        return 1;
+    }
+    return 0;
 }
 
 void Damage_Turret(Turret* obj){
@@ -90,8 +107,9 @@ void Damage_Turret(Turret* obj){
 void Draw_Turret(Turret* obj){
     if (!obj->isActive) return;
 
-    DrawCube(obj->position, obj->size, obj->size, obj->size, obj->color);
+    DrawCube(obj->position, obj->size.x, obj->size.y, obj->size.z, obj->color);
     DrawBoundingBox(obj->bb, obj->bbColor);
+    DrawRay(obj->aimRay, obj->bbColor);
 
     obj->color = obj->defaultColor;
 }

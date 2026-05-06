@@ -17,8 +17,8 @@
 
 #define MOUSE_MOVE_SENSITIVITY 0.001f
 
-#define WORLD_PAWN_LIMIT 10
-#define WORLD_BULLET_LIMIT 50
+#define WORLD_PAWN_LIMIT 20
+#define WORLD_BULLET_LIMIT 100
 #define WORLD_POLY_LIMIT 100
 
 #define BOXTREE_INITIAL_SIZE 16
@@ -109,6 +109,14 @@ bool RayHitNormalValid(Vector3 vector){
     if (vector.z != 0 && vector.z != 1 && vector.z != -1){ return false; }
 
     return true;
+}
+
+bool ContainsInstance(void *arr[], int size, void *target){
+    for (int i = 0; i < size; i++) {
+        // Direct address comparison
+        if (arr[i] == target) return true;
+    }
+    return false;
 }
 
 // void pointer (Thinking Emoji)
@@ -223,7 +231,6 @@ int main(void) // @INIT ========================================================
         if (IsKeyDown(KEY_DOWN)){ newPlayerVel.z += ps; }
         if (IsKeyPressed(KEY_RIGHT_CONTROL)){ newPlayerVel.w = 1; }
 
-        r1Color = (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) ? RED : WHITE;
         if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
             printf("\nenter debug mode\n");
         }
@@ -232,7 +239,10 @@ int main(void) // @INIT ========================================================
         if (IsKeyPressed(KEY_MINUS)){ SetTargetFPS(60); }
         if (IsKeyPressed(KEY_EQUAL)){ SetTargetFPS(120); }
 
-        if (IsKeyPressed(KEY_E)){ editMode = !editMode; }
+        if (IsKeyPressed(KEY_E)){
+            editMode = !editMode;
+            r1Color = (editMode) ? WHITE : RED;
+        }
         if (IsKeyPressed(KEY_R)){ screenFading = true; }
 
         if (IsKeyPressed(KEY_ONE)){ ss = SS_VOXEL; }
@@ -266,6 +276,17 @@ int main(void) // @INIT ========================================================
             switch (pawnAction){
                 case 1:
                     SpawnWorldBullet(worldPawns[i]->aimRay);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
+            int turretAction = Update_Turret(worldTurrets[i], dt);
+            switch (turretAction){
+                case 1:
+                    SpawnWorldBullet(worldTurrets[i]->aimRay);
                     break;
                 default:
                     break;
@@ -333,6 +354,7 @@ int main(void) // @INIT ========================================================
         for (int i = 0; i < WORLD_BULLET_LIMIT; i++){
             // Bullets
             if (!worldBullets[i]->isActive) continue;
+            if (!worldBullets[i]->isArmed) continue;
             // Nodes
             for (int j = 0; j < worldBullets[i]->nodeCount; j++){
 
@@ -381,10 +403,13 @@ int main(void) // @INIT ========================================================
                         if (worldBullets[i]->nodes[j]->turrets[m]->isActive){
                             Turret* hitTurret = worldBullets[i]->nodes[j]->turrets[m];
 
-                            hitTurret->color = WHITE;
-                            Damage_Turret(hitTurret);
-                            // add target to bullet hitTargets // TODO
-                            worldBullets[i]->hitTargets[0] = hitTurret;
+                            // if bullet has not hit this target, add to hitTargets
+                            if (!ContainsInstance(worldBullets[i]->hitTargets, 8, hitTurret)){
+                                worldBullets[i]->hitTargets[worldBullets[i]->hitCount] = hitTurret;
+                                worldBullets[i]->hitCount++;
+                                hitTurret->color = WHITE;
+                                Damage_Turret(hitTurret);
+                            }
 
                             worldBullets[i]->color = WHITE;
                             if (!worldBullets[i]->destroyFlag){
@@ -605,6 +630,10 @@ int main(void) // @INIT ========================================================
 
                     for (int i = 0; i < WORLD_POLY_LIMIT; i++){
                         worldPolys[i]->isActive = false;
+                    }
+
+                    for (int i = 0; i < WORLD_PAWN_LIMIT; i++){
+                        worldTurrets[i]->isActive = false;
                     }
 
                     // reset grid

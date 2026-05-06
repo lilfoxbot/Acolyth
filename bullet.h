@@ -8,6 +8,7 @@
 
 typedef struct Bullet {
     bool isActive;
+    bool isArmed;
 
     Vector3 position;
     Vector3 direction;
@@ -22,8 +23,11 @@ typedef struct Bullet {
     Color defaultColor;
     
     float lifeSpan;
+    float lifeSpanLimit;
+    float armTimer;
     bool destroyFlag;
 
+    int hitCount;
     void *hitTargets[8];
     
     struct BoxtreeNode* nodes[8];
@@ -31,80 +35,95 @@ typedef struct Bullet {
 } Bullet;
 
 Bullet* Create_Bullet() {
-    Bullet* bullet = (Bullet*)malloc(sizeof(Bullet));
-    bullet->isActive = false;
+    Bullet* obj = (Bullet*)malloc(sizeof(Bullet));
+    obj->isActive = false;
+    obj->isArmed = false;
 
-    bullet->position = (Vector3){0,0,0};
-    bullet->direction = (Vector3){0,0,0};
-    bullet->speed = 3.0f;
-    bullet->velocity = (Vector3){0,0,0};
+    obj->position = (Vector3){0,0,0};
+    obj->direction = (Vector3){0,0,0};
+    obj->speed = 3.0f;
+    obj->velocity = (Vector3){0,0,0};
 
-    bullet->size = 0.1f;
-    bullet->bb.min = (Vector3){0,0,0};
-    bullet->bb.max = (Vector3){0,0,0};
+    obj->size = 0.1f;
+    obj->bb.min = (Vector3){0,0,0};
+    obj->bb.max = (Vector3){0,0,0};
 
-    bullet->bbColor = BLACK;
-    bullet->defaultColor = RED;
-    bullet->color = bullet->defaultColor;
+    obj->bbColor = BLACK;
+    obj->defaultColor = RED;
+    obj->color = obj->defaultColor;
 
-    bullet->lifeSpan = 5;
-    bullet->destroyFlag = false;
+    obj->lifeSpan = 0;
+    obj->lifeSpanLimit = 3;
+    obj->armTimer = 0.2f;
+    obj->destroyFlag = false;
     
-    bullet->nodeCount = 0;
-    memset(bullet->nodes, 0, sizeof(bullet->nodes));
+    obj->nodeCount = 0;
+    memset(obj->nodes, 0, sizeof(obj->nodes));
 
-    return bullet;
+    obj->hitCount = 0;
+    memset(obj->hitTargets, 0, sizeof(obj->hitTargets));
+
+    return obj;
 }
 
-void Spawn_Bullet(Bullet* bullet, Vector3 newPos, Vector3 newDir){
-    bullet->isActive = true;
-    bullet->lifeSpan = 3;
-    bullet->position = newPos;
+void Spawn_Bullet(Bullet* obj, Vector3 newPos, Vector3 newDir){
+    obj->isActive = true;
+    obj->isArmed = false;
+    obj->lifeSpan = 0;
+    obj->position = newPos;
 
-    bullet->bb.min = (Vector3){newPos.x - bullet->size / 2, newPos.y - bullet->size / 2, newPos.z - bullet->size / 2};
-    bullet->bb.max = (Vector3){newPos.x + bullet->size / 2, newPos.y + bullet->size / 2, newPos.z + bullet->size / 2};
+    obj->bb.min = (Vector3){newPos.x - obj->size / 2, newPos.y - obj->size / 2, newPos.z - obj->size / 2};
+    obj->bb.max = (Vector3){newPos.x + obj->size / 2, newPos.y + obj->size / 2, newPos.z + obj->size / 2};
 
-    bullet->direction = newDir;
+    obj->direction = newDir;
 }
 
-void Destroy_Bullet(Bullet* bullet){
-    if (!bullet->isActive) return;
+void Destroy_Bullet(Bullet* obj){
+    if (!obj->isActive) return;
     
-    bullet->isActive = false; 
-    bullet->destroyFlag = false;
-    bullet->color = bullet->defaultColor;
+    obj->isActive = false; 
+    obj->destroyFlag = false;
+    obj->color = obj->defaultColor;
 }
 
-void Reset_Bullet(Bullet* bullet){
-    if (!bullet->isActive) return;
+void Reset_Bullet(Bullet* obj){
+    if (!obj->isActive) return;
 
-    bullet->nodeCount = 0;
-    memset(bullet->nodes, 0, sizeof(bullet->nodes));
+    obj->nodeCount = 0;
+    memset(obj->nodes, 0, sizeof(obj->nodes));
+    obj->hitCount = 0;
+    memset(obj->hitTargets, 0, sizeof(obj->hitTargets));
 }
 
-void Update_Bullet(Bullet* bullet, float deltatime){
-    if (!bullet->isActive) return;
+void Update_Bullet(Bullet* obj, float deltatime){
+    if (!obj->isActive) return;
 
-    bullet->velocity = Vector3Scale(Vector3Scale(bullet->direction, bullet->speed), deltatime);
+    obj->velocity = Vector3Scale(Vector3Scale(obj->direction, obj->speed), deltatime);
 
     // update position
-    Vector3 newPos = Vector3Add(bullet->position, bullet->velocity);
-    bullet->position = newPos;
-    bullet->bb.min = (Vector3){newPos.x - bullet->size / 2, newPos.y - bullet->size / 2, newPos.z - bullet->size / 2};
-    bullet->bb.max = (Vector3){newPos.x + bullet->size / 2, newPos.y + bullet->size / 2, newPos.z + bullet->size / 2};
+    Vector3 newPos = Vector3Add(obj->position, obj->velocity);
+    obj->position = newPos;
+    obj->bb.min = (Vector3){newPos.x - obj->size / 2, newPos.y - obj->size / 2, newPos.z - obj->size / 2};
+    obj->bb.max = (Vector3){newPos.x + obj->size / 2, newPos.y + obj->size / 2, newPos.z + obj->size / 2};
 
     // update lifetime
-    bullet->lifeSpan -= deltatime;
-    if (bullet->lifeSpan <= 0){
-        Destroy_Bullet(bullet);
-    } else if (bullet->destroyFlag){
-        Destroy_Bullet(bullet);
+    obj->lifeSpan += deltatime;
+    if (obj->lifeSpan > obj->armTimer) obj->isArmed = true;
+    if (obj->lifeSpan > obj->lifeSpanLimit){
+        Destroy_Bullet(obj);
+    } else if (obj->destroyFlag){
+        Destroy_Bullet(obj);
     }
 }
 
-void Draw_Bullet(Bullet* bullet) {
-    if (!bullet->isActive) return;
+void Draw_Bullet(Bullet* obj) {
+    if (!obj->isActive) return;
 
-    DrawCube(bullet->position, bullet->size, bullet->size, bullet->size, bullet->color);
-    DrawBoundingBox(bullet->bb, bullet->bbColor);
+    if (obj->isArmed){
+        DrawCube(obj->position, obj->size, obj->size, obj->size, obj->color);
+    } else {
+        DrawCube(obj->position, obj->size, obj->size, obj->size, BLACK);
+    }
+    
+    DrawBoundingBox(obj->bb, obj->bbColor);
 }
