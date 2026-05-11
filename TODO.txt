@@ -1,9 +1,14 @@
 - tallboi turrets (occupy 2 voxels)
-- turret model
+- only spawn turrets on floor
+
+- tar source
+- tar spread
+
+- spawn tile
 
 - player collision that dont suck
-
-- save/reset level build
+- save/reset level layouts
+- level loader
 
 === BUGS ===
 
@@ -12,7 +17,23 @@
 
 === NOTES ===
 
-▼ NEW ENVIRONMENT SETUP ▼
+▼ inspiration
+- tempest (1981)
+- plants vs zombies
+- creeper world
+- rocket slime
+
+▼ ideas
+- win condition: tar source destroyed
+- fail condition: tar reaches player spawn
+- small enclosed voxel environments
+- encroaching tar voxels
+- player can shoot and place turrets to fight tar
+- creeper kills player on touch, returns player to spawn
+- sky view of level (spawner view)
+- blastoff transition between levels (tempest)
+
+▼ NEW ENVIRONMENT SETUP
 
 1 - install raylib
 

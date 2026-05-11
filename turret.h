@@ -41,8 +41,8 @@ Turret* Create_Turret(){
 
     obj->size = (Vector3){1,1,1};
     obj->color = BLACK;
-    obj->defaultColor = BLACK;
-    obj->bbColor = WHITE;
+    obj->defaultColor = LIGHTGRAY;
+    obj->bbColor = BLACK;
 
     obj->shootDelay = 1;
     obj->shootTick = 1;
