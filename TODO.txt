@@ -1,5 +1,4 @@
 - tallboi turrets (occupy 2 voxels)
-- only spawn turrets on floor
 
 - tar source
 - tar spread

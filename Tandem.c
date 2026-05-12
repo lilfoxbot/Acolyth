@@ -103,10 +103,18 @@ Turret* SpawnWorldTurret(Vector3 newPos){
     }
 }
 
-bool RayHitNormalValid(Vector3 vector){
+bool IsRayHitNormalValid(Vector3 vector){
     if (vector.x != 0 && vector.x != 1 && vector.x != -1){ return false; }
     if (vector.y != 0 && vector.y != 1 && vector.y != -1){ return false; }
     if (vector.z != 0 && vector.z != 1 && vector.z != -1){ return false; }
+
+    return true;
+}
+
+bool IsNormalUp(Vector3 vector){
+    if (vector.x != 0){ return false; }
+    if (vector.y != 1){ return false; }
+    if (vector.z != 0){ return false; }
 
     return true;
 }
@@ -193,7 +201,7 @@ int main(void) // @INIT ========================================================
     struct Ray r1;
     r1.position = (Vector3){0,0,0};
     r1.direction = (Vector3){10,10,0};
-    Color r1Color = WHITE;
+    Color r1Color = RED;
 
     struct Ray voxelRay;
     voxelRay.position = (Vector3){0,0,0};
@@ -504,11 +512,10 @@ int main(void) // @INIT ========================================================
                             if (targetVoxel->isOccupied == false && targetVoxel->isOccupied == false){
                                 targetVoxel->isActive = true;
                             }
-
                         }
                         break;
                     case SS_TURRET:
-                        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && RayHitNormalValid(rayHitNormal)){
+                        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && IsNormalUp(rayHitNormal)){
                             Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayHitNormal);
                             Voxel* targetVoxel = grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)]
                             [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
@@ -519,7 +526,6 @@ int main(void) // @INIT ========================================================
                                 Turret* newTurret = SpawnWorldTurret(Vector3Add(closestHitVoxel->position, rayHitNormal));
                                 newTurret->occupiedVoxels[0] = targetVoxel;
                             }
-                            
                         }
                         break;
                     default:
