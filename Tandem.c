@@ -101,6 +101,7 @@ Turret* SpawnWorldTurret(Vector3 newPos){
             return worldTurrets[i];
         }
     }
+    return NULL;
 }
 
 bool IsRayHitNormalValid(Vector3 vector){
