@@ -25,7 +25,7 @@ typedef struct Turret{
     int hp;
 
     struct Voxel* occupiedVoxels[4];
-    struct BoxtreeNode* nodes[8];
+    struct BoxtreeNode* nodes[16];
     int nodeCount;
 } Turret;
 
@@ -39,7 +39,7 @@ Turret* Create_Turret(){
     obj->aimRay.position = obj->position;
     obj->aimRay.direction = (Vector3){0,0,-1};
 
-    obj->size = (Vector3){1,1,1};
+    obj->size = (Vector3){0.7f,2,0.7f};
     obj->color = BLACK;
     obj->defaultColor = LIGHTGRAY;
     obj->bbColor = BLACK;

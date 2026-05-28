@@ -33,7 +33,8 @@ Voxel* Create_Voxel(Vector3 position, Vector3 coordinates, float size) {
     voxel->bbColor = BLACK;
     voxel->defaultColor = (Color){coordinates.x*20, coordinates.y*20, coordinates.z*20, 255};
     voxel->color = voxel->defaultColor;
-    voxel->isActive = true;
+    voxel->isActive = false;
+    voxel->isOccupied = false;
     voxel->selected = false;
     voxel->selectedNormal = (Vector3){0,0,0};
     voxel->fading = false;

@@ -1,4 +1,7 @@
-- tallboi turrets (occupy 2 voxels)
+- menu button text
+- play sound on button press
+
+- level loader
 
 - tar source
 - tar spread
@@ -6,8 +9,6 @@
 - spawn tile
 
 - player collision that dont suck
-- save/reset level layouts
-- level loader
 
 === BUGS ===
 

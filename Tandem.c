@@ -2,7 +2,6 @@
 #include "rcamera.h"
 #include "raymath.h"
 #include <stdio.h>
-#include <string.h>
 
 #include "poly.h"
 #include "cube.h"
@@ -12,6 +11,7 @@
 #include "pawn.h"
 #include "player.h"
 #include "turret.h"
+#include "button.h"
 
 #define RAYMATH_IMPLEMENTATION
 
@@ -28,6 +28,7 @@ Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0.0f, 2.0f, -2.0f };
 
 float screenFade = 0.2f;
 bool screenFading = false;
+bool cursorEnabled = false;
 bool myDebug = false;
 bool editMode = false;
 float lookSensitivity = 40.0f;
@@ -46,6 +47,8 @@ const int LEVEL_GRID_ROWS = 10;
 const int LEVEL_GRID_COLS = 5;
 const int LEVEL_GRID_DEPTH = 10;
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
+
+struct Button* menuButtons[4];
 
 struct Pawn* worldPawns[WORLD_PAWN_LIMIT];
 struct Turret* worldTurrets[WORLD_PAWN_LIMIT];
@@ -150,8 +153,8 @@ int main(void) // @INIT ========================================================
     const int screenHeight = 720;
 
     InitWindow(screenWidth, screenHeight, "Tandem");
-    DisableCursor();                    // Limit cursor to relative movement inside the window
-    SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
+    DisableCursor();
+    SetTargetFPS(60);
 
     // Define the camera to look into our 3d world (position, target, up vector)
     Camera camera = { 0 };
@@ -174,6 +177,18 @@ int main(void) // @INIT ========================================================
                 grid3d[x][y][z] = newVoxel;
                 PlaceVoxelInBoxtree(newVoxel, boxtreeRoot);
                 gridIndex++;
+            }
+        }
+    }
+
+    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+        for (int y = 0; y < LEVEL_GRID_COLS; y++){
+            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+                if (y == 0){
+                    grid3d[x][y][z]->isActive = true;
+                } else {
+                    grid3d[x][y][z]->isActive = false;
+                }
             }
         }
     }
@@ -208,6 +223,11 @@ int main(void) // @INIT ========================================================
     voxelRay.position = (Vector3){0,0,0};
     voxelRay.direction = (Vector3){1,1,0};
 
+    // @Menu init
+    for (int i = 0; i < 4; i++){
+        menuButtons[i] = Create_Button();
+    }
+
     //Mesh myMesh = GenMeshCube(1, 1, 1);
     //Model placeHolderModel = LoadModelFromMesh(myMesh);
     //Model myModel = LoadModel("resources/models/myCube.obj");
@@ -216,6 +236,8 @@ int main(void) // @INIT ========================================================
 
     //Spawn_Pawn(worldPawns[0], SEEKER, (Vector3){3,6,0});
     //Spawn_Pawn(worldPawns[1], SHOOTER, (Vector3){3,2,-3});
+
+    Spawn_Button(menuButtons[0], (Vector2){1200,120});
 
     Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -241,7 +263,12 @@ int main(void) // @INIT ========================================================
         if (IsKeyPressed(KEY_RIGHT_CONTROL)){ newPlayerVel.w = 1; }
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-            printf("\nenter debug mode\n");
+            if (!cursorEnabled){
+                EnableCursor();
+            } else {
+                DisableCursor();
+            }
+            cursorEnabled = !cursorEnabled;
         }
 
         if (IsKeyPressed(KEY_P)){ myDebug = !myDebug; }
@@ -269,12 +296,22 @@ int main(void) // @INIT ========================================================
         if (IsKeyDown(KEY_SPACE)) newUp += camSpeed;
         if (IsKeyDown(KEY_LEFT_CONTROL)) newUp -= camSpeed;
         
-        // new camera rotation
-        Vector2 mousePositionDelta = GetMouseDelta();
-        float newYaw = mousePositionDelta.x*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
-        float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
+        // camera rotation
+        if (!cursorEnabled){
+            Vector2 mousePositionDelta = GetMouseDelta();
+            float newYaw = mousePositionDelta.x*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
+            float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
+
+            UpdateCameraPro(&camera, 
+            (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
+            (Vector3){ newYaw, newPitch, 0.0f }, // added rot
+            0.0f); // zoom
+        }
         
         // @UPDATE ==========================================================================
+        Vector2 mousePos = GetMousePosition();
+
+        for (int i = 0; i < 4; i++){ Update_Button(menuButtons[i], mousePos); }
 
         for (int i = 0; i < WORLD_POLY_LIMIT; i++){ Update_Poly(worldPolys[i], dt); }
         
@@ -303,11 +340,6 @@ int main(void) // @INIT ========================================================
         }
 
         Update_Player(player, newPlayerVel, dt);
-
-        UpdateCameraPro(&camera, 
-            (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
-            (Vector3){ newYaw, newPitch, 0.0f }, // added rot
-            0.0f); // zoom
         
         Vector3 camF = GetCameraForward(&camera);
         Vector3 camR = GetCameraRight(&camera);
@@ -510,23 +542,33 @@ int main(void) // @INIT ========================================================
                             [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
                             [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)];
 
-                            if (targetVoxel->isOccupied == false && targetVoxel->isOccupied == false){
+                            if (targetVoxel->isOccupied == false && targetVoxel->isActive == false){
                                 targetVoxel->isActive = true;
                             }
                         }
                         break;
                     case SS_TURRET:
                         if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && IsNormalUp(rayHitNormal)){
-                            Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayHitNormal);
+                            Vector3 NVC = Vector3Add(closestHitVoxel->coordinates, rayHitNormal);
                             Voxel* targetVoxel = grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)]
                             [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
                             [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)];
 
-                            if (targetVoxel->isOccupied == false && targetVoxel->isOccupied == false){
-                                targetVoxel->isOccupied = true;
-                                Turret* newTurret = SpawnWorldTurret(Vector3Add(closestHitVoxel->position, rayHitNormal));
-                                newTurret->occupiedVoxels[0] = targetVoxel;
-                            }
+                            Vector3 NVC2 = Vector3Add(closestHitVoxel->coordinates, Vector3Scale(rayHitNormal, 2));
+                            Voxel* targetVoxel2 = grid3d[(int)Clamp(NVC2.x,0,LEVEL_GRID_ROWS-1)]
+                            [(int)Clamp(NVC2.y,0,LEVEL_GRID_COLS-1)]
+                            [(int)Clamp(NVC2.z,0,LEVEL_GRID_DEPTH-1)];
+
+                            // check if (2) voxels are occupied or active
+                            if (targetVoxel->isOccupied == true || targetVoxel->isActive == true){ break; }
+                            if (targetVoxel2->isOccupied == true || targetVoxel2->isActive == true){ break; }
+                            
+                            Turret* newTurret = SpawnWorldTurret(Vector3Add(closestHitVoxel->position, Vector3Scale(rayHitNormal,1.5f)));
+                            targetVoxel->isOccupied = true;
+                            newTurret->occupiedVoxels[0] = targetVoxel;
+                            targetVoxel2->isOccupied = true;
+                            newTurret->occupiedVoxels[1] = targetVoxel2;
+
                         }
                         break;
                     default:
@@ -587,6 +629,8 @@ int main(void) // @INIT ========================================================
             DrawRay(voxelRay, WHITE);
             
             EndMode3D(); // ==========================================================================
+
+            for (int i = 0; i < 4; i++){ Draw_Button(menuButtons[i]); }
 
             // Draw HUD
             // Left side
