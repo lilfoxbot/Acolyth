@@ -320,6 +320,8 @@ int main(void) // @INIT ========================================================
             switch (btnfunc){
                 case BTN_FUNC1:
                     PlaySound(testSFX);
+                    const char *scoreText = "testy_test";
+                    SaveFileText("score.txt", (char *)scoreText);
                     break;
                 case BTN_FUNC2:
                     PlaySound(testSFX);

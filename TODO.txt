@@ -1,9 +1,9 @@
-- level loader
+- export grid layout to file
+
+- different organization of game objects?
 
 - tar source
 - tar spread
-
-- spawn tile
 
 - player collision that dont suck
 
@@ -21,14 +21,20 @@
 - rocket slime
 
 ▼ ideas
-- win condition: tar source destroyed
-- fail condition: tar reaches player spawn
 - small enclosed voxel environments
-- encroaching tar voxels
-- player can shoot and place turrets to fight tar
-- creeper kills player on touch, returns player to spawn
-- sky view of level (spawner view)
+- each environment is filled with white/black tar that spreads
+- "structures" on map that activate when touched by tar
+- win condition: white tar reaches black crystal
+- fail condition: black tar reaches white crystal
+- swap between first-person and top-down views
+- first-person player can shoot and place turrets to fight tar
+- top-down player can manipulate structures
 - blastoff transition between levels (tempest)
+
+▼ structures
+- crystal: win condition
+- gate: allows swap between first-person and top-down
+- turret: shoots nearby tar
 
 ▼ NEW ENVIRONMENT SETUP
 

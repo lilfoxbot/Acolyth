@@ -31,7 +31,7 @@ Voxel* Create_Voxel(Vector3 position, Vector3 coordinates, float size) {
     voxel->bb.min = (Vector3){position.x - size / 2, position.y - size / 2, position.z - size / 2};
     voxel->bb.max = (Vector3){position.x + size / 2, position.y + size / 2, position.z + size / 2};
     voxel->bbColor = BLACK;
-    voxel->defaultColor = (Color){coordinates.x*20, coordinates.y*20, coordinates.z*20, 255};
+    voxel->defaultColor = (Color){coordinates.z*20, coordinates.z*20, coordinates.z*20, 255};
     voxel->color = voxel->defaultColor;
     voxel->isActive = false;
     voxel->isOccupied = false;
