@@ -153,8 +153,11 @@ int main(void) // @INIT ========================================================
     const int screenHeight = 720;
 
     InitWindow(screenWidth, screenHeight, "Tandem");
-    DisableCursor();
     SetTargetFPS(60);
+    InitAudioDevice();
+    DisableCursor();
+
+    Sound testSFX = LoadSound("resources/sound/blip.wav");
 
     // Define the camera to look into our 3d world (position, target, up vector)
     Camera camera = { 0 };
@@ -237,7 +240,8 @@ int main(void) // @INIT ========================================================
     //Spawn_Pawn(worldPawns[0], SEEKER, (Vector3){3,6,0});
     //Spawn_Pawn(worldPawns[1], SHOOTER, (Vector3){3,2,-3});
 
-    Spawn_Button(menuButtons[0], (Vector2){1200,120});
+    Spawn_Button(menuButtons[0], (Vector2){1200,120}, "btn1", BTN_FUNC1);
+    Spawn_Button(menuButtons[1], (Vector2){1200,160}, "btn2", BTN_FUNC2);
 
     Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -311,7 +315,21 @@ int main(void) // @INIT ========================================================
         // @UPDATE ==========================================================================
         Vector2 mousePos = GetMousePosition();
 
-        for (int i = 0; i < 4; i++){ Update_Button(menuButtons[i], mousePos); }
+        if (cursorEnabled) for (int i = 0; i < 4; i++){
+            ButtonFunction btnfunc = Update_Button(menuButtons[i], mousePos);
+            switch (btnfunc){
+                case BTN_FUNC1:
+                    PlaySound(testSFX);
+                    break;
+                case BTN_FUNC2:
+                    PlaySound(testSFX);
+                    break;
+                case BTN_NONE:
+                    break;
+                default:
+                    break;
+            }
+        }
 
         for (int i = 0; i < WORLD_POLY_LIMIT; i++){ Update_Poly(worldPolys[i], dt); }
         
@@ -514,7 +532,7 @@ int main(void) // @INIT ========================================================
         }
         
         // edit ray collision
-        if (editMode){
+        if (editMode && !cursorEnabled){
             for (int i = 0; i < 50; i++){
                 if (voxelHits[i] == NULL){
                     break;
@@ -579,7 +597,7 @@ int main(void) // @INIT ========================================================
                     Destroy_Voxel(closestHitVoxel);
                 }
             }
-        } else {
+        } else if (!cursorEnabled) {
             // shoot a projectile
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                 SpawnWorldBullet(r1);
@@ -630,7 +648,7 @@ int main(void) // @INIT ========================================================
             
             EndMode3D(); // ==========================================================================
 
-            for (int i = 0; i < 4; i++){ Draw_Button(menuButtons[i]); }
+            if (cursorEnabled) for (int i = 0; i < 4; i++){ Draw_Button(menuButtons[i]); }
 
             // Draw HUD
             // Left side

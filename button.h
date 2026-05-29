@@ -4,15 +4,27 @@
 #include "raymath.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+typedef enum {
+    BTN_NONE,
+    BTN_FUNC1,
+    BTN_FUNC2
+} ButtonFunction;
 
 typedef struct Button{
     bool isActive;
 
     Rectangle rect;
-    char btnText[32];
-
+    char label[20];
     Color color;
+    ButtonFunction btnfunc;
+
 } Button;
+
+void SetArray(char *dest, size_t dest_size, const char *source) {
+    snprintf(dest, dest_size, "%s", source);
+}
 
 Button* Create_Button(){
     Button* obj = (Button*)malloc(sizeof(Button));
@@ -22,14 +34,16 @@ Button* Create_Button(){
     obj->rect.height = 30;
 
     obj->color = WHITE;
-
+    
     return obj;
 }
 
-void Spawn_Button(Button* obj, Vector2 newPos){
+void Spawn_Button(Button* obj, Vector2 newPos, char *label, ButtonFunction btnfunc){
     obj->isActive = true;
     obj->rect.x = newPos.x;
     obj->rect.y = newPos.y;
+    SetArray(obj->label, sizeof(obj->label), label);
+    obj->btnfunc = btnfunc;
 }
 
 void Destroy_Button(Button* obj){
@@ -37,8 +51,8 @@ void Destroy_Button(Button* obj){
     obj->isActive = false;
 }
 
-void Update_Button(Button* obj, Vector2 mousePoint){
-    if (!obj->isActive) return;
+ButtonFunction Update_Button(Button* obj, Vector2 mousePoint){
+    if (!obj->isActive) return BTN_NONE;
 
     if (CheckCollisionPointRec(mousePoint, obj->rect)){
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
@@ -46,16 +60,18 @@ void Update_Button(Button* obj, Vector2 mousePoint){
         } else {
             obj->color = WHITE;
         }
-        //if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) btnAction = true;
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) return BTN_FUNC1;
         
     } else {
         obj->color = WHITE;
     }
+
+    return BTN_NONE;
 }
 
 void Draw_Button(Button* obj){
     if (!obj->isActive) return;
 
     DrawRectangle(obj->rect.x, obj->rect.y, obj->rect.width, obj->rect.height, obj->color);
-    DrawText(TextFormat("Btn"), obj->rect.x+obj->rect.width/2-8, obj->rect.y+obj->rect.height/2-8, 10, BLACK);
+    DrawText(obj->label, obj->rect.x+5, obj->rect.y+obj->rect.height/2-8, 10, BLACK);
 }
