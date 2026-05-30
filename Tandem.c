@@ -65,7 +65,7 @@ void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
     }
 
     if (CheckCollisionBoxes(voxel->bb, btnode->bb)){
-        if (btnode->depth == MAX_BOXTREE_DEPTH) {
+        if (btnode->depth == MAX_BOXTREE_DEPTH){
             btnode->voxels[btnode->voxelCount] = voxel;
             btnode->voxelCount++;
         }
@@ -172,7 +172,11 @@ int main(void) // @INIT ========================================================
     // @GRID init
     Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
     int gridIndex = 0;
+
     struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
+    char levelString[LEVEL_GRID_ROWS*LEVEL_GRID_COLS*LEVEL_GRID_DEPTH];
+    char levelStringSave[] = "11111111110000000010000000001000000000100000000010111111111100000000000000000000000000000000000000101111111111000000000000000000000000000000000000001011111111110000000010000000001000000000100000000010111111111100000000000000000000000000000000000000001111111111000000000000000000000000000000000000000011111111110000000000000000000000000000000000000000111111111100000000000000000000000000000000000000001111111111000000000000000000000000000000000000000011111111110000000000000000000000000000000000000000";
+    
     for (int x = 0; x < LEVEL_GRID_ROWS; x++){
         for (int y = 0; y < LEVEL_GRID_COLS; y++){
             for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
@@ -184,6 +188,7 @@ int main(void) // @INIT ========================================================
         }
     }
 
+    // set all ground level voxels
     for (int x = 0; x < LEVEL_GRID_ROWS; x++){
         for (int y = 0; y < LEVEL_GRID_COLS; y++){
             for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
@@ -240,8 +245,8 @@ int main(void) // @INIT ========================================================
     //Spawn_Pawn(worldPawns[0], SEEKER, (Vector3){3,6,0});
     //Spawn_Pawn(worldPawns[1], SHOOTER, (Vector3){3,2,-3});
 
-    Spawn_Button(menuButtons[0], (Vector2){1200,120}, "btn1", BTN_FUNC1);
-    Spawn_Button(menuButtons[1], (Vector2){1200,160}, "btn2", BTN_FUNC2);
+    Spawn_Button(menuButtons[0], (Vector2){1200,120}, "save", BTN_SAVE);
+    Spawn_Button(menuButtons[1], (Vector2){1200,160}, "load", BTN_LOAD);
 
     Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -316,15 +321,41 @@ int main(void) // @INIT ========================================================
         Vector2 mousePos = GetMousePosition();
 
         if (cursorEnabled) for (int i = 0; i < 4; i++){
+            int lsIndex = 0;
             ButtonFunction btnfunc = Update_Button(menuButtons[i], mousePos);
             switch (btnfunc){
-                case BTN_FUNC1:
+                case BTN_SAVE:
                     PlaySound(testSFX);
-                    const char *scoreText = "testy_test";
-                    SaveFileText("score.txt", (char *)scoreText);
+                    
+                    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+                        for (int y = 0; y < LEVEL_GRID_COLS; y++){
+                            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+                                if (grid3d[x][y][z]->isActive == true){
+                                    levelString[lsIndex] = '1';
+                                } else {
+                                    levelString[lsIndex] = '0';
+                                }
+                                lsIndex++;
+                            }
+                        }
+                    }
+                    SaveFileText("level.txt", (char *)levelString);
+
                     break;
-                case BTN_FUNC2:
+                case BTN_LOAD:
                     PlaySound(testSFX);
+                    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+                        for (int y = 0; y < LEVEL_GRID_COLS; y++){
+                            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+                                grid3d[x][y][z]->isActive = false;
+                                if (levelStringSave[lsIndex] == '1'){
+                                    grid3d[x][y][z]->isActive = true;
+                                }
+                                lsIndex++;
+                            }
+                        }
+                    }
+
                     break;
                 case BTN_NONE:
                     break;

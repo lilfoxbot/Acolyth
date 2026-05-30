@@ -8,8 +8,8 @@
 
 typedef enum {
     BTN_NONE,
-    BTN_FUNC1,
-    BTN_FUNC2
+    BTN_SAVE,
+    BTN_LOAD
 } ButtonFunction;
 
 typedef struct Button{
@@ -60,7 +60,7 @@ ButtonFunction Update_Button(Button* obj, Vector2 mousePoint){
         } else {
             obj->color = WHITE;
         }
-        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) return BTN_FUNC1;
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) return obj->btnfunc;
         
     } else {
         obj->color = WHITE;

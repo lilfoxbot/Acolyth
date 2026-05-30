@@ -1,5 +1,3 @@
-- export grid layout to file
-
 - different organization of game objects?
 
 - tar source
