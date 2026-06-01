@@ -1,5 +1,3 @@
-- fix hud format
-
 - different organization of game objects?
 
 - tar source

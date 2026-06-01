@@ -73,7 +73,7 @@ typedef enum {
     SS_VOXEL,
     SS_TURRET
 } SpawnSelection;
-SpawnSelection ss = SS_VOXEL;
+SpawnSelection spawnSelection = SS_VOXEL;
 
 int main(void) // @INIT ========================================================================
 {
@@ -173,8 +173,11 @@ int main(void) // @INIT ========================================================
     
     // READY ==========================================================================
 
-    Spawn_Button(menuButtons[0], (Vector2){1200,120}, "save", BTN_SAVE);
-    Spawn_Button(menuButtons[1], (Vector2){1200,160}, "load", BTN_LOAD);
+    Spawn_Button(menuButtons[0], (Vector2){200, 10}, "save", BTN_SAVE);
+    Spawn_Button(menuButtons[1], (Vector2){280, 10}, "load", BTN_LOAD);
+
+    Spawn_Button(menuButtons[2], (Vector2){200, 60}, "voxel", BTN_VOXEL);
+    Spawn_Button(menuButtons[3], (Vector2){280, 60}, "turret", BTN_TURRET);
 
     //Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -222,8 +225,8 @@ int main(void) // @INIT ========================================================
 
                 if (IsKeyPressed(KEY_R)){ screenFading = true; }
 
-                if (IsKeyPressed(KEY_ONE)){ ss = SS_VOXEL; }
-                if (IsKeyPressed(KEY_TWO)){ ss = SS_TURRET; }
+                if (IsKeyPressed(KEY_ONE)){ spawnSelection = SS_VOXEL; }
+                if (IsKeyPressed(KEY_TWO)){ spawnSelection = SS_TURRET; }
                 
                 // camera movement/input
                 camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
@@ -332,6 +335,12 @@ int main(void) // @INIT ========================================================
                                 }
                             }
 
+                            break;
+                        case BTN_VOXEL:
+                            spawnSelection = SS_VOXEL;
+                            break;
+                        case BTN_TURRET:
+                            spawnSelection = SS_TURRET;
                             break;
                         case BTN_NONE: break;
                         default: break;
@@ -525,7 +534,7 @@ int main(void) // @INIT ========================================================
                         closestHitVoxel->selected = true;
                         closestHitVoxel->selectedNormal = rayHitNormal;
 
-                        switch(ss){
+                        switch(spawnSelection){
                             case SS_VOXEL:
                                 if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
                                     Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayHitNormal);
@@ -636,16 +645,15 @@ int main(void) // @INIT ========================================================
             }
 
             // Draw HUD
-            // Left side
-            DrawRectangle(5, 5, 250, 100, Fade(SKYBLUE, 0.5f));
-            DrawRectangleLines(5, 5, 250, 100, BLUE);
+            //DrawRectangle(5, 5, 250, 1000, Fade(SKYBLUE, 0.5f));
+            //DrawRectangleLines(5, 5, 250, 1000, BLUE);
             
             DrawText(TextFormat("Time Passed: %0.2f", timePassed), 15, 15, 10, BLACK);
             DrawText(TextFormat("Current FPS: %d", GetFPS()), 15, 30, 10, BLACK);
             DrawText(TextFormat("Cam Target: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 15, 45, 10, BLACK);
             DrawText(TextFormat("Edit Mode: %s", (editMode) ? "ON" : "OFF"), 15, 75, 10, BLACK);
 
-            switch(ss){
+            switch(spawnSelection){
                 case SS_VOXEL:
                     DrawText(TextFormat("Spawn Selection: Voxel"), 15, 90, 10, BLACK);
                     break;
@@ -656,15 +664,6 @@ int main(void) // @INIT ========================================================
                     break;
             }
             
-            // Right side
-            DrawRectangle(1080, 5, 195, 100, Fade(SKYBLUE, 0.5f));
-            DrawRectangleLines(1080, 5, 195, 100, BLUE);
-            
-            DrawText(TextFormat("Player Col Normal: %0.1f _ %0.1f _ %0.1f",
-                playerColNormal.x,
-                playerColNormal.y,
-                playerColNormal.z), 1090, 15, 10, BLACK);
-            
             // Screen Fade
             if (screenFading){
                 screenFade += 2*dt;
@@ -674,7 +673,6 @@ int main(void) // @INIT ========================================================
                     screenFade = 0;
 
                     // Do Scene Reset
-                    
                     camera.position = CAM_DEFAULT_POS;
                     camera.target = CAM_DEFAULT_TARGET;
 

@@ -9,7 +9,9 @@
 typedef enum {
     BTN_NONE,
     BTN_SAVE,
-    BTN_LOAD
+    BTN_LOAD,
+    BTN_VOXEL,
+    BTN_TURRET
 } ButtonFunction;
 
 typedef struct Button{
@@ -18,6 +20,7 @@ typedef struct Button{
     Rectangle rect;
     char label[20];
     Color color;
+    Color outlineColor;
     ButtonFunction btnfunc;
 
 } Button;
@@ -34,6 +37,7 @@ Button* Create_Button(){
     obj->rect.height = 30;
 
     obj->color = WHITE;
+    obj->outlineColor = BLACK;
     
     return obj;
 }
@@ -57,8 +61,10 @@ ButtonFunction Update_Button(Button* obj, Vector2 mousePoint){
     if (CheckCollisionPointRec(mousePoint, obj->rect)){
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
             obj->color = BLACK;
+            obj->outlineColor = WHITE;
         } else {
             obj->color = WHITE;
+            obj->outlineColor = BLACK;
         }
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) return obj->btnfunc;
         
@@ -73,5 +79,6 @@ void Draw_Button(Button* obj){
     if (!obj->isActive) return;
 
     DrawRectangle(obj->rect.x, obj->rect.y, obj->rect.width, obj->rect.height, obj->color);
+    DrawRectangleLines(obj->rect.x, obj->rect.y, obj->rect.width, obj->rect.height, obj->outlineColor);
     DrawText(obj->label, obj->rect.x+5, obj->rect.y+obj->rect.height/2-8, 10, BLACK);
 }
