@@ -8,6 +8,8 @@
 
 typedef enum {
     BTN_NONE,
+    BTN_PLAY,
+    BTN_TEST,
     BTN_SAVE,
     BTN_LOAD,
     BTN_VOXEL,
@@ -70,6 +72,7 @@ ButtonFunction Update_Button(Button* obj, Vector2 mousePoint){
         
     } else {
         obj->color = WHITE;
+        obj->outlineColor = BLACK;
     }
 
     return BTN_NONE;

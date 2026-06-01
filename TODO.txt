@@ -1,4 +1,8 @@
-- different organization of game objects?
+- main menu:
+    main_menu UI
+    Reset Scene Function
+    Return To Main function
+    Init Scene Function
 
 - tar source
 - tar spread

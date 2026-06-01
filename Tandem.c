@@ -22,12 +22,16 @@
 #define WORLD_DEFAULT_LIMIT 100
 #define BOXTREE_INITIAL_SIZE 16
 
+#define LEVEL_GRID_ROWS 10
+#define LEVEL_GRID_COLS 5
+#define LEVEL_GRID_DEPTH 10
+
 Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 2.0f, 0.0f };
 Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0.0f, 2.0f, -2.0f };
 
 float screenFade = 0.2f;
 bool screenFading = false;
-bool cursorEnabled = false;
+bool cursorEnabled = true;
 bool myDebug = false;
 bool editMode = false;
 float lookSensitivity = 40.0f;
@@ -39,19 +43,22 @@ float timePassed = 0;
 float playerSpeed = 2.0f;
 
 const int OCT = 8; // octree root size
-const int LEVEL_GRID_ROWS = 10;
-const int LEVEL_GRID_COLS = 5;
-const int LEVEL_GRID_DEPTH = 10;
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
+struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
 
-struct Button* menuButtons[4];
+struct Button* editorButtons[4];
+struct Button* mainmenuButtons[4];
 
 struct Pawn* worldPawns[WORLD_DEFAULT_LIMIT];
 struct Turret* worldTurrets[WORLD_DEFAULT_LIMIT];
 struct Bullet* worldBullets[WORLD_DEFAULT_LIMIT];
+int worldBulletCount = 0;
 struct Poly* worldPolys[WORLD_DEFAULT_LIMIT];
 struct Player* player;
-int worldBulletCount = 0;
+
+char levelString[LEVEL_GRID_ROWS*LEVEL_GRID_COLS*LEVEL_GRID_DEPTH];
+char levelStringSave[] = "11111111110000000010000000001000000000100000000010111111111100000000000000000000000000000000000000101111111111000000000000000000000000000000000000001011111111110000000010000000001000000000100000000010111111111100000000000000000000000000000000000000001111111111000000000000000000000000000000000000000011111111110000000000000000000000000000000000000000111111111100000000000000000000000000000000000000001111111111000000000000000000000000000000000000000011111111110000000000000000000000000000000000000000";
+Sound testSFX;
 
 static void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode);
 static void SpawnWorldBullet(Ray ray);
@@ -59,15 +66,17 @@ static void SpawnWorldPoly(Vector3 newPos);
 static Turret* SpawnWorldTurret(Vector3 newPos);
 static bool IsNormalUp(Vector3 vector);
 static bool ContainsInstance(void *arr[], int size, void *target);
+static void ExecuteButtonFunction(ButtonFunction btnfunc);
 //static bool IsRayHitNormalValid(Vector3 vector);
 
 typedef enum {
-    GS_MENU,
-    GS_EDITOR,
+    GS_MENU_MAIN,
+    GS_EDIT,
+    GS_EDIT_PAUSE,
     GS_GAMEPLAY
 } GameState;
 
-GameState gamestate = GS_EDITOR;
+GameState gamestate = GS_MENU_MAIN;
 
 typedef enum {
     SS_VOXEL,
@@ -86,9 +95,10 @@ int main(void) // @INIT ========================================================
     
     SetTargetFPS(60);
     InitAudioDevice();
-    DisableCursor();
+    EnableCursor();
+    //DisableCursor();
 
-    Sound testSFX = LoadSound("resources/sound/blip.wav");
+    testSFX = LoadSound("resources/sound/blip.wav");
 
     // Define the camera to look into our 3d world (position, target, up vector)
     Camera camera = { 0 };
@@ -103,10 +113,6 @@ int main(void) // @INIT ========================================================
     // @GRID init
     Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
     int gridIndex = 0;
-
-    struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
-    char levelString[LEVEL_GRID_ROWS*LEVEL_GRID_COLS*LEVEL_GRID_DEPTH];
-    char levelStringSave[] = "11111111110000000010000000001000000000100000000010111111111100000000000000000000000000000000000000101111111111000000000000000000000000000000000000001011111111110000000010000000001000000000100000000010111111111100000000000000000000000000000000000000001111111111000000000000000000000000000000000000000011111111110000000000000000000000000000000000000000111111111100000000000000000000000000000000000000001111111111000000000000000000000000000000000000000011111111110000000000000000000000000000000000000000";
     
     for (int x = 0; x < LEVEL_GRID_ROWS; x++){
         for (int y = 0; y < LEVEL_GRID_COLS; y++){
@@ -163,9 +169,8 @@ int main(void) // @INIT ========================================================
     voxelRay.direction = (Vector3){1,1,0};
 
     // @Menu init
-    for (int i = 0; i < 4; i++){
-        menuButtons[i] = Create_Button();
-    }
+    for (int i = 0; i < 4; i++){ editorButtons[i] = Create_Button(); }
+    for (int i = 0; i < 4; i++){ mainmenuButtons[i] = Create_Button(); }
 
     //Mesh myMesh = GenMeshCube(1, 1, 1);
     //Model placeHolderModel = LoadModelFromMesh(myMesh);
@@ -173,11 +178,13 @@ int main(void) // @INIT ========================================================
     
     // READY ==========================================================================
 
-    Spawn_Button(menuButtons[0], (Vector2){200, 10}, "save", BTN_SAVE);
-    Spawn_Button(menuButtons[1], (Vector2){280, 10}, "load", BTN_LOAD);
+    Spawn_Button(editorButtons[0], (Vector2){200, 10}, "save", BTN_SAVE);
+    Spawn_Button(editorButtons[1], (Vector2){280, 10}, "load", BTN_LOAD);
+    Spawn_Button(editorButtons[2], (Vector2){200, 60}, "voxel", BTN_VOXEL);
+    Spawn_Button(editorButtons[3], (Vector2){280, 60}, "turret", BTN_TURRET);
 
-    Spawn_Button(menuButtons[2], (Vector2){200, 60}, "voxel", BTN_VOXEL);
-    Spawn_Button(menuButtons[3], (Vector2){280, 60}, "turret", BTN_TURRET);
+    Spawn_Button(mainmenuButtons[0], (Vector2){500, 500}, "PLAY", BTN_PLAY);
+    Spawn_Button(mainmenuButtons[1], (Vector2){500, 600}, "TEST", BTN_TEST);
 
     //Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -195,19 +202,8 @@ int main(void) // @INIT ========================================================
         Vector2 mousePos = GetMousePosition();
         Vector4 newPlayerVel = (Vector4){0,0,0,0};
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-            if (!cursorEnabled){
-                EnableCursor();
-                gamestate = GS_MENU;
-            } else {
-                DisableCursor();
-                gamestate = GS_EDITOR;
-            }
-            cursorEnabled = !cursorEnabled;
-        }
-
         switch (gamestate){
-            case GS_EDITOR:
+            case GS_EDIT:
                 if (IsKeyDown(KEY_LEFT)){ newPlayerVel.x += -playerSpeed; }
                 if (IsKeyDown(KEY_RIGHT)){ newPlayerVel.x += playerSpeed; }
                 if (IsKeyDown(KEY_UP)){ newPlayerVel.z += -playerSpeed; }
@@ -221,6 +217,17 @@ int main(void) // @INIT ========================================================
                 if (IsKeyPressed(KEY_E)){
                     editMode = !editMode;
                     r1Color = (editMode) ? WHITE : RED;
+                }
+
+                if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
+                    if (!cursorEnabled){
+                        EnableCursor();
+                        gamestate = GS_EDIT_PAUSE;
+                    } else {
+                        DisableCursor();
+                        gamestate = GS_EDIT;
+                    }
+                        cursorEnabled = !cursorEnabled;
                 }
 
                 if (IsKeyPressed(KEY_R)){ screenFading = true; }
@@ -251,15 +258,25 @@ int main(void) // @INIT ========================================================
                 0.0f); // zoom
 
                 break;
-            case GS_MENU: break;
-            case GS_GAMEPLAY: break;
+            case GS_EDIT_PAUSE:
+                if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
+                    if (!cursorEnabled){
+                        EnableCursor();
+                        gamestate = GS_EDIT_PAUSE;
+                    } else {
+                        DisableCursor();
+                        gamestate = GS_EDIT;
+                    }
+                    cursorEnabled = !cursorEnabled;
+                }
+                break;
             default: break;
         }
         
         // @UPDATE ==========================================================================
         
         switch (gamestate){
-            case GS_EDITOR:
+            case GS_EDIT:
                 for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ Update_Poly(worldPolys[i], dt); }
                 for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ Update_Bullet(worldBullets[i], dt); }
                 for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
@@ -297,57 +314,19 @@ int main(void) // @INIT ========================================================
                 r1.position = aimRay;
                 r1.direction = camF;
                 break;
-            case GS_MENU:
+            case GS_EDIT_PAUSE:
                 for (int i = 0; i < 4; i++){
-                    int lsIndex = 0;
-                    ButtonFunction btnfunc = Update_Button(menuButtons[i], mousePos);
-                    switch (btnfunc){
-                        case BTN_SAVE:
-                            PlaySound(testSFX);
-                            
-                            for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-                                for (int y = 0; y < LEVEL_GRID_COLS; y++){
-                                    for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                                        if (grid3d[x][y][z]->isActive == true){
-                                            levelString[lsIndex] = '1';
-                                        } else {
-                                            levelString[lsIndex] = '0';
-                                        }
-                                        lsIndex++;
-                                    }
-                                }
-                            }
-                            SaveFileText("level.txt", (char *)levelString);
-
-                            break;
-                        case BTN_LOAD:
-                            PlaySound(testSFX);
-
-                            for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-                                for (int y = 0; y < LEVEL_GRID_COLS; y++){
-                                    for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                                        grid3d[x][y][z]->isActive = false;
-                                        if (levelStringSave[lsIndex] == '1'){
-                                            grid3d[x][y][z]->isActive = true;
-                                        }
-                                        lsIndex++;
-                                    }
-                                }
-                            }
-
-                            break;
-                        case BTN_VOXEL:
-                            spawnSelection = SS_VOXEL;
-                            break;
-                        case BTN_TURRET:
-                            spawnSelection = SS_TURRET;
-                            break;
-                        case BTN_NONE: break;
-                        default: break;
-                    }
+                    ButtonFunction btnfunc = Update_Button(editorButtons[i], mousePos);
+                    ExecuteButtonFunction(btnfunc);
                 }
                 break;
             case GS_GAMEPLAY: break;
+            case GS_MENU_MAIN:
+                for (int i = 0; i < 4; i++){
+                    ButtonFunction btnfunc = Update_Button(mainmenuButtons[i], mousePos);
+                    ExecuteButtonFunction(btnfunc);
+                }
+                break;
             default: break;
         }
         
@@ -357,11 +336,10 @@ int main(void) // @INIT ========================================================
         Vector3 playerColNormal = (Vector3){0,0,0};
 
         switch (gamestate){
-            case GS_EDITOR:
+            case GS_EDIT:
                 ResetBoxtree(boxtreeRoot);
                 Voxel* voxelHits[50] = {NULL};
                 GetRayVoxels(r1, boxtreeRoot, voxelHits, 50);
-
                 
                 float closestVoxelDist = 100;
                 struct Voxel* closestHitVoxel = NULL;
@@ -586,8 +564,6 @@ int main(void) // @INIT ========================================================
                     }
                 }
                 break;
-            case GS_MENU: break;
-            case GS_GAMEPLAY: break;
             default: break;
         }
         
@@ -598,8 +574,8 @@ int main(void) // @INIT ========================================================
             BeginMode3D(camera);
             
             // North Star
-            DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, YELLOW);
-            DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, WHITE);
+            DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, WHITE);
+            //DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, YELLOW);
 
             DrawGrid(10, 1.0f);
             DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
@@ -636,9 +612,13 @@ int main(void) // @INIT ========================================================
             EndMode3D(); // ==========================================================================
 
             switch (gamestate){
-                case GS_EDITOR: break;
-                case GS_MENU:
-                    if (cursorEnabled) for (int i = 0; i < 4; i++){ Draw_Button(menuButtons[i]); }
+                case GS_MENU_MAIN:
+                    DrawText(TextFormat("TANDEM"), screenWidth/2, screenHeight/2, 40, BLACK);
+                    for (int i = 0; i < 4; i++){ Draw_Button(mainmenuButtons[i]); }
+                    break;
+                case GS_EDIT: break;
+                case GS_EDIT_PAUSE:
+                    for (int i = 0; i < 4; i++){ Draw_Button(editorButtons[i]); }
                     break;
                 case GS_GAMEPLAY: break;
                 default: break;
@@ -710,6 +690,58 @@ int main(void) // @INIT ========================================================
     //===============================================================================
 
     return 0;
+}
+
+static void ExecuteButtonFunction(ButtonFunction btnfunc){
+    int lsIndex = 0;
+    switch (btnfunc){
+        case BTN_SAVE:
+            PlaySound(testSFX);
+            for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+                for (int y = 0; y < LEVEL_GRID_COLS; y++){
+                    for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+                        if (grid3d[x][y][z]->isActive == true){
+                            levelString[lsIndex] = '1';
+                        } else {
+                            levelString[lsIndex] = '0';
+                        }
+                        lsIndex++;
+                    }
+                }
+            }
+            SaveFileText("level.txt", (char *)levelString);
+            break;
+        case BTN_LOAD:
+            PlaySound(testSFX);
+            for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+                for (int y = 0; y < LEVEL_GRID_COLS; y++){
+                    for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+                        grid3d[x][y][z]->isActive = false;
+                        if (levelStringSave[lsIndex] == '1'){
+                            grid3d[x][y][z]->isActive = true;
+                        }
+                        lsIndex++;
+                    }
+                }
+            }
+            break;
+        case BTN_VOXEL:
+            spawnSelection = SS_VOXEL;
+            break;
+        case BTN_TURRET:
+            spawnSelection = SS_TURRET;
+            break;
+        case BTN_PLAY:
+            //gamestate = GS_GAMEPLAY;
+            break;
+        case BTN_TEST:
+            gamestate = GS_EDIT;
+            DisableCursor();
+            cursorEnabled = false;
+            break;
+        case BTN_NONE: break;
+        default: break;
+    }
 }
 
 static void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
