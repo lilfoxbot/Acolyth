@@ -1,7 +1,4 @@
-- database file
-- Resource loading functions
-- Return To Main function
-- Init Scene Function
+- text box struct
 
 - tar source
 - tar spread

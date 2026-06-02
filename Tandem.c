@@ -12,16 +12,16 @@
 #include "player.h"
 #include "turret.h"
 #include "button.h"
-
-#include "game.h"
+#include "database.h"
 
 #define RAYMATH_IMPLEMENTATION
 
 #define MOUSE_MOVE_SENSITIVITY 0.001f
 
-
 #define WORLD_DEFAULT_LIMIT 100
 #define BOXTREE_INITIAL_SIZE 16
+
+#define BTN_LIMIT 10
 
 #define LEVEL_GRID_ROWS 10
 #define LEVEL_GRID_COLS 5
@@ -31,7 +31,7 @@ Vector3 DEFAULT_PLAYER_POSITION = (Vector3){0, 5,-3};
 Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 3.0f, 3.0f };
 Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0.0f, 2.0f, -2.0f };
 
-float screenFade = 0.2f;
+float screenFade = 1;
 bool screenFading = false;
 bool cursorEnabled = true;
 bool myDebug = false;
@@ -48,8 +48,10 @@ const int OCT = 8; // octree root size
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
 
-struct Button* editorButtons[4];
-struct Button* mainmenuButtons[4];
+struct Button* editorButtons[BTN_LIMIT];
+struct Button* mainmenuButtons[BTN_LIMIT];
+Rectangle textBox = { 600, 10, 100, 30 };
+bool mouseOnText = false;
 
 struct Pawn* worldPawns[WORLD_DEFAULT_LIMIT];
 struct Turret* worldTurrets[WORLD_DEFAULT_LIMIT];
@@ -61,9 +63,8 @@ struct Player* player;
 Camera camera = { 0 };
 
 char levelString[LEVEL_GRID_ROWS*LEVEL_GRID_COLS*LEVEL_GRID_DEPTH];
-char levelStringSave[] = "11111111110000000010000000001000000000100000000010111111111100000000000000000000000000000000000000101111111111000000000000000000000000000000000000001011111111110000000010000000001000000000100000000010111111111100000000000000000000000000000000000000001111111111000000000000000000000000000000000000000011111111110000000000000000000000000000000000000000111111111100000000000000000000000000000000000000001111111111000000000000000000000000000000000000000011111111110000000000000000000000000000000000000000";
-Sound testSFX;
 
+void LoadLevel();
 void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode);
 void SpawnWorldBullet(Ray ray);
 void SpawnWorldPoly(Vector3 newPos);
@@ -104,7 +105,7 @@ int main(void) // @INIT ========================================================
     EnableCursor();
     //DisableCursor();
 
-    testSFX = LoadSound("resources/sound/blip.wav");
+    LoadSounds();
 
     camera.position = CAM_DEFAULT_POS;
     camera.target = CAM_DEFAULT_TARGET;
@@ -173,8 +174,8 @@ int main(void) // @INIT ========================================================
     voxelRay.direction = (Vector3){1,1,0};
 
     // @Menu init
-    for (int i = 0; i < 4; i++){ editorButtons[i] = Create_Button(); }
-    for (int i = 0; i < 4; i++){ mainmenuButtons[i] = Create_Button(); }
+    for (int i = 0; i < BTN_LIMIT; i++){ editorButtons[i] = Create_Button(); }
+    for (int i = 0; i < BTN_LIMIT; i++){ mainmenuButtons[i] = Create_Button(); }
 
     //Mesh myMesh = GenMeshCube(1, 1, 1);
     //Model placeHolderModel = LoadModelFromMesh(myMesh);
@@ -182,10 +183,14 @@ int main(void) // @INIT ========================================================
     
     // READY ==========================================================================
 
-    Spawn_Button(editorButtons[0], (Vector2){200, 10}, (Vector2){60, 30}, "save", 10, BTN_SAVE);
-    Spawn_Button(editorButtons[1], (Vector2){280, 10}, (Vector2){60, 30}, "load", 10, BTN_LOAD);
-    Spawn_Button(editorButtons[2], (Vector2){200, 60}, (Vector2){60, 30}, "voxel", 10, BTN_VOXEL);
-    Spawn_Button(editorButtons[3], (Vector2){280, 60}, (Vector2){60, 30}, "turret", 10, BTN_TURRET);
+    Spawn_Button(editorButtons[0], btn_edit_origin, (Vector2){60, 30}, "MAIN", 10, BTN_MAIN);
+    Spawn_Button(editorButtons[1], (Vector2){btn_edit_origin.x + btn_edit_offset.x, btn_edit_origin.y}, (Vector2){60, 30}, "SAVE", 10, BTN_SAVE);
+    Spawn_Button(editorButtons[2], (Vector2){btn_edit_origin.x + btn_edit_offset.x*2, btn_edit_origin.y}, (Vector2){60, 30}, "LOAD", 10, BTN_LOAD);
+    Spawn_Button(editorButtons[3], (Vector2){btn_edit_origin.x + btn_edit_offset.x*3, btn_edit_origin.y}, (Vector2){60, 30}, "PREV", 10, BTN_PREV);
+    Spawn_Button(editorButtons[4], (Vector2){btn_edit_origin.x + btn_edit_offset.x*4, btn_edit_origin.y}, (Vector2){60, 30}, "NEXT", 10, BTN_NEXT);
+
+    Spawn_Button(editorButtons[5], (Vector2){btn_edit_origin.x, btn_edit_origin.y + btn_edit_offset.y}, (Vector2){60, 30}, "voxel", 10, BTN_VOXEL);
+    Spawn_Button(editorButtons[6], (Vector2){btn_edit_origin.x + btn_edit_offset.x, btn_edit_origin.y + btn_edit_offset.y}, (Vector2){60, 30}, "turret", 10, BTN_TURRET);
 
     Spawn_Button(mainmenuButtons[0], (Vector2){500, 500}, (Vector2){200, 30}, "PLAY", 20, BTN_PLAY);
     Spawn_Button(mainmenuButtons[1], (Vector2){500, 600}, (Vector2){200, 30}, "TEST", 20, BTN_TEST);
@@ -234,7 +239,7 @@ int main(void) // @INIT ========================================================
                         cursorEnabled = !cursorEnabled;
                 }
 
-                if (IsKeyPressed(KEY_R)){ screenFading = true; }
+                if (IsKeyPressed(KEY_R)){ ResetScene(); }
 
                 if (IsKeyPressed(KEY_ONE)){ spawnSelection = SS_VOXEL; }
                 if (IsKeyPressed(KEY_TWO)){ spawnSelection = SS_TURRET; }
@@ -319,14 +324,14 @@ int main(void) // @INIT ========================================================
                 r1.direction = camF;
                 break;
             case GS_EDIT_PAUSE:
-                for (int i = 0; i < 4; i++){
+                for (int i = 0; i < BTN_LIMIT; i++){
                     ButtonFunction btnfunc = Update_Button(editorButtons[i], mousePos);
                     ExecuteButtonFunction(btnfunc);
                 }
                 break;
             case GS_GAMEPLAY: break;
             case GS_MENU_MAIN:
-                for (int i = 0; i < 4; i++){
+                for (int i = 0; i < BTN_LIMIT; i++){
                     ButtonFunction btnfunc = Update_Button(mainmenuButtons[i], mousePos);
                     ExecuteButtonFunction(btnfunc);
                 }
@@ -609,20 +614,26 @@ int main(void) // @INIT ========================================================
             }
 
             Draw_Player(player);
-            
-            DrawRay(r1,r1Color);
-            //DrawRay(voxelRay, WHITE);
+
+            switch (gamestate){
+                case GS_EDIT:
+                    DrawRay(r1,r1Color);
+                    break;
+                case GS_GAMEPLAY: break;
+                default: break;
+            }
             
             EndMode3D(); // ==========================================================================
 
             switch (gamestate){
                 case GS_MENU_MAIN:
                     DrawText(TextFormat("TANDEM"), screenWidth/2, screenHeight/2, 50, BLACK);
-                    for (int i = 0; i < 4; i++){ Draw_Button(mainmenuButtons[i]); }
+                    for (int i = 0; i < BTN_LIMIT; i++){ Draw_Button(mainmenuButtons[i]); }
                     break;
                 case GS_EDIT: break;
                 case GS_EDIT_PAUSE:
-                    for (int i = 0; i < 4; i++){ Draw_Button(editorButtons[i]); }
+                    for (int i = 0; i < BTN_LIMIT; i++){ Draw_Button(editorButtons[i]); }
+                    DrawRectangleRec(textBox, LIGHTGRAY);
                     break;
                 case GS_GAMEPLAY: break;
                 default: break;
@@ -636,26 +647,22 @@ int main(void) // @INIT ========================================================
             DrawText(TextFormat("Current FPS: %d", GetFPS()), 15, 30, 10, BLACK);
             DrawText(TextFormat("Cam Target: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 15, 45, 10, BLACK);
             DrawText(TextFormat("Edit Mode: %s", (editMode) ? "ON" : "OFF"), 15, 75, 10, BLACK);
+            DrawText(TextFormat("Selected Level: %d", levelSelection+1), 15, 90, 10, BLACK);
 
             switch(spawnSelection){
                 case SS_VOXEL:
-                    DrawText(TextFormat("Spawn Selection: Voxel"), 15, 90, 10, BLACK);
+                    DrawText(TextFormat("Spawn Selection: Voxel"), 15, 105, 10, BLACK);
                     break;
                 case SS_TURRET:
-                    DrawText(TextFormat("Spawn Selection: Turret"), 15, 90, 10, BLACK);
+                    DrawText(TextFormat("Spawn Selection: Turret"), 15, 105, 10, BLACK);
                     break;
                 default:
                     break;
             }
+
             
-            // Screen Fade
-            if (screenFading){
-                screenFade += 3*dt;
-                DrawRectangle(0, 0, screenWidth*2, screenHeight*2, Fade(BLACK, screenFade));
-                if (screenFade >= 1){
-                    ResetScene();
-                }
-            }
+            DrawRectangle(0, 0, screenWidth*2, screenHeight*2, Fade(BLACK, screenFade));
+            if (screenFade > 0){ screenFade -= 3*dt; }
 
         EndDrawing();
 
@@ -672,10 +679,10 @@ int main(void) // @INIT ========================================================
 }
 
 void ExecuteButtonFunction(ButtonFunction btnfunc){
-    int lsIndex = 0;
     switch (btnfunc){
         case BTN_SAVE:
-            PlaySound(testSFX);
+            PlaySound(sound_test);
+            int lsIndex = 0;
             for (int x = 0; x < LEVEL_GRID_ROWS; x++){
                 for (int y = 0; y < LEVEL_GRID_COLS; y++){
                     for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
@@ -688,21 +695,21 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
                     }
                 }
             }
-            SaveFileText("level.txt", (char *)levelString);
+            SaveFileText("level_export.txt", (char *)levelString);
             break;
         case BTN_LOAD:
-            PlaySound(testSFX);
-            for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-                for (int y = 0; y < LEVEL_GRID_COLS; y++){
-                    for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                        grid3d[x][y][z]->isActive = false;
-                        if (levelStringSave[lsIndex] == '1'){
-                            grid3d[x][y][z]->isActive = true;
-                        }
-                        lsIndex++;
-                    }
-                }
-            }
+            PlaySound(sound_test);
+            LoadLevel();
+            break;
+        case BTN_PREV:
+            levelSelection--;
+            if (levelSelection < 0) levelSelection = 0;
+            LoadLevel();
+            break;
+        case BTN_NEXT:
+            levelSelection++;
+            if (levelSelection > 2) levelSelection = 2;
+            LoadLevel();
             break;
         case BTN_VOXEL:
             spawnSelection = SS_VOXEL;
@@ -718,14 +725,33 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
             DisableCursor();
             cursorEnabled = false;
             break;
+        case BTN_MAIN:
+            gamestate = GS_MENU_MAIN;
+            ResetScene();
+            break;
         case BTN_NONE: break;
         default: break;
     }
 }
 
+void LoadLevel(){
+    screenFade = 1;
+    int lsIndex = 0;
+    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+        for (int y = 0; y < LEVEL_GRID_COLS; y++){
+            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+                grid3d[x][y][z]->isActive = false;
+                if (levels[levelSelection][lsIndex] == '1'){
+                    grid3d[x][y][z]->isActive = true;
+                }
+                lsIndex++;
+            }
+        }
+    }
+}
+
 void ResetScene(){
-    screenFading = false;
-    screenFade = 0;
+    screenFade = 1;
 
     camera.position = CAM_DEFAULT_POS;
     camera.target = CAM_DEFAULT_TARGET;

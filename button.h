@@ -6,12 +6,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+Vector2 btn_edit_origin = (Vector2){200, 10};
+Vector2 btn_edit_offset = (Vector2){80, 60};
+
 typedef enum {
     BTN_NONE,
+    BTN_MAIN,
     BTN_PLAY,
     BTN_TEST,
     BTN_SAVE,
     BTN_LOAD,
+    BTN_PREV,
+    BTN_NEXT,
     BTN_VOXEL,
     BTN_TURRET
 } ButtonFunction;
