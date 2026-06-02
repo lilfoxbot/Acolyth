@@ -19,6 +19,7 @@
 
 #define MOUSE_MOVE_SENSITIVITY 0.001f
 
+
 #define WORLD_DEFAULT_LIMIT 100
 #define BOXTREE_INITIAL_SIZE 16
 
@@ -26,7 +27,8 @@
 #define LEVEL_GRID_COLS 5
 #define LEVEL_GRID_DEPTH 10
 
-Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 2.0f, 0.0f };
+Vector3 DEFAULT_PLAYER_POSITION = (Vector3){0, 5,-3};
+Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 3.0f, 3.0f };
 Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0.0f, 2.0f, -2.0f };
 
 float screenFade = 0.2f;
@@ -56,17 +58,20 @@ int worldBulletCount = 0;
 struct Poly* worldPolys[WORLD_DEFAULT_LIMIT];
 struct Player* player;
 
+Camera camera = { 0 };
+
 char levelString[LEVEL_GRID_ROWS*LEVEL_GRID_COLS*LEVEL_GRID_DEPTH];
 char levelStringSave[] = "11111111110000000010000000001000000000100000000010111111111100000000000000000000000000000000000000101111111111000000000000000000000000000000000000001011111111110000000010000000001000000000100000000010111111111100000000000000000000000000000000000000001111111111000000000000000000000000000000000000000011111111110000000000000000000000000000000000000000111111111100000000000000000000000000000000000000001111111111000000000000000000000000000000000000000011111111110000000000000000000000000000000000000000";
 Sound testSFX;
 
-static void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode);
-static void SpawnWorldBullet(Ray ray);
-static void SpawnWorldPoly(Vector3 newPos);
-static Turret* SpawnWorldTurret(Vector3 newPos);
-static bool IsNormalUp(Vector3 vector);
-static bool ContainsInstance(void *arr[], int size, void *target);
-static void ExecuteButtonFunction(ButtonFunction btnfunc);
+void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode);
+void SpawnWorldBullet(Ray ray);
+void SpawnWorldPoly(Vector3 newPos);
+Turret* SpawnWorldTurret(Vector3 newPos);
+bool IsNormalUp(Vector3 vector);
+bool ContainsInstance(void *arr[], int size, void *target);
+void ExecuteButtonFunction(ButtonFunction btnfunc);
+void ResetScene();
 //static bool IsRayHitNormalValid(Vector3 vector);
 
 typedef enum {
@@ -86,10 +91,11 @@ SpawnSelection spawnSelection = SS_VOXEL;
 
 int main(void) // @INIT ========================================================================
 {
-    const int screenWidth = 1280;
-    const int screenHeight = 720;
+    const int screenWidth = 1920;
+    const int screenHeight = 1080;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    //SetConfigFlags(FLAG_FULLSCREEN_MODE);
     InitWindow(screenWidth, screenHeight, "Tandem");
     MaximizeWindow();
     
@@ -100,13 +106,11 @@ int main(void) // @INIT ========================================================
 
     testSFX = LoadSound("resources/sound/blip.wav");
 
-    // Define the camera to look into our 3d world (position, target, up vector)
-    Camera camera = { 0 };
-    camera.position = CAM_DEFAULT_POS;    // Camera position
-    camera.target = CAM_DEFAULT_TARGET;      // Camera looking at point
-    camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
-    camera.fovy = 60.0f;                                // Camera field-of-view Y
-    camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
+    camera.position = CAM_DEFAULT_POS;
+    camera.target = CAM_DEFAULT_TARGET;
+    camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
+    camera.fovy = 60.0f;
+    camera.projection = CAMERA_PERSPECTIVE;
 
     BoxtreeNode* boxtreeRoot = BuildBoxtree((Vector3){0,0,0}, BOXTREE_INITIAL_SIZE, 1);
 
@@ -178,13 +182,13 @@ int main(void) // @INIT ========================================================
     
     // READY ==========================================================================
 
-    Spawn_Button(editorButtons[0], (Vector2){200, 10}, "save", BTN_SAVE);
-    Spawn_Button(editorButtons[1], (Vector2){280, 10}, "load", BTN_LOAD);
-    Spawn_Button(editorButtons[2], (Vector2){200, 60}, "voxel", BTN_VOXEL);
-    Spawn_Button(editorButtons[3], (Vector2){280, 60}, "turret", BTN_TURRET);
+    Spawn_Button(editorButtons[0], (Vector2){200, 10}, (Vector2){60, 30}, "save", 10, BTN_SAVE);
+    Spawn_Button(editorButtons[1], (Vector2){280, 10}, (Vector2){60, 30}, "load", 10, BTN_LOAD);
+    Spawn_Button(editorButtons[2], (Vector2){200, 60}, (Vector2){60, 30}, "voxel", 10, BTN_VOXEL);
+    Spawn_Button(editorButtons[3], (Vector2){280, 60}, (Vector2){60, 30}, "turret", 10, BTN_TURRET);
 
-    Spawn_Button(mainmenuButtons[0], (Vector2){500, 500}, "PLAY", BTN_PLAY);
-    Spawn_Button(mainmenuButtons[1], (Vector2){500, 600}, "TEST", BTN_TEST);
+    Spawn_Button(mainmenuButtons[0], (Vector2){500, 500}, (Vector2){200, 30}, "PLAY", 20, BTN_PLAY);
+    Spawn_Button(mainmenuButtons[1], (Vector2){500, 600}, (Vector2){200, 30}, "TEST", 20, BTN_TEST);
 
     //Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -613,7 +617,7 @@ int main(void) // @INIT ========================================================
 
             switch (gamestate){
                 case GS_MENU_MAIN:
-                    DrawText(TextFormat("TANDEM"), screenWidth/2, screenHeight/2, 40, BLACK);
+                    DrawText(TextFormat("TANDEM"), screenWidth/2, screenHeight/2, 50, BLACK);
                     for (int i = 0; i < 4; i++){ Draw_Button(mainmenuButtons[i]); }
                     break;
                 case GS_EDIT: break;
@@ -646,35 +650,10 @@ int main(void) // @INIT ========================================================
             
             // Screen Fade
             if (screenFading){
-                screenFade += 2*dt;
-                DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, screenFade));
-                if (screenFade >= 1){ 
-                    screenFading = false;
-                    screenFade = 0;
-
-                    // Do Scene Reset
-                    camera.position = CAM_DEFAULT_POS;
-                    camera.target = CAM_DEFAULT_TARGET;
-
-                    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldBullets[i]->isActive = false; }
-                    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldPolys[i]->isActive = false; }
-                    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldTurrets[i]->isActive = false; }
-
-                    // reset grid
-                    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-                        for (int y = 0; y < LEVEL_GRID_COLS; y++){
-                            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                                if (y == 0){
-                                    grid3d[x][y][z]->isActive = true;
-                                } else {
-                                    grid3d[x][y][z]->isActive = false;
-                                }
-                            }
-                        }
-                    }
-
-                    player->position = (Vector3){0, 5,-3};
-                    player->velocity = (Vector3){0,0,0};
+                screenFade += 3*dt;
+                DrawRectangle(0, 0, screenWidth*2, screenHeight*2, Fade(BLACK, screenFade));
+                if (screenFade >= 1){
+                    ResetScene();
                 }
             }
 
@@ -692,7 +671,7 @@ int main(void) // @INIT ========================================================
     return 0;
 }
 
-static void ExecuteButtonFunction(ButtonFunction btnfunc){
+void ExecuteButtonFunction(ButtonFunction btnfunc){
     int lsIndex = 0;
     switch (btnfunc){
         case BTN_SAVE:
@@ -744,7 +723,35 @@ static void ExecuteButtonFunction(ButtonFunction btnfunc){
     }
 }
 
-static void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
+void ResetScene(){
+    screenFading = false;
+    screenFade = 0;
+
+    camera.position = CAM_DEFAULT_POS;
+    camera.target = CAM_DEFAULT_TARGET;
+
+    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldBullets[i]->isActive = false; }
+    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldPolys[i]->isActive = false; }
+    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldTurrets[i]->isActive = false; }
+
+    // reset grid
+    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+        for (int y = 0; y < LEVEL_GRID_COLS; y++){
+            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+                if (y == 0){
+                    grid3d[x][y][z]->isActive = true;
+                } else {
+                    grid3d[x][y][z]->isActive = false;
+                }
+            }
+        }
+    }
+
+    player->position = DEFAULT_PLAYER_POSITION;
+    player->velocity = (Vector3){0,0,0};
+}
+
+void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
     if (voxel == NULL || btnode == NULL) return;
 
     if (voxel->coordinates.y > 0){
@@ -765,7 +772,7 @@ static void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
     }
 }
 
-static void SpawnWorldBullet(Ray ray){
+void SpawnWorldBullet(Ray ray){
     // find empty slot in bullet object pool
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         if (!worldBullets[i]->isActive){
@@ -775,7 +782,7 @@ static void SpawnWorldBullet(Ray ray){
     }
 }
 
-static void SpawnWorldPoly(Vector3 newPos){
+void SpawnWorldPoly(Vector3 newPos){
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         if (!worldPolys[i]->isActive){
             Spawn_Poly(worldPolys[i], newPos);
@@ -784,7 +791,7 @@ static void SpawnWorldPoly(Vector3 newPos){
     }
 }
 
-static Turret* SpawnWorldTurret(Vector3 newPos){
+Turret* SpawnWorldTurret(Vector3 newPos){
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         if (!worldTurrets[i]->isActive){
             Spawn_Turret(worldTurrets[i], newPos);
@@ -794,7 +801,7 @@ static Turret* SpawnWorldTurret(Vector3 newPos){
     return NULL;
 }
 
-static bool IsNormalUp(Vector3 vector){
+bool IsNormalUp(Vector3 vector){
     if (vector.x != 0){ return false; }
     if (vector.y != 1){ return false; }
     if (vector.z != 0){ return false; }
@@ -802,7 +809,7 @@ static bool IsNormalUp(Vector3 vector){
     return true;
 }
 
-static bool ContainsInstance(void *arr[], int size, void *target){
+bool ContainsInstance(void *arr[], int size, void *target){
     for (int i = 0; i < size; i++) {
         // Direct address comparison
         if (arr[i] == target) return true;
@@ -810,7 +817,7 @@ static bool ContainsInstance(void *arr[], int size, void *target){
     return false;
 }
 
-// static bool IsRayHitNormalValid(Vector3 vector){
+// bool IsRayHitNormalValid(Vector3 vector){
 //     if (vector.x != 0 && vector.x != 1 && vector.x != -1){ return false; }
 //     if (vector.y != 0 && vector.y != 1 && vector.y != -1){ return false; }
 //     if (vector.z != 0 && vector.z != 1 && vector.z != -1){ return false; }

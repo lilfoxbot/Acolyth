@@ -1,13 +1,10 @@
-- main menu:
-    main_menu UI
-    Reset Scene Function
-    Return To Main function
-    Init Scene Function
+- database file
+- Resource loading functions
+- Return To Main function
+- Init Scene Function
 
 - tar source
 - tar spread
-
-- player collision that dont suck
 
 === BUGS ===
 
