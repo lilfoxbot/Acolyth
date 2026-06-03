@@ -34,7 +34,7 @@ typedef struct Button{
 
 } Button;
 
-void SetArray(char *dest, size_t dest_size, const char *source) {
+static void SetBtnTextArray(char *dest, size_t dest_size, const char *source) {
     snprintf(dest, dest_size, "%s", source);
 }
 
@@ -60,7 +60,7 @@ void Spawn_Button(Button* obj, Vector2 pos, Vector2 size, char *label, int fontS
     obj->rect.height = size.y;
     obj->fontSize = fontSize;
 
-    SetArray(obj->label, sizeof(obj->label), label);
+    SetBtnTextArray(obj->label, sizeof(obj->label), label);
     obj->btnfunc = btnfunc;
 }
 
@@ -95,5 +95,5 @@ void Draw_Button(Button* obj){
 
     DrawRectangle(obj->rect.x, obj->rect.y, obj->rect.width, obj->rect.height, obj->color);
     DrawRectangleLines(obj->rect.x, obj->rect.y, obj->rect.width, obj->rect.height, obj->outlineColor);
-    DrawText(obj->label, obj->rect.x+5, obj->rect.y+obj->rect.height/2-8, obj->fontSize, BLACK);
+    DrawText(obj->label, obj->rect.x+5, obj->rect.y+obj->rect.height/2-6, obj->fontSize, BLACK);
 }

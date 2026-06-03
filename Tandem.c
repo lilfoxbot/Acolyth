@@ -12,6 +12,7 @@
 #include "player.h"
 #include "turret.h"
 #include "button.h"
+#include "textbox.h"
 #include "database.h"
 
 #define RAYMATH_IMPLEMENTATION
@@ -50,8 +51,8 @@ struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
 
 struct Button* editorButtons[BTN_LIMIT];
 struct Button* mainmenuButtons[BTN_LIMIT];
-Rectangle textBox = { 600, 10, 100, 30 };
-bool mouseOnText = false;
+
+struct Textbox* levelTextbox;
 
 struct Pawn* worldPawns[WORLD_DEFAULT_LIMIT];
 struct Turret* worldTurrets[WORLD_DEFAULT_LIMIT];
@@ -177,6 +178,8 @@ int main(void) // @INIT ========================================================
     for (int i = 0; i < BTN_LIMIT; i++){ editorButtons[i] = Create_Button(); }
     for (int i = 0; i < BTN_LIMIT; i++){ mainmenuButtons[i] = Create_Button(); }
 
+    levelTextbox = Create_Textbox();
+
     //Mesh myMesh = GenMeshCube(1, 1, 1);
     //Model placeHolderModel = LoadModelFromMesh(myMesh);
     //Model myModel = LoadModel("resources/models/myCube.obj");
@@ -194,6 +197,9 @@ int main(void) // @INIT ========================================================
 
     Spawn_Button(mainmenuButtons[0], (Vector2){500, 500}, (Vector2){200, 30}, "PLAY", 20, BTN_PLAY);
     Spawn_Button(mainmenuButtons[1], (Vector2){500, 600}, (Vector2){200, 30}, "TEST", 20, BTN_TEST);
+
+    Spawn_Textbox(levelTextbox, (Vector2){600,10}, (Vector2){100,30}, 10);
+    //Rectangle textBox = { 600, 10, 100, 30 };
 
     //Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -328,6 +334,7 @@ int main(void) // @INIT ========================================================
                     ButtonFunction btnfunc = Update_Button(editorButtons[i], mousePos);
                     ExecuteButtonFunction(btnfunc);
                 }
+                Update_Textbox(levelTextbox, mousePos);
                 break;
             case GS_GAMEPLAY: break;
             case GS_MENU_MAIN:
@@ -633,7 +640,7 @@ int main(void) // @INIT ========================================================
                 case GS_EDIT: break;
                 case GS_EDIT_PAUSE:
                     for (int i = 0; i < BTN_LIMIT; i++){ Draw_Button(editorButtons[i]); }
-                    DrawRectangleRec(textBox, LIGHTGRAY);
+                    Draw_Textbox(levelTextbox);
                     break;
                 case GS_GAMEPLAY: break;
                 default: break;
