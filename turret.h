@@ -24,7 +24,7 @@ typedef struct Turret{
     float shootTick;
     int hp;
 
-    struct Voxel* occupiedVoxels[4];
+    Voxel* rootVoxel;
     struct BoxtreeNode* nodes[16];
     int nodeCount;
 } Turret;
@@ -48,7 +48,7 @@ Turret* Create_Turret(){
     obj->shootTick = 1;
     obj->hp = 3;
 
-    for (int i = 0; i < 4; i++){ obj->occupiedVoxels[i] = NULL; }
+
     obj->nodeCount = 0;
     memset(obj->nodes, 0, sizeof(obj->nodes));
 
@@ -70,11 +70,7 @@ void Spawn_Turret(Turret* obj, Vector3 newPos){
 void Destroy_Turret(Turret* obj){
     if (!obj->isActive) return;
     obj->isActive = false;
-    for (int i = 0; i < 4; i++){
-        if (obj->occupiedVoxels[i] != NULL){
-            obj->occupiedVoxels[i]->isOccupied = false;
-        }
-    }
+    obj->rootVoxel->isOccupied = false;
 }
 
 void Reset_Turret(Turret* obj){

@@ -1,7 +1,15 @@
-- save/load with turrets
+- crosshair?
 
+- bullet shoot sound
+- locational audio
+
+- rook structures
 - tar source
 - tar spread
+
+- player possession (knight)
+- hand model
+- player ejection
 
 === BUGS ===
 

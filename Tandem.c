@@ -29,7 +29,7 @@
 #define LEVEL_GRID_DEPTH 10
 
 Vector3 DEFAULT_PLAYER_POSITION = (Vector3){0, 5,-3};
-Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 3.0f, 3.0f };
+Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 3.0f, 6.0f };
 Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0.0f, 2.0f, -2.0f };
 
 float screenFade = 1;
@@ -246,9 +246,6 @@ int main(void) // @INIT ========================================================
                 }
 
                 if (IsKeyPressed(KEY_R)){ ResetScene(); }
-
-                if (IsKeyPressed(KEY_ONE)){ spawnSelection = SS_VOXEL; }
-                if (IsKeyPressed(KEY_TWO)){ spawnSelection = SS_TURRET; }
                 
                 // camera movement/input
                 camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
@@ -548,21 +545,12 @@ int main(void) // @INIT ========================================================
                                     [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
                                     [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)];
 
-                                    Vector3 NVC2 = Vector3Add(closestHitVoxel->coordinates, Vector3Scale(rayHitNormal, 2));
-                                    Voxel* targetVoxel2 = grid3d[(int)Clamp(NVC2.x,0,LEVEL_GRID_ROWS-1)]
-                                    [(int)Clamp(NVC2.y,0,LEVEL_GRID_COLS-1)]
-                                    [(int)Clamp(NVC2.z,0,LEVEL_GRID_DEPTH-1)];
-
-                                    // check if (2) voxels are occupied or active
                                     if (targetVoxel->isOccupied == true || targetVoxel->isActive == true){ break; }
-                                    if (targetVoxel2->isOccupied == true || targetVoxel2->isActive == true){ break; }
                                     
                                     Turret* newTurret = SpawnWorldTurret(Vector3Add(closestHitVoxel->position, Vector3Scale(rayHitNormal,1.5f)));
                                     targetVoxel->isOccupied = true;
-                                    newTurret->occupiedVoxels[0] = targetVoxel;
-                                    targetVoxel2->isOccupied = true;
-                                    newTurret->occupiedVoxels[1] = targetVoxel2;
-
+                                    targetVoxel->occupier = OB_TURRET;
+                                    newTurret->rootVoxel = targetVoxel;
                                 }
                                 break;
                             default:
@@ -695,6 +683,13 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
                     for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
                         if (grid3d[x][y][z]->isActive == true){
                             levelString[lsIndex] = '1';
+                        } else if (grid3d[x][y][z]->isOccupied == true){
+                            switch (grid3d[x][y][z]->occupier){
+                                case OB_TURRET:
+                                    levelString[lsIndex] = '2';
+                                break;
+                                default: break;
+                            }
                         } else {
                             levelString[lsIndex] = '0';
                         }
@@ -743,13 +738,25 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
 
 void LoadLevel(){
     screenFade = 1;
+
+    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldBullets[i]->isActive = false; }
+    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldPolys[i]->isActive = false; }
+    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldTurrets[i]->isActive = false; }
+
     int lsIndex = 0;
     for (int x = 0; x < LEVEL_GRID_ROWS; x++){
         for (int y = 0; y < LEVEL_GRID_COLS; y++){
             for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
                 grid3d[x][y][z]->isActive = false;
+                grid3d[x][y][z]->isOccupied = false;
+
                 if (levels[levelSelection][lsIndex] == '1'){
                     grid3d[x][y][z]->isActive = true;
+                } else if (levels[levelSelection][lsIndex] == '2'){
+                    grid3d[x][y][z]->isOccupied = true;
+                    grid3d[x][y][z]->occupier = OB_TURRET;
+                    Turret* newTurret = SpawnWorldTurret(Vector3Add(grid3d[x][y][z]->position, (Vector3){0,0.5f,0}));
+                    newTurret->rootVoxel = grid3d[x][y][z];
                 }
                 lsIndex++;
             }
@@ -760,14 +767,13 @@ void LoadLevel(){
 void ResetScene(){
     screenFade = 1;
 
-    camera.position = CAM_DEFAULT_POS;
-    camera.target = CAM_DEFAULT_TARGET;
+    //camera.position = CAM_DEFAULT_POS;
+    //camera.target = CAM_DEFAULT_TARGET;
 
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldBullets[i]->isActive = false; }
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldPolys[i]->isActive = false; }
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldTurrets[i]->isActive = false; }
 
-    // reset grid
     for (int x = 0; x < LEVEL_GRID_ROWS; x++){
         for (int y = 0; y < LEVEL_GRID_COLS; y++){
             for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
@@ -776,6 +782,7 @@ void ResetScene(){
                 } else {
                     grid3d[x][y][z]->isActive = false;
                 }
+                grid3d[x][y][z]->isOccupied = false;
             }
         }
     }

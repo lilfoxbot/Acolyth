@@ -5,9 +5,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+typedef enum {
+    OB_NONE,
+    OB_TURRET
+} OccupiedBy;
+
 typedef struct Voxel {
     bool isActive;
     bool isOccupied;
+    OccupiedBy occupier;
 
     Vector3 coordinates;
     Vector3 position;
@@ -31,7 +37,7 @@ Voxel* Create_Voxel(Vector3 position, Vector3 coordinates, float size) {
     voxel->bb.min = (Vector3){position.x - size / 2, position.y - size / 2, position.z - size / 2};
     voxel->bb.max = (Vector3){position.x + size / 2, position.y + size / 2, position.z + size / 2};
     voxel->bbColor = BLACK;
-    voxel->defaultColor = (Color){coordinates.z*20, coordinates.z*20, coordinates.z*20, 255};
+    voxel->defaultColor = (Color){coordinates.z*25, coordinates.z*25, coordinates.z*25, 255};
     voxel->color = voxel->defaultColor;
     voxel->isActive = false;
     voxel->isOccupied = false;
