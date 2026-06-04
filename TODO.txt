@@ -1,7 +1,10 @@
-▼ shooting
-- bullet shoot sound
-- locational audio
-- sound manager
+- combine rook and pawn structs
+
+▼ objectives
+- (rook) structures
+- crystal
+- tar spawn
+- turret
 
 ▼ enemy
 - tar source
@@ -11,9 +14,6 @@
 - player possession (knight)
 - hand model
 - player ejection
-
-▼ objectives
-- (rook) structures
 
 === BUGS ===
 

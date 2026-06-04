@@ -10,6 +10,7 @@
 #include "bullet.h"
 #include "pawn.h"
 #include "player.h"
+#include "rook.h"
 #include "turret.h"
 #include "button.h"
 #include "textbox.h"
@@ -55,6 +56,7 @@ struct Button* mainmenuButtons[BTN_LIMIT];
 struct Textbox* levelTextbox;
 
 struct Pawn* worldPawns[WORLD_DEFAULT_LIMIT];
+struct Rook* worldRooks[WORLD_DEFAULT_LIMIT];
 struct Turret* worldTurrets[WORLD_DEFAULT_LIMIT];
 struct Bullet* worldBullets[WORLD_DEFAULT_LIMIT];
 int worldBulletCount = 0;
@@ -74,6 +76,8 @@ bool IsNormalUp(Vector3 vector);
 bool ContainsInstance(void *arr[], int size, void *target);
 void ExecuteButtonFunction(ButtonFunction btnfunc);
 void ResetScene();
+void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxDist);
+void PlaySoundInstance(Sound sound, Vector3 soundPos);
 //static bool IsRayHitNormalValid(Vector3 vector);
 
 typedef enum {
@@ -145,20 +149,11 @@ int main(void) // @INIT ========================================================
     }
 
     // OBJECT POOLS
-
-    // @BULLET init
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         worldBullets[i] = Create_Bullet();
-    }
-
-    // @PAWN init
-    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         worldPawns[i] = Create_Pawn();
+        worldRooks[i] = Create_Rook();
         worldTurrets[i] = Create_Turret();
-    }
-
-    // @POLY init
-    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         worldPolys[i] = Create_Poly();
     }
 
@@ -174,15 +169,11 @@ int main(void) // @INIT ========================================================
     voxelRay.position = (Vector3){0,0,0};
     voxelRay.direction = (Vector3){1,1,0};
 
-    // @Menu init
+    // menus
     for (int i = 0; i < BTN_LIMIT; i++){ editorButtons[i] = Create_Button(); }
     for (int i = 0; i < BTN_LIMIT; i++){ mainmenuButtons[i] = Create_Button(); }
 
     levelTextbox = Create_Textbox();
-
-    //Mesh myMesh = GenMeshCube(1, 1, 1);
-    //Model placeHolderModel = LoadModelFromMesh(myMesh);
-    //Model myModel = LoadModel("resources/models/myCube.obj");
     
     // READY ==========================================================================
 
@@ -199,7 +190,6 @@ int main(void) // @INIT ========================================================
     Spawn_Button(mainmenuButtons[1], (Vector2){500, 600}, (Vector2){200, 30}, "TEST", 20, BTN_TEST);
 
     Spawn_Textbox(levelTextbox, (Vector2){600,10}, (Vector2){100,30}, 10);
-    //Rectangle textBox = { 600, 10, 100, 30 };
 
     //Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -289,16 +279,18 @@ int main(void) // @INIT ========================================================
         
         switch (gamestate){
             case GS_EDIT:
-                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ Update_Poly(worldPolys[i], dt); }
-                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ Update_Bullet(worldBullets[i], dt); }
+                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+                    Update_Poly(worldPolys[i], dt);
+                    Update_Bullet(worldBullets[i], dt);
+                }
+
                 for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                     int pawnAction = Update_Pawn(worldPawns[i], dt);
                     switch (pawnAction){
                         case 1:
                             SpawnWorldBullet(worldPawns[i]->aimRay);
                             break;
-                        default:
-                            break;
+                        default: break;
                     }
                 }
 
@@ -308,10 +300,20 @@ int main(void) // @INIT ========================================================
                         case 1:
                             SpawnWorldBullet(worldTurrets[i]->aimRay);
                             break;
-                        default:
-                            break;
+                        default: break;
                     }
                 }
+                
+                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+                    int rookAction = Update_Rook(worldRooks[i], dt);
+                    switch (rookAction){
+                        case 1:
+                            SpawnWorldBullet(worldRooks[i]->aimRay);
+                            break;
+                        default: break;
+                    }
+                }
+
                 Update_Player(player, newPlayerVel, dt);
         
                 Vector3 camF = GetCameraForward(&camera);
@@ -380,6 +382,13 @@ int main(void) // @INIT ========================================================
                     if (!worldTurrets[i]->isActive) continue;
                     Reset_Turret(worldTurrets[i]);
                     GetTurretNodes(worldTurrets[i], boxtreeRoot);
+                }
+
+                // rook checkin
+                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+                    if (!worldRooks[i]->isActive) continue;
+                    Reset_Turret(worldRooks[i]);
+                    GetTurretNodes(worldRooks[i], boxtreeRoot);
                 }
 
                 // bullet collision
@@ -683,7 +692,7 @@ int main(void) // @INIT ========================================================
 void ExecuteButtonFunction(ButtonFunction btnfunc){
     switch (btnfunc){
         case BTN_SAVE:
-            PlaySound(sound_test);
+            PlaySound(bullet_shot);
             int lsIndex = 0;
             for (int x = 0; x < LEVEL_GRID_ROWS; x++){
                 for (int y = 0; y < LEVEL_GRID_COLS; y++){
@@ -707,7 +716,6 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
             SaveFileText("level_export.txt", (char *)levelString);
             break;
         case BTN_LOAD:
-            PlaySound(sound_test);
             LoadLevel();
             break;
         case BTN_PREV:
@@ -827,6 +835,7 @@ void SpawnWorldBullet(Ray ray){
             break;
         }
     }
+    PlaySoundInstance(bullet_shot, ray.position);
 }
 
 void SpawnWorldPoly(Vector3 newPos){
@@ -862,6 +871,39 @@ bool ContainsInstance(void *arr[], int size, void *target){
         if (arr[i] == target) return true;
     }
     return false;
+}
+
+void PlaySoundInstance(Sound sound, Vector3 soundPos){
+    Sound soundInstance = LoadSoundAlias(sound);
+    
+    SetSoundPosition(camera, soundInstance, soundPos, 1.0f);
+    PlaySound(soundInstance);
+}
+
+void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxDist){
+    // Calculate direction vector and distance between listener and sound source
+    Vector3 direction = Vector3Subtract(position, listener.position);
+    float distance = Vector3Length(direction);
+
+    // Apply logarithmic distance attenuation and clamp between 0-1
+    float attenuation = 1.0f/(1.0f + (distance/maxDist));
+    attenuation = Clamp(attenuation, 0.0f, 1.0f);
+
+    // Calculate normalized vectors for spatial positioning
+    Vector3 normalizedDirection = Vector3Normalize(direction);
+    Vector3 forward = Vector3Normalize(Vector3Subtract(listener.target, listener.position));
+    Vector3 right = Vector3Normalize(Vector3CrossProduct(listener.up, forward));
+
+    // Reduce volume for sounds behind the listener
+    float dotProduct = Vector3DotProduct(forward, normalizedDirection);
+    if (dotProduct < 0.0f) attenuation *= (1.0f + dotProduct*0.5f);
+
+    // Set stereo panning based on sound position relative to listener
+    float pan = 0.5f + 0.5f*Vector3DotProduct(normalizedDirection, right);
+
+    // Apply final sound properties
+    SetSoundVolume(sound, attenuation);
+    SetSoundPan(sound, pan);
 }
 
 // bool IsRayHitNormalValid(Vector3 vector){

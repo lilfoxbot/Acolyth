@@ -225,4 +225,21 @@ void GetTurretNodes(Turret* turret, BoxtreeNode* node){
     }
 }
 
-// get pawn nodes?
+void GetRookNodes(Rook* rook, BoxtreeNode* node){
+    if (node == NULL || !rook->isActive) return;
+
+    if (CheckCollisionBoxes(node->bb, rook->bb)){
+        if (node->depth == MAX_BOXTREE_DEPTH){
+            rook->nodes[rook->nodeCount] = node;
+            rook->nodeCount++;
+            node->rooks[node->turretCount] = rook;
+            node->turretCount++;
+
+            node->nodeTouched = true;
+        } else {
+            for (int i = 0; i < 8; i++) {
+                GetRookNodes(rook, node->children[i]);
+            }
+        }
+    }
+}
