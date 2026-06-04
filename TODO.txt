@@ -1,15 +1,19 @@
-- crosshair?
-
+▼ shooting
 - bullet shoot sound
 - locational audio
+- sound manager
 
-- rook structures
+▼ enemy
 - tar source
 - tar spread
 
+▼ player
 - player possession (knight)
 - hand model
 - player ejection
+
+▼ objectives
+- (rook) structures
 
 === BUGS ===
 

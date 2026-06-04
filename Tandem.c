@@ -93,12 +93,12 @@ SpawnSelection spawnSelection = SS_VOXEL;
 
 int main(void) // @INIT ========================================================================
 {
-    const int screenWidth = 1920;
-    const int screenHeight = 1080;
+    //const int screenWidth = 1920;
+    //const int screenHeight = 1080;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     //SetConfigFlags(FLAG_FULLSCREEN_MODE);
-    InitWindow(screenWidth, screenHeight, "Tandem");
+    InitWindow(1920, 1080, "Tandem");
     MaximizeWindow();
     
     SetTargetFPS(60);
@@ -577,9 +577,7 @@ int main(void) // @INIT ========================================================
             ClearBackground(GRAY);
             BeginMode3D(camera);
             
-            // North Star
             DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, WHITE);
-            //DrawSphereWires((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, 20, 20, YELLOW);
 
             DrawGrid(10, 1.0f);
             DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
@@ -619,20 +617,29 @@ int main(void) // @INIT ========================================================
             }
             
             EndMode3D(); // ==========================================================================
+            
+            int screenWidth = GetScreenWidth();
+            int screenHeight = GetScreenHeight();
 
             switch (gamestate){
                 case GS_MENU_MAIN:
                     DrawText(TextFormat("TANDEM"), screenWidth/2, screenHeight/2, 50, BLACK);
                     for (int i = 0; i < BTN_LIMIT; i++){ Draw_Button(mainmenuButtons[i]); }
                     break;
-                case GS_EDIT: break;
+                case GS_EDIT:
+                    
+                    Vector2 center = { screenWidth / 2.0f, screenHeight / 2.0f };
+                    // Draw a simple plus-sign crosshair
+                    DrawLine(center.x - 10, center.y, center.x + 10, center.y, WHITE);
+                    DrawLine(center.x, center.y - 10, center.x, center.y + 10, WHITE);
+                    break;
                 case GS_EDIT_PAUSE:
                     for (int i = 0; i < BTN_LIMIT; i++){ Draw_Button(editorButtons[i]); }
                     Draw_Textbox(levelTextbox);
                     break;
                 case GS_GAMEPLAY: break;
                 default: break;
-            }
+            }            
 
             // Draw HUD
             //DrawRectangle(5, 5, 250, 1000, Fade(SKYBLUE, 0.5f));

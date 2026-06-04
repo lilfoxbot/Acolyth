@@ -20,7 +20,7 @@ Sound sound_test;
 // Models
 
 void LoadSounds(){
-    sound_test = LoadSound("resources/sound/blip.wav");
+    sound_test = LoadSound("resources/sound/shot.wav");
 }
 
 void LoadModels(){
