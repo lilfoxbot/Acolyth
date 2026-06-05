@@ -4,154 +4,124 @@
 #include "raymath.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-#include "bullet.h"
+#include "voxel.h"
 
 typedef enum {
-    SEEKER,
-    SHOOTER
+    PAWN_CRYSTAL,
+    PAWN_TAR,
+    PAWN_TURRET
 } PawnType;
 
-typedef struct Pawn {
+typedef struct Pawn{
     bool isActive;
-    PawnType type;
-
-    float shootDelay;
-    float shootTick;
+    PawnType pawnType;
 
     Vector3 position;
-    Vector3 direction;
-    float speed;
     Vector3 velocity;
+    Vector3 size;
 
-    struct Ray aimRay;
-
-    float size;
     BoundingBox bb;
-
-    Color bbColor;
     Color color;
     Color defaultColor;
-    Color aimRayColor;
-    
-    int health;
-    bool destroyFlag;
+    Color bbColor;
 
+    struct Ray aimRay;
+    float shootDelay;
+    float shootTick;
+    int hp;
+
+    Voxel* rootVoxel;
+    struct BoxtreeNode* nodes[16];
     int nodeCount;
-    struct BoxtreeNode* nodes[8];
 } Pawn;
 
-Pawn* Create_Pawn() {
-    Pawn* pawn = (Pawn*)malloc(sizeof(Pawn));
-    pawn->isActive = false;
-    pawn->type = SEEKER;
+Pawn* Create_Pawn(){
+    Pawn* obj = (Pawn*)malloc(sizeof(Pawn));
+    obj->isActive = false;
 
-    pawn->shootDelay = 1;
-    pawn->shootTick = 1;
+    obj->position = (Vector3){0,0,0};
+    obj->velocity = (Vector3){0,0,0};
 
-    pawn->position = (Vector3){0,0,0};
-    pawn->direction = (Vector3){0,0,0};
-    pawn->speed = 0.1f;
-    pawn->velocity = (Vector3){0,0,0};
+    obj->aimRay.position = obj->position;
+    obj->aimRay.direction = (Vector3){0,0,-1};
 
-    pawn->aimRay.position = pawn->position;
-    pawn->aimRay.direction = (Vector3){0,0,1};
+    obj->size = (Vector3){0.7f,2,0.7f};
+    obj->color = BLACK;
+    obj->defaultColor = LIGHTGRAY;
+    obj->bbColor = BLACK;
 
-    pawn->size = 0.5f;
-    pawn->bb.min = (Vector3){0,0,0};
-    pawn->bb.max = (Vector3){0,0,0};
+    obj->shootDelay = 1;
+    obj->shootTick = 1;
+    obj->hp = 3;
 
-    pawn->bbColor = BLACK;
-    pawn->defaultColor = GRAY;
-    pawn->color = pawn->defaultColor;
-    pawn->aimRayColor = WHITE;
 
-    pawn->health = 3;
-    pawn->destroyFlag = false;
-    
-    pawn->nodeCount = 0;
-    memset(pawn->nodes, 0, sizeof(pawn->nodes));
+    obj->nodeCount = 0;
+    memset(obj->nodes, 0, sizeof(obj->nodes));
 
-    return pawn;
+    return obj;
 }
 
-void Spawn_Pawn(Pawn* pawn, PawnType type, Vector3 newPos){
-    pawn->isActive = true;
-    pawn->type = type;
-    pawn->position = newPos;
+void Spawn_Pawn(Pawn* obj, Vector3 newPos, PawnType pt){
+    obj->isActive = true;
+    obj->pawnType = pt;
+    obj->position = newPos;
+    obj->bb.min = (Vector3){newPos.x - obj->size.x / 2, newPos.y - obj->size.y / 2, newPos.z - obj->size.z / 2};
+    obj->bb.max = (Vector3){newPos.x + obj->size.x / 2, newPos.y + obj->size.y / 2, newPos.z + obj->size.z / 2};
 
-    switch(type){
-        case SEEKER:
-            pawn->color = GREEN;
-            break;
-        case SHOOTER:
-            pawn->color = BLUE;
-            break;
-        default:
-            break;
-    }
+    obj->aimRay.position = obj->position;
+    obj->aimRay.direction = (Vector3){0,0,-1};
 
-    pawn->bb.min = (Vector3){newPos.x - pawn->size / 2, newPos.y - pawn->size / 2, newPos.z - pawn->size / 2};
-    pawn->bb.max = (Vector3){newPos.x + pawn->size / 2, newPos.y + pawn->size / 2, newPos.z + pawn->size / 2};
+    obj->hp = 3;
 }
 
-void Destroy_Pawn(Pawn* pawn) {
-    if (!pawn->isActive) return;
-    
-    pawn->isActive = false; 
-    pawn->destroyFlag = false;
-    pawn->color = pawn->defaultColor;
+void Destroy_Pawn(Pawn* obj){
+    if (!obj->isActive) return;
+    obj->isActive = false;
+    obj->rootVoxel->isOccupied = false;
 }
 
-void Reset_Pawn(Pawn* pawn){
-    if (!pawn->isActive) return;
+void Reset_Pawn(Pawn* obj){
+    if (!obj->isActive) return;
 
-    pawn->nodeCount = 0;
-    memset(pawn->nodes, 0, sizeof(pawn->nodes));
+    obj->nodeCount = 0;
+    memset(obj->nodes, 0, sizeof(obj->nodes));
 }
 
-int Update_Pawn(Pawn* pawn, float deltaTime){
-    if (!pawn->isActive) return 0;
-    if (pawn->destroyFlag){
-        Destroy_Pawn(pawn);
-        return 0;
-    }
+int Update_Pawn(Pawn* obj, float deltaTime){
+    if (!obj->isActive) return 0;
 
-    // update position
-    Vector3 newPos = Vector3Add(pawn->position, pawn->velocity);
-    pawn->position = newPos;
-    pawn->bb.min = (Vector3){newPos.x - pawn->size / 2, newPos.y - pawn->size / 2, newPos.z - pawn->size / 2};
-    pawn->bb.max = (Vector3){newPos.x + pawn->size / 2, newPos.y + pawn->size / 2, newPos.z + pawn->size / 2};
-
-    switch(pawn->type){
-        case SEEKER:
-            pawn->aimRay.direction = (Vector3){0,0,1};
-            return 0;
-            break;
-        case SHOOTER:
-            //pawn->velocity = Vector3Scale((Vector3){0,0.1f,0}, deltatime);
-            pawn->aimRay.position = pawn->position;
-            pawn->aimRay.direction = (Vector3){0,0,1};
-
-            pawn->shootTick -= deltaTime;
-            if (pawn->shootTick <= 0){
-                pawn->shootTick = pawn->shootDelay;
-                // shoot
+    switch (obj->pawnType){
+        case PAWN_TURRET:
+            obj->shootTick -= deltaTime;
+            if (obj->shootTick <= 0){
+                obj->shootTick = obj->shootDelay;
                 return 1;
             }
-            return 0;
             break;
-        default:
-            return 0;
-            break;
+        case PAWN_CRYSTAL: break;
+        case PAWN_TAR: break;
+        default: break;
+    }
+
+    obj->aimRay.direction = (Vector3){0,0,-1};
+    
+    return 0;
+}
+
+void Damage_Pawn(Pawn* obj){
+    obj->hp--;
+    if (obj->hp <= 0){
+        Destroy_Pawn(obj);
     }
 }
 
-void Draw_Pawn(Pawn* pawn) {
-    if (!pawn->isActive) return;
+void Draw_Pawn(Pawn* obj){
+    if (!obj->isActive) return;
 
-    DrawCube(pawn->position, pawn->size, pawn->size, pawn->size, pawn->color);
-    DrawBoundingBox(pawn->bb, pawn->bbColor);
-    DrawRay(pawn->aimRay,WHITE);
+    DrawCube(obj->position, obj->size.x, obj->size.y, obj->size.z, obj->color);
+    DrawBoundingBox(obj->bb, obj->bbColor);
+    DrawRay(obj->aimRay, obj->bbColor);
+
+    obj->color = obj->defaultColor;
 }

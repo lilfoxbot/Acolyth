@@ -7,7 +7,6 @@
 
 #include "voxel.h"
 #include "bullet.h"
-#include "turret.h"
 #include "pawn.h"
 #include "player.h"
 
@@ -25,10 +24,10 @@ typedef struct BoxtreeNode {
 
     int voxelCount;
     int bulletCount;
-    int turretCount;
+    int pawnCount;
     struct Voxel* voxels[64];
     struct Bullet* bullets[32];
-    struct Turret* turrets[32];
+    struct Pawn* pawns[32];
 } BoxtreeNode;
 
 BoxtreeNode* CreateBoxtreeNode(Vector3 center, int size, int depth) {
@@ -41,10 +40,10 @@ BoxtreeNode* CreateBoxtreeNode(Vector3 center, int size, int depth) {
     for (int i = 0; i < 8; i++) { node->children[i] = NULL; }
     for (int i = 0; i < 64; i++) { node->voxels[i] = NULL; }
     for (int i = 0; i < 32; i++) { node->bullets[i] = NULL; }
-    for (int i = 0; i < 32; i++) { node->turrets[i] = NULL; }
+    for (int i = 0; i < 32; i++) { node->pawns[i] = NULL; }
     node->voxelCount = 0;
     node->bulletCount = 0;
-    node->turretCount = 0;
+    node->pawnCount = 0;
 
     node->debugColor = WHITE;
     node->isRayHit = false;
@@ -95,8 +94,8 @@ void ResetBoxtree(BoxtreeNode* node) {
     node->bulletCount = 0;
     memset(node->bullets, 0, sizeof(node->bullets));
 
-    node->turretCount = 0;
-    memset(node->turrets, 0, sizeof(node->turrets));
+    node->pawnCount = 0;
+    memset(node->pawns, 0, sizeof(node->pawns));
 
     for (int i = 0; i < 8; i++) {
         ResetBoxtree(node->children[i]);
@@ -182,6 +181,8 @@ void GetPawnNodes(Pawn* pawn, BoxtreeNode* node){
             node->nodeTouched = true;
             pawn->nodes[pawn->nodeCount] = node;
             pawn->nodeCount++;
+            node->pawns[node->pawnCount] = pawn;
+            node->pawnCount++;
         } else {
             for (int i = 0; i < 8; i++) {
                 GetPawnNodes(pawn, node->children[i]);
@@ -201,44 +202,6 @@ void GetPlayerNodes(Player* player, BoxtreeNode* node){
         } else {
             for (int i = 0; i < 8; i++) {
                 GetPlayerNodes(player, node->children[i]);
-            }
-        }
-    }
-}
-
-void GetTurretNodes(Turret* turret, BoxtreeNode* node){
-    if (node == NULL || !turret->isActive) return;
-
-    if (CheckCollisionBoxes(node->bb, turret->bb)){
-        if (node->depth == MAX_BOXTREE_DEPTH){
-            turret->nodes[turret->nodeCount] = node;
-            turret->nodeCount++;
-            node->turrets[node->turretCount] = turret;
-            node->turretCount++;
-
-            node->nodeTouched = true;
-        } else {
-            for (int i = 0; i < 8; i++) {
-                GetTurretNodes(turret, node->children[i]);
-            }
-        }
-    }
-}
-
-void GetRookNodes(Rook* rook, BoxtreeNode* node){
-    if (node == NULL || !rook->isActive) return;
-
-    if (CheckCollisionBoxes(node->bb, rook->bb)){
-        if (node->depth == MAX_BOXTREE_DEPTH){
-            rook->nodes[rook->nodeCount] = node;
-            rook->nodeCount++;
-            node->rooks[node->turretCount] = rook;
-            node->turretCount++;
-
-            node->nodeTouched = true;
-        } else {
-            for (int i = 0; i < 8; i++) {
-                GetRookNodes(rook, node->children[i]);
             }
         }
     }

@@ -10,8 +10,6 @@
 #include "bullet.h"
 #include "pawn.h"
 #include "player.h"
-#include "rook.h"
-#include "turret.h"
 #include "button.h"
 #include "textbox.h"
 #include "database.h"
@@ -56,8 +54,6 @@ struct Button* mainmenuButtons[BTN_LIMIT];
 struct Textbox* levelTextbox;
 
 struct Pawn* worldPawns[WORLD_DEFAULT_LIMIT];
-struct Rook* worldRooks[WORLD_DEFAULT_LIMIT];
-struct Turret* worldTurrets[WORLD_DEFAULT_LIMIT];
 struct Bullet* worldBullets[WORLD_DEFAULT_LIMIT];
 int worldBulletCount = 0;
 struct Poly* worldPolys[WORLD_DEFAULT_LIMIT];
@@ -71,7 +67,7 @@ void LoadLevel();
 void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode);
 void SpawnWorldBullet(Ray ray);
 void SpawnWorldPoly(Vector3 newPos);
-Turret* SpawnWorldTurret(Vector3 newPos);
+Pawn* SpawnWorldPawn(Vector3 newPos, PawnType pt);
 bool IsNormalUp(Vector3 vector);
 bool ContainsInstance(void *arr[], int size, void *target);
 void ExecuteButtonFunction(ButtonFunction btnfunc);
@@ -152,8 +148,6 @@ int main(void) // @INIT ========================================================
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         worldBullets[i] = Create_Bullet();
         worldPawns[i] = Create_Pawn();
-        worldRooks[i] = Create_Rook();
-        worldTurrets[i] = Create_Turret();
         worldPolys[i] = Create_Poly();
     }
 
@@ -294,26 +288,6 @@ int main(void) // @INIT ========================================================
                     }
                 }
 
-                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                    int turretAction = Update_Turret(worldTurrets[i], dt);
-                    switch (turretAction){
-                        case 1:
-                            SpawnWorldBullet(worldTurrets[i]->aimRay);
-                            break;
-                        default: break;
-                    }
-                }
-                
-                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                    int rookAction = Update_Rook(worldRooks[i], dt);
-                    switch (rookAction){
-                        case 1:
-                            SpawnWorldBullet(worldRooks[i]->aimRay);
-                            break;
-                        default: break;
-                    }
-                }
-
                 Update_Player(player, newPlayerVel, dt);
         
                 Vector3 camF = GetCameraForward(&camera);
@@ -377,20 +351,6 @@ int main(void) // @INIT ========================================================
                     GetBulletNodes(worldBullets[i], boxtreeRoot);
                 }
 
-                // turret checkin
-                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                    if (!worldTurrets[i]->isActive) continue;
-                    Reset_Turret(worldTurrets[i]);
-                    GetTurretNodes(worldTurrets[i], boxtreeRoot);
-                }
-
-                // rook checkin
-                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                    if (!worldRooks[i]->isActive) continue;
-                    Reset_Turret(worldRooks[i]);
-                    GetTurretNodes(worldRooks[i], boxtreeRoot);
-                }
-
                 // bullet collision
                 for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                     // Bullets
@@ -438,18 +398,18 @@ int main(void) // @INIT ========================================================
                             }
                         }
                         
-                        // Turrets
-                        for (int m = 0; m < worldBullets[i]->nodes[j]->turretCount; m++){
-                            if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->turrets[m]->bb)){
-                                if (worldBullets[i]->nodes[j]->turrets[m]->isActive){
-                                    Turret* hitTurret = worldBullets[i]->nodes[j]->turrets[m];
+                        // Pawns
+                        for (int m = 0; m < worldBullets[i]->nodes[j]->pawnCount; m++){
+                            if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->pawns[m]->bb)){
+                                if (worldBullets[i]->nodes[j]->pawns[m]->isActive){
+                                    Pawn* hitPawn = worldBullets[i]->nodes[j]->pawns[m];
 
                                     // if bullet has not hit this target, add to hitTargets
-                                    if (!ContainsInstance(worldBullets[i]->hitTargets, 8, hitTurret)){
-                                        worldBullets[i]->hitTargets[worldBullets[i]->hitCount] = hitTurret;
+                                    if (!ContainsInstance(worldBullets[i]->hitTargets, 8, hitPawn)){
+                                        worldBullets[i]->hitTargets[worldBullets[i]->hitCount] = hitPawn;
                                         worldBullets[i]->hitCount++;
-                                        hitTurret->color = WHITE;
-                                        Damage_Turret(hitTurret);
+                                        hitPawn->color = WHITE;
+                                        Damage_Pawn(hitPawn);
                                     }
 
                                     worldBullets[i]->color = WHITE;
@@ -556,10 +516,10 @@ int main(void) // @INIT ========================================================
 
                                     if (targetVoxel->isOccupied == true || targetVoxel->isActive == true){ break; }
                                     
-                                    Turret* newTurret = SpawnWorldTurret(Vector3Add(closestHitVoxel->position, Vector3Scale(rayHitNormal,1.5f)));
+                                    Pawn* newPawn = SpawnWorldPawn(Vector3Add(closestHitVoxel->position, Vector3Scale(rayHitNormal,1.5f)), PAWN_TURRET);
                                     targetVoxel->isOccupied = true;
                                     targetVoxel->occupier = OB_TURRET;
-                                    newTurret->rootVoxel = targetVoxel;
+                                    newPawn->rootVoxel = targetVoxel;
                                 }
                                 break;
                             default:
@@ -595,14 +555,7 @@ int main(void) // @INIT ========================================================
 
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                 Draw_Poly(worldPolys[i]);
-            }
-
-            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                 Draw_Pawn(worldPawns[i]);
-                Draw_Turret(worldTurrets[i]);
-            }
-
-            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                 Draw_Bullet(worldBullets[i]);
             }
             
@@ -754,9 +707,11 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
 void LoadLevel(){
     screenFade = 1;
 
-    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldBullets[i]->isActive = false; }
-    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldPolys[i]->isActive = false; }
-    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldTurrets[i]->isActive = false; }
+    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+        worldBullets[i]->isActive = false;
+        worldPolys[i]->isActive = false;
+        worldPawns[i]->isActive = false;
+    }
 
     int lsIndex = 0;
     for (int x = 0; x < LEVEL_GRID_ROWS; x++){
@@ -770,8 +725,8 @@ void LoadLevel(){
                 } else if (levels[levelSelection][lsIndex] == '2'){
                     grid3d[x][y][z]->isOccupied = true;
                     grid3d[x][y][z]->occupier = OB_TURRET;
-                    Turret* newTurret = SpawnWorldTurret(Vector3Add(grid3d[x][y][z]->position, (Vector3){0,0.5f,0}));
-                    newTurret->rootVoxel = grid3d[x][y][z];
+                    Pawn* newPawn = SpawnWorldPawn(Vector3Add(grid3d[x][y][z]->position, (Vector3){0,0.5f,0}), PAWN_TURRET);
+                    newPawn->rootVoxel = grid3d[x][y][z];
                 }
                 lsIndex++;
             }
@@ -787,7 +742,7 @@ void ResetScene(){
 
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldBullets[i]->isActive = false; }
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldPolys[i]->isActive = false; }
-    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldTurrets[i]->isActive = false; }
+    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldPawns[i]->isActive = false; }
 
     for (int x = 0; x < LEVEL_GRID_ROWS; x++){
         for (int y = 0; y < LEVEL_GRID_COLS; y++){
@@ -847,11 +802,11 @@ void SpawnWorldPoly(Vector3 newPos){
     }
 }
 
-Turret* SpawnWorldTurret(Vector3 newPos){
+Pawn* SpawnWorldPawn(Vector3 newPos, PawnType pt){
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-        if (!worldTurrets[i]->isActive){
-            Spawn_Turret(worldTurrets[i], newPos);
-            return worldTurrets[i];
+        if (!worldPawns[i]->isActive){
+            Spawn_Pawn(worldPawns[i], newPos, pt);
+            return worldPawns[i];
         }
     }
     return NULL;

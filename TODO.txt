@@ -1,7 +1,6 @@
-- combine rook and pawn structs
+
 
 ▼ objectives
-- (rook) structures
 - crystal
 - tar spawn
 - turret
@@ -14,6 +13,9 @@
 - player possession (knight)
 - hand model
 - player ejection
+
+▼ sound
+- bullet_hit
 
 === BUGS ===
 
