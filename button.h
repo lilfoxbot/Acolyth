@@ -74,11 +74,11 @@ ButtonFunction Update_Button(Button* obj, Vector2 mousePoint){
 
     if (CheckCollisionPointRec(mousePoint, obj->rect)){
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-            obj->color = BLACK;
-            obj->outlineColor = WHITE;
+            //obj->color = BLACK;
+            //obj->outlineColor = WHITE;
         } else {
-            obj->color = WHITE;
-            obj->outlineColor = BLACK;
+            //obj->color = WHITE;
+            //obj->outlineColor = BLACK;
         }
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) return obj->btnfunc;
         

@@ -1,4 +1,13 @@
+=== STUFFS ===
 
+- Menu Struct
+    - title bar region (outline and different color)
+    - window should only be grabbable from title bar
+    - arrays of "buttons"
+
+- dev console
+
+=== TANDEM ===
 
 ▼ objectives
 - crystal

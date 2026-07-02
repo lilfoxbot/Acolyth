@@ -12,6 +12,7 @@
 #include "player.h"
 #include "button.h"
 #include "textbox.h"
+#include "window.h"
 #include "database.h"
 
 #define RAYMATH_IMPLEMENTATION
@@ -21,7 +22,7 @@
 #define WORLD_DEFAULT_LIMIT 100
 #define BOXTREE_INITIAL_SIZE 16
 
-#define BTN_LIMIT 10
+#define HUD_LIMIT 10
 
 #define LEVEL_GRID_ROWS 10
 #define LEVEL_GRID_COLS 5
@@ -48,10 +49,10 @@ const int OCT = 8; // octree root size
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
 
-struct Button* editorButtons[BTN_LIMIT];
-struct Button* mainmenuButtons[BTN_LIMIT];
-
+struct Button* editorButtons[HUD_LIMIT];
+struct Button* mainmenuButtons[HUD_LIMIT];
 struct Textbox* levelTextbox;
+struct Window* testWindow;
 
 struct Pawn* worldPawns[WORLD_DEFAULT_LIMIT];
 struct Bullet* worldBullets[WORLD_DEFAULT_LIMIT];
@@ -164,12 +165,13 @@ int main(void) // @INIT ========================================================
     voxelRay.direction = (Vector3){1,1,0};
 
     // menus
-    for (int i = 0; i < BTN_LIMIT; i++){ editorButtons[i] = Create_Button(); }
-    for (int i = 0; i < BTN_LIMIT; i++){ mainmenuButtons[i] = Create_Button(); }
+    for (int i = 0; i < HUD_LIMIT; i++){ editorButtons[i] = Create_Button(); }
+    for (int i = 0; i < HUD_LIMIT; i++){ mainmenuButtons[i] = Create_Button(); }
 
     levelTextbox = Create_Textbox();
+    testWindow = Create_Window();
     
-    // READY ==========================================================================
+    // @READY ==========================================================================
 
     Spawn_Button(editorButtons[0], btn_edit_origin, (Vector2){60, 30}, "MAIN", 10, BTN_MAIN);
     Spawn_Button(editorButtons[1], (Vector2){btn_edit_origin.x + btn_edit_offset.x, btn_edit_origin.y}, (Vector2){60, 30}, "SAVE", 10, BTN_SAVE);
@@ -184,6 +186,8 @@ int main(void) // @INIT ========================================================
     Spawn_Button(mainmenuButtons[1], (Vector2){500, 600}, (Vector2){200, 30}, "TEST", 20, BTN_TEST);
 
     Spawn_Textbox(levelTextbox, (Vector2){600,10}, (Vector2){100,30}, 10);
+
+    Spawn_Window(testWindow, (Vector2){700, 700}, (Vector2){500, 500}, "WINDOW", 20);
 
     //Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -303,15 +307,16 @@ int main(void) // @INIT ========================================================
                 r1.direction = camF;
                 break;
             case GS_EDIT_PAUSE:
-                for (int i = 0; i < BTN_LIMIT; i++){
+                for (int i = 0; i < HUD_LIMIT; i++){
                     ButtonFunction btnfunc = Update_Button(editorButtons[i], mousePos);
                     ExecuteButtonFunction(btnfunc);
                 }
                 Update_Textbox(levelTextbox, mousePos);
+                Update_Window(testWindow, mousePos);
                 break;
             case GS_GAMEPLAY: break;
             case GS_MENU_MAIN:
-                for (int i = 0; i < BTN_LIMIT; i++){
+                for (int i = 0; i < HUD_LIMIT; i++){
                     ButtonFunction btnfunc = Update_Button(mainmenuButtons[i], mousePos);
                     ExecuteButtonFunction(btnfunc);
                 }
@@ -586,18 +591,18 @@ int main(void) // @INIT ========================================================
             switch (gamestate){
                 case GS_MENU_MAIN:
                     DrawText(TextFormat("TANDEM"), screenWidth/2, screenHeight/2, 50, BLACK);
-                    for (int i = 0; i < BTN_LIMIT; i++){ Draw_Button(mainmenuButtons[i]); }
+                    for (int i = 0; i < HUD_LIMIT; i++){ Draw_Button(mainmenuButtons[i]); }
                     break;
                 case GS_EDIT:
-                    
                     Vector2 center = { screenWidth / 2.0f, screenHeight / 2.0f };
                     // Draw a simple plus-sign crosshair
                     DrawLine(center.x - 10, center.y, center.x + 10, center.y, WHITE);
                     DrawLine(center.x, center.y - 10, center.x, center.y + 10, WHITE);
                     break;
                 case GS_EDIT_PAUSE:
-                    for (int i = 0; i < BTN_LIMIT; i++){ Draw_Button(editorButtons[i]); }
+                    for (int i = 0; i < HUD_LIMIT; i++){ Draw_Button(editorButtons[i]); }
                     Draw_Textbox(levelTextbox);
+                    Draw_Window(testWindow);
                     break;
                 case GS_GAMEPLAY: break;
                 default: break;
