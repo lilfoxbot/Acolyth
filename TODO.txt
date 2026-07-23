@@ -1,7 +1,7 @@
 === STUFFS ===
 
 - Window
-    - "title" on titlebar
+    - window debug info
     - arrays of "buttons"
 
 - dev console

@@ -187,7 +187,7 @@ int main(void) // @INIT ========================================================
 
     Spawn_Textbox(levelTextbox, (Vector2){600,10}, (Vector2){100,30}, 10);
 
-    Spawn_Window(testWindow, (Vector2){700, 700}, (Vector2){500, 500}, "WINDOW");
+    Spawn_Window(testWindow, (Vector2){1000, 300}, (Vector2){500, 500}, "WINDOW");
 
     //Spawn_Player(player, (Vector3){0,5,-3});
     

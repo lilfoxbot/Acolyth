@@ -37,12 +37,12 @@ Window* Create_Window(){
 
     obj->body.width = 60;
     obj->body.height = 30;
-    int titleFontSize = 8;
+    obj->titleFontSize = 8;
     obj->fontSize = 8;
 
     obj->titleBarColor = LIGHTGRAY;
     obj->titleBarOutlineColor = BLACK;
-    obj->bodyColor = WHITE;
+    obj->bodyColor = DARKGRAY;
     obj->bodyOutlineColor = BLACK;
     
     return obj;
@@ -81,11 +81,7 @@ void Update_Window(Window* obj, Vector2 mousePoint){
         // } else {
         //     obj->bodyColor = WHITE;
         //     obj->bodyOutlineColor = BLACK;
-        // }
-        
-    } else {
-        obj->bodyColor = WHITE;
-        obj->bodyOutlineColor = BLACK;
+        // }   
     }
 
     if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)){
@@ -114,5 +110,8 @@ void Draw_Window(Window* obj){
     // title
     DrawRectangle(obj->titleBar.x, obj->titleBar.y, obj->titleBar.width, obj->titleBar.height, obj->titleBarColor);
     DrawRectangleLines(obj->titleBar.x, obj->titleBar.y, obj->titleBar.width, obj->titleBar.height, obj->bodyOutlineColor);
-    DrawText(obj->title, obj->titleBar.x + 5, obj->titleBar.y + obj->titleBar.height/2, obj->fontSize, BLACK);
+    DrawText(obj->title, obj->titleBar.x + 4, obj->titleBar.y + obj->titleBar.height/2, obj->titleFontSize, BLACK);
+
+    // debug
+    
 }
