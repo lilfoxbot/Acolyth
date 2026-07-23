@@ -11,11 +11,17 @@ typedef struct Window{
     bool dragging;
     Vector2 dragPoint;
 
-    Rectangle rect;
+    Rectangle body;
+    Color bodyColor;
+    Color bodyOutlineColor;
+    
+    Rectangle titleBar;
+    Color titleBarColor;
+    Color titleBarOutlineColor;
+
     char title[30];
+    int titleFontSize;
     int fontSize;
-    Color color;
-    Color outlineColor;
 
 } Window;
 
@@ -29,23 +35,28 @@ Window* Create_Window(){
     obj->dragging = false;
     obj->dragPoint = (Vector2){0,0};
 
-    obj->rect.width = 60;
-    obj->rect.height = 30;
-    obj->fontSize = 10;
+    obj->body.width = 60;
+    obj->body.height = 30;
+    int titleFontSize = 8;
+    obj->fontSize = 8;
 
-    obj->color = WHITE;
-    obj->outlineColor = BLACK;
+    obj->titleBarColor = LIGHTGRAY;
+    obj->titleBarOutlineColor = BLACK;
+    obj->bodyColor = WHITE;
+    obj->bodyOutlineColor = BLACK;
     
     return obj;
 }
 
-void Spawn_Window(Window* obj, Vector2 pos, Vector2 size, char *title, int fontSize){
+void Spawn_Window(Window* obj, Vector2 pos, Vector2 size, char *title){
     obj->isActive = true;
-    obj->rect.x = pos.x;
-    obj->rect.y = pos.y;
-    obj->rect.width = size.x;
-    obj->rect.height = size.y;
-    obj->fontSize = fontSize;
+    obj->body.x = pos.x;
+    obj->body.y = pos.y;
+    obj->body.width = size.x;
+    obj->body.height = size.y;
+
+    obj->titleBar.width = obj->body.width;
+    obj->titleBar.height = 20;
 
     SetTextArray(obj->title, sizeof(obj->title), title);
 }
@@ -58,23 +69,23 @@ void Destroy_Window(Window* obj){
 void Update_Window(Window* obj, Vector2 mousePoint){
     if (!obj->isActive) return;
 
-    if (CheckCollisionPointRec(mousePoint, obj->rect)){
+    if (CheckCollisionPointRec(mousePoint, obj->titleBar)){
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
             obj->dragging = true;
             obj->dragPoint = mousePoint;
         }
 
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-            obj->color = BLACK;
-            obj->outlineColor = WHITE;
-        } else {
-            obj->color = WHITE;
-            obj->outlineColor = BLACK;
-        }
+        // if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+        //     obj->bodyColor = BLACK;
+        //     obj->bodyOutlineColor = WHITE;
+        // } else {
+        //     obj->bodyColor = WHITE;
+        //     obj->bodyOutlineColor = BLACK;
+        // }
         
     } else {
-        obj->color = WHITE;
-        obj->outlineColor = BLACK;
+        obj->bodyColor = WHITE;
+        obj->bodyOutlineColor = BLACK;
     }
 
     if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)){
@@ -83,17 +94,25 @@ void Update_Window(Window* obj, Vector2 mousePoint){
 
     if (obj->dragging){
         Vector2 tempVec = Vector2Subtract(mousePoint, obj->dragPoint);
-        tempVec = Vector2Add((Vector2){obj->rect.x,obj->rect.y}, tempVec);
-        obj->rect.x = tempVec.x;
-        obj->rect.y = tempVec.y;
+        tempVec = Vector2Add((Vector2){obj->body.x,obj->body.y}, tempVec);
+        obj->body.x = tempVec.x;
+        obj->body.y = tempVec.y;
         obj->dragPoint = mousePoint;
     }
+
+    obj->titleBar.x = obj->body.x;
+    obj->titleBar.y = obj->body.y;
 }
 
 void Draw_Window(Window* obj){
     if (!obj->isActive) return;
 
-    DrawRectangle(obj->rect.x, obj->rect.y, obj->rect.width, obj->rect.height, obj->color);
-    DrawRectangleLines(obj->rect.x, obj->rect.y, obj->rect.width, obj->rect.height, obj->outlineColor);
-    DrawText(obj->title, obj->rect.x+5, obj->rect.y+obj->rect.height/2-6, obj->fontSize, BLACK);
+    // body
+    DrawRectangle(obj->body.x, obj->body.y, obj->body.width, obj->body.height, obj->bodyColor);
+    DrawRectangleLines(obj->body.x, obj->body.y, obj->body.width, obj->body.height, obj->bodyOutlineColor);
+    
+    // title
+    DrawRectangle(obj->titleBar.x, obj->titleBar.y, obj->titleBar.width, obj->titleBar.height, obj->titleBarColor);
+    DrawRectangleLines(obj->titleBar.x, obj->titleBar.y, obj->titleBar.width, obj->titleBar.height, obj->bodyOutlineColor);
+    DrawText(obj->title, obj->titleBar.x + 5, obj->titleBar.y + obj->titleBar.height/2, obj->fontSize, BLACK);
 }
