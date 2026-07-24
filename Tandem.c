@@ -28,7 +28,7 @@
 #define LEVEL_GRID_COLS 5
 #define LEVEL_GRID_DEPTH 10
 
-Vector3 DEFAULT_PLAYER_POSITION = (Vector3){0, 5,-3};
+Vector3 DEFAULT_PLAYER_POSITION = (Vector3){ 0, 5,-3 };
 Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 3.0f, 6.0f };
 Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0.0f, 2.0f, -2.0f };
 
@@ -49,6 +49,7 @@ const int OCT = 8; // octree root size
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
 
+struct Button* windowButtons[HUD_LIMIT];
 struct Button* editorButtons[HUD_LIMIT];
 struct Button* mainmenuButtons[HUD_LIMIT];
 struct Textbox* levelTextbox;
@@ -165,6 +166,7 @@ int main(void) // @INIT ========================================================
     voxelRay.direction = (Vector3){1,1,0};
 
     // menus
+    for (int i = 0; i < HUD_LIMIT; i++){ windowButtons[i] = Create_Button(); }
     for (int i = 0; i < HUD_LIMIT; i++){ editorButtons[i] = Create_Button(); }
     for (int i = 0; i < HUD_LIMIT; i++){ mainmenuButtons[i] = Create_Button(); }
 
@@ -173,21 +175,23 @@ int main(void) // @INIT ========================================================
     
     // @READY ==========================================================================
 
+    Spawn_Button(mainmenuButtons[0], (Vector2){500, 500}, (Vector2){200, 30}, "PLAY", 20, BTN_PLAY);
+    Spawn_Button(mainmenuButtons[1], (Vector2){500, 600}, (Vector2){200, 30}, "TEST", 20, BTN_TEST);
+
     Spawn_Button(editorButtons[0], btn_edit_origin, (Vector2){60, 30}, "MAIN", 10, BTN_MAIN);
     Spawn_Button(editorButtons[1], (Vector2){btn_edit_origin.x + btn_edit_offset.x, btn_edit_origin.y}, (Vector2){60, 30}, "SAVE", 10, BTN_SAVE);
     Spawn_Button(editorButtons[2], (Vector2){btn_edit_origin.x + btn_edit_offset.x*2, btn_edit_origin.y}, (Vector2){60, 30}, "LOAD", 10, BTN_LOAD);
     Spawn_Button(editorButtons[3], (Vector2){btn_edit_origin.x + btn_edit_offset.x*3, btn_edit_origin.y}, (Vector2){60, 30}, "PREV", 10, BTN_PREV);
     Spawn_Button(editorButtons[4], (Vector2){btn_edit_origin.x + btn_edit_offset.x*4, btn_edit_origin.y}, (Vector2){60, 30}, "NEXT", 10, BTN_NEXT);
 
-    Spawn_Button(editorButtons[5], (Vector2){btn_edit_origin.x, btn_edit_origin.y + btn_edit_offset.y}, (Vector2){60, 30}, "voxel", 10, BTN_VOXEL);
-    Spawn_Button(editorButtons[6], (Vector2){btn_edit_origin.x + btn_edit_offset.x, btn_edit_origin.y + btn_edit_offset.y}, (Vector2){60, 30}, "turret", 10, BTN_TURRET);
-
-    Spawn_Button(mainmenuButtons[0], (Vector2){500, 500}, (Vector2){200, 30}, "PLAY", 20, BTN_PLAY);
-    Spawn_Button(mainmenuButtons[1], (Vector2){500, 600}, (Vector2){200, 30}, "TEST", 20, BTN_TEST);
-
     Spawn_Textbox(levelTextbox, (Vector2){600,10}, (Vector2){100,30}, 10);
 
-    Spawn_Window(testWindow, (Vector2){1000, 300}, (Vector2){500, 500}, "WINDOW");
+    Spawn_Button(windowButtons[0], (Vector2){0, 0}, (Vector2){60, 30}, "voxel", 10, BTN_VOXEL);
+    Spawn_Button(windowButtons[1], (Vector2){0, 0}, (Vector2){60, 30}, "turret", 10, BTN_TURRET);
+    Spawn_Window(testWindow, (Vector2){1405, 495}, (Vector2){500, 500}, "WINDOW");
+    testWindow->buttons[0] = windowButtons[0];
+    testWindow->buttons[1] = windowButtons[1];
+    testWindow->buttonCount = 2;
 
     //Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -312,7 +316,9 @@ int main(void) // @INIT ========================================================
                     ExecuteButtonFunction(btnfunc);
                 }
                 Update_Textbox(levelTextbox, mousePos);
-                Update_Window(testWindow, mousePos);
+                
+                ButtonFunction btnfunc = Update_Window(testWindow, mousePos);
+                ExecuteButtonFunction(btnfunc);
                 break;
             case GS_GAMEPLAY: break;
             case GS_MENU_MAIN:
@@ -628,7 +634,6 @@ int main(void) // @INIT ========================================================
                 default:
                     break;
             }
-
             
             DrawRectangle(0, 0, screenWidth*2, screenHeight*2, Fade(BLACK, screenFade));
             if (screenFade > 0){ screenFade -= 3*dt; }

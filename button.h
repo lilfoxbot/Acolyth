@@ -29,7 +29,10 @@ typedef struct Button{
     char label[20];
     int fontSize;
     Color color;
-    Color outlineColor;
+    //Color outlineColor;
+    Color colorTL;
+    Color colorBR;
+
     ButtonFunction btnfunc;
 
 } Button;
@@ -46,8 +49,10 @@ Button* Create_Button(){
     obj->rect.height = 30;
     obj->fontSize = 10;
 
-    obj->color = WHITE;
-    obj->outlineColor = BLACK;
+    obj->color = LIGHTGRAY;
+    //obj->outlineColor = BLACK;
+    obj->colorTL = WHITE;
+    obj->colorBR = BLACK;
     
     return obj;
 }
@@ -70,21 +75,25 @@ void Destroy_Button(Button* obj){
 }
 
 ButtonFunction Update_Button(Button* obj, Vector2 mousePoint){
+    if (obj == NULL) return BTN_NONE;
     if (!obj->isActive) return BTN_NONE;
 
     if (CheckCollisionPointRec(mousePoint, obj->rect)){
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-            //obj->color = BLACK;
-            //obj->outlineColor = WHITE;
+            obj->colorTL = BLACK;
+            obj->colorBR = WHITE;
+            obj->color = DARKGRAY;
         } else {
-            //obj->color = WHITE;
-            //obj->outlineColor = BLACK;
+            obj->colorTL = WHITE;
+            obj->colorBR = BLACK;
+            obj->color = LIGHTGRAY;
         }
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) return obj->btnfunc;
         
     } else {
-        obj->color = WHITE;
-        obj->outlineColor = BLACK;
+        obj->colorTL = WHITE;
+        obj->colorBR = BLACK;
+        obj->color = LIGHTGRAY;
     }
 
     return BTN_NONE;
@@ -94,6 +103,10 @@ void Draw_Button(Button* obj){
     if (!obj->isActive) return;
 
     DrawRectangle(obj->rect.x, obj->rect.y, obj->rect.width, obj->rect.height, obj->color);
-    DrawRectangleLines(obj->rect.x, obj->rect.y, obj->rect.width, obj->rect.height, obj->outlineColor);
+    DrawLine(obj->rect.x, obj->rect.y, obj->rect.x + obj->rect.width, obj->rect.y, obj->colorTL); // TOP
+    DrawLine(obj->rect.x, obj->rect.y, obj->rect.x, obj->rect.y + obj->rect.height, obj->colorTL); // LEFT
+    DrawLine(obj->rect.x, obj->rect.y + obj->rect.height, obj->rect.x + obj->rect.width, obj->rect.y + obj->rect.height, obj->colorBR); // BOT
+    DrawLine(obj->rect.x + obj->rect.width, obj->rect.y, obj->rect.x + obj->rect.width, obj->rect.y + obj->rect.height, obj->colorBR); // RIGHT
+
     DrawText(obj->label, obj->rect.x+5, obj->rect.y+obj->rect.height/2-6, obj->fontSize, BLACK);
 }

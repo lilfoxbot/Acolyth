@@ -5,9 +5,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "button.h"
 
 typedef struct Window{
     bool isActive;
+    bool isFocused;
     bool dragging;
     Vector2 dragPoint;
 
@@ -23,10 +25,19 @@ typedef struct Window{
     int titleFontSize;
     int fontSize;
 
+    Button* buttons[4];
+    int buttonCount;
+
+    char debugString[50];
 } Window;
 
-static void SetTextArray(char *dest, size_t dest_size, const char *source){
+static void SetText(char *dest, size_t dest_size, const char *source){
     snprintf(dest, dest_size, "%s", source);
+}
+
+void UpdateDebugString(Window* obj){
+    SetText(obj->debugString, sizeof(obj->debugString),
+    TextFormat("Position: %0.2f _ %0.2f", obj->body.x, obj->body.y));
 }
 
 Window* Create_Window(){
@@ -44,6 +55,8 @@ Window* Create_Window(){
     obj->titleBarOutlineColor = BLACK;
     obj->bodyColor = DARKGRAY;
     obj->bodyOutlineColor = BLACK;
+
+    obj->buttonCount = 0;
     
     return obj;
 }
@@ -58,7 +71,7 @@ void Spawn_Window(Window* obj, Vector2 pos, Vector2 size, char *title){
     obj->titleBar.width = obj->body.width;
     obj->titleBar.height = 20;
 
-    SetTextArray(obj->title, sizeof(obj->title), title);
+    SetText(obj->title, sizeof(obj->title), title);
 }
 
 void Destroy_Window(Window* obj){
@@ -66,22 +79,14 @@ void Destroy_Window(Window* obj){
     obj->isActive = false;
 }
 
-void Update_Window(Window* obj, Vector2 mousePoint){
-    if (!obj->isActive) return;
+ButtonFunction Update_Window(Window* obj, Vector2 mousePoint){
+    if (!obj->isActive) return BTN_NONE;
 
     if (CheckCollisionPointRec(mousePoint, obj->titleBar)){
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
             obj->dragging = true;
             obj->dragPoint = mousePoint;
-        }
-
-        // if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-        //     obj->bodyColor = BLACK;
-        //     obj->bodyOutlineColor = WHITE;
-        // } else {
-        //     obj->bodyColor = WHITE;
-        //     obj->bodyOutlineColor = BLACK;
-        // }   
+        } 
     }
 
     if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)){
@@ -98,6 +103,20 @@ void Update_Window(Window* obj, Vector2 mousePoint){
 
     obj->titleBar.x = obj->body.x;
     obj->titleBar.y = obj->body.y;
+
+    // update buttons
+    ButtonFunction savedBtnFunc;
+    for (int i = 0; i < obj->buttonCount; i++){
+        ButtonFunction btnFunc;
+        btnFunc = Update_Button(obj->buttons[i], mousePoint);
+        if (btnFunc != BTN_NONE){ savedBtnFunc = btnFunc; }
+        // update button positions
+        obj->buttons[i]->rect.x = obj->body.x + 30;
+        obj->buttons[i]->rect.y = obj->body.y + 30 + (i*40);
+    }
+
+    UpdateDebugString(obj);
+    return savedBtnFunc;
 }
 
 void Draw_Window(Window* obj){
@@ -110,8 +129,13 @@ void Draw_Window(Window* obj){
     // title
     DrawRectangle(obj->titleBar.x, obj->titleBar.y, obj->titleBar.width, obj->titleBar.height, obj->titleBarColor);
     DrawRectangleLines(obj->titleBar.x, obj->titleBar.y, obj->titleBar.width, obj->titleBar.height, obj->bodyOutlineColor);
-    DrawText(obj->title, obj->titleBar.x + 4, obj->titleBar.y + obj->titleBar.height/2, obj->titleFontSize, BLACK);
+    DrawText(obj->title, obj->titleBar.x + 4, obj->titleBar.y + obj->titleBar.height/2 - 2, obj->titleFontSize, BLACK);
+
+    // buttons
+    for (int i = 0; i < obj->buttonCount; i++){
+        Draw_Button(obj->buttons[i]);
+    }
 
     // debug
-    
+    DrawText(obj->debugString, obj->body.x + 4, obj->body.y + obj->body.height - 10, obj->titleFontSize, BLACK);
 }
