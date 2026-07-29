@@ -43,6 +43,7 @@ void UpdateDebugString(Window* obj){
 Window* Create_Window(){
     Window* obj = (Window*)malloc(sizeof(Window));
     obj->isActive = false;
+    obj->isFocused = false;
     obj->dragging = false;
     obj->dragPoint = (Vector2){0,0};
 
@@ -54,7 +55,7 @@ Window* Create_Window(){
     obj->titleBarColor = LIGHTGRAY;
     obj->titleBarOutlineColor = BLACK;
     obj->bodyColor = DARKGRAY;
-    obj->bodyOutlineColor = BLACK;
+    obj->bodyOutlineColor = GRAY;
 
     obj->buttonCount = 0;
     
@@ -71,6 +72,9 @@ void Spawn_Window(Window* obj, Vector2 pos, Vector2 size, char *title){
     obj->titleBar.width = obj->body.width;
     obj->titleBar.height = 20;
 
+    obj->titleBar.x = obj->body.x;
+    obj->titleBar.y = obj->body.y;
+
     SetText(obj->title, sizeof(obj->title), title);
 }
 
@@ -80,6 +84,7 @@ void Destroy_Window(Window* obj){
 }
 
 ButtonFunction Update_Window(Window* obj, Vector2 mousePoint){
+    if (obj == NULL) return BTN_NONE;
     if (!obj->isActive) return BTN_NONE;
 
     if (CheckCollisionPointRec(mousePoint, obj->titleBar)){
@@ -101,6 +106,7 @@ ButtonFunction Update_Window(Window* obj, Vector2 mousePoint){
         obj->dragPoint = mousePoint;
     }
 
+    // update titlebar pos
     obj->titleBar.x = obj->body.x;
     obj->titleBar.y = obj->body.y;
 
@@ -120,6 +126,7 @@ ButtonFunction Update_Window(Window* obj, Vector2 mousePoint){
 }
 
 void Draw_Window(Window* obj){
+    if (obj == NULL) return;
     if (!obj->isActive) return;
 
     // body

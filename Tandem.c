@@ -14,6 +14,7 @@
 #include "textbox.h"
 #include "window.h"
 #include "database.h"
+#include "linkedlist.h"
 
 #define RAYMATH_IMPLEMENTATION
 
@@ -52,8 +53,13 @@ struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
 struct Button* windowButtons[HUD_LIMIT];
 struct Button* editorButtons[HUD_LIMIT];
 struct Button* mainmenuButtons[HUD_LIMIT];
+
+struct List* windowList;
+struct Window* testWindowOne;
+struct Window* testWindowTwo;
+struct Window* testWindowThree;
+
 struct Textbox* levelTextbox;
-struct Window* testWindow;
 
 struct Pawn* worldPawns[WORLD_DEFAULT_LIMIT];
 struct Bullet* worldBullets[WORLD_DEFAULT_LIMIT];
@@ -170,9 +176,17 @@ int main(void) // @INIT ========================================================
     for (int i = 0; i < HUD_LIMIT; i++){ editorButtons[i] = Create_Button(); }
     for (int i = 0; i < HUD_LIMIT; i++){ mainmenuButtons[i] = Create_Button(); }
 
-    levelTextbox = Create_Textbox();
-    testWindow = Create_Window();
+    testWindowOne = Create_Window();
+    testWindowTwo = Create_Window();
+    testWindowThree = Create_Window();
+    windowList = Create_List();
+
+    Push(windowList, &testWindowThree);
+    Push(windowList, &testWindowTwo);
+    Push(windowList, &testWindowOne);
     
+    levelTextbox = Create_Textbox();
+
     // @READY ==========================================================================
 
     Spawn_Button(mainmenuButtons[0], (Vector2){500, 500}, (Vector2){200, 30}, "PLAY", 20, BTN_PLAY);
@@ -188,10 +202,14 @@ int main(void) // @INIT ========================================================
 
     Spawn_Button(windowButtons[0], (Vector2){0, 0}, (Vector2){60, 30}, "voxel", 10, BTN_VOXEL);
     Spawn_Button(windowButtons[1], (Vector2){0, 0}, (Vector2){60, 30}, "turret", 10, BTN_TURRET);
-    Spawn_Window(testWindow, (Vector2){1405, 495}, (Vector2){500, 500}, "WINDOW");
-    testWindow->buttons[0] = windowButtons[0];
-    testWindow->buttons[1] = windowButtons[1];
-    testWindow->buttonCount = 2;
+
+    Spawn_Window(testWindowOne, (Vector2){1405, 495}, (Vector2){500, 500}, "WINDOW 1");
+    testWindowOne->buttons[0] = windowButtons[0];
+    testWindowOne->buttons[1] = windowButtons[1];
+    testWindowOne->buttonCount = 2;
+
+    Spawn_Window(testWindowTwo, (Vector2){1205, 495}, (Vector2){500, 500}, "WINDOW 2");
+    Spawn_Window(testWindowThree, (Vector2){1005, 495}, (Vector2){500, 500}, "WINDOW 3");
 
     //Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -317,8 +335,9 @@ int main(void) // @INIT ========================================================
                 }
                 Update_Textbox(levelTextbox, mousePos);
                 
-                ButtonFunction btnfunc = Update_Window(testWindow, mousePos);
-                ExecuteButtonFunction(btnfunc);
+                // @TODO
+                //for (int i = 0; i < HUD_LIMIT; i++){ Update_Window(testWindows[i], mousePos); }
+                //ExecuteButtonFunction(btnfunc);
                 break;
             case GS_GAMEPLAY: break;
             case GS_MENU_MAIN:
@@ -608,7 +627,8 @@ int main(void) // @INIT ========================================================
                 case GS_EDIT_PAUSE:
                     for (int i = 0; i < HUD_LIMIT; i++){ Draw_Button(editorButtons[i]); }
                     Draw_Textbox(levelTextbox);
-                    Draw_Window(testWindow);
+                    // @TODO
+                    //for (int i = 0; i < HUD_LIMIT; i++){ Draw_Window(testWindows[i]); }
                     break;
                 case GS_GAMEPLAY: break;
                 default: break;

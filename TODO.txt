@@ -1,9 +1,11 @@
 === STUFFS ===
 
-- Window
-    - window focus, indicated by border color
-    - multiple windows
-    - switching window layers
+- Window List
+    - update and draw windows with linked list
+
+    - windows are CHECKed in reverse order of DRAW
+    - window focus, indicated by something...?
+
 
 - dev console
     - open/close with tilde (~)
