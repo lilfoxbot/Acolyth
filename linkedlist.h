@@ -8,6 +8,7 @@
 typedef struct List {
     int count;
     struct Node *head;
+    struct Node *cur;
     struct Node *tail;
 } List;
 
@@ -23,6 +24,10 @@ List* Create_List(){
     return obj;
 }
 
+// Push() example
+// int int_val1 = 10, int_val2 = 20;
+// Push(&head, &int_val1);
+// Push(&head, &int_val2);
 void Push(List* list, void *new_data) {
     Node *new_node = (Node *)malloc(sizeof(Node));
     if (new_node == NULL) {
@@ -35,21 +40,15 @@ void Push(List* list, void *new_data) {
     list->count++;
 }
 
-// Push() example
-// int int_val1 = 10, int_val2 = 20;
-// Push(&head, &int_val1);
-// Push(&head, &int_val2);
-
-// void Push(Node **head_ref, void *new_data) {
-//     Node *new_node = (Node *)malloc(sizeof(Node));
-//     if (new_node == NULL) {
-//         printf("Memory allocation failed.\n");
-//         exit(1);
-//     }
-//     new_node->data = new_data;
-//     new_node->next = (*head_ref);
-//     (*head_ref) = new_node;
-// }
+void* GetListItem(List* list, int idx){
+    if (list->count == 0){ return NULL; }
+    list->cur = list->head;
+    for (int i = 0; i < list->count; i++){
+        if (i == idx) { return list->cur->data; }
+        else { list->cur = list->cur->next; }
+    }
+    return NULL;
+}
 
 void FreeList(Node *head) {
     Node *temp;

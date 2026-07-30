@@ -58,6 +58,7 @@ struct List* windowList;
 struct Window* testWindowOne;
 struct Window* testWindowTwo;
 struct Window* testWindowThree;
+struct Window* fetchedWindow;
 
 struct Textbox* levelTextbox;
 
@@ -628,7 +629,11 @@ int main(void) // @INIT ========================================================
                     for (int i = 0; i < HUD_LIMIT; i++){ Draw_Button(editorButtons[i]); }
                     Draw_Textbox(levelTextbox);
                     // @TODO
-                    //for (int i = 0; i < HUD_LIMIT; i++){ Draw_Window(testWindows[i]); }
+                    for (int i = 0; i < HUD_LIMIT; i++){
+                        fetchedWindow = (struct Window *)GetListItem(windowList, i);
+                        Draw_Window(fetchedWindow);
+                    }
+
                     break;
                 case GS_GAMEPLAY: break;
                 default: break;
