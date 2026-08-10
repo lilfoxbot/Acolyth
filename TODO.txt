@@ -1,11 +1,9 @@
 === STUFFS ===
 
 - Window List
-    - update and draw windows with linked list
-
+    - reorder windows, move clicked to top
     - windows are CHECKed in reverse order of DRAW
     - window focus, indicated by something...?
-
 
 - dev console
     - open/close with tilde (~)

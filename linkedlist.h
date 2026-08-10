@@ -19,16 +19,13 @@ typedef struct Node {
 
 List* Create_List(){
     List* obj = (List*)malloc(sizeof(List));
+    obj->head = NULL;
     obj->count = 0;
 
     return obj;
 }
 
-// Push() example
-// int int_val1 = 10, int_val2 = 20;
-// Push(&head, &int_val1);
-// Push(&head, &int_val2);
-void Push(List* list, void *new_data) {
+void Push(List* list, void *new_data){
     Node *new_node = (Node *)malloc(sizeof(Node));
     if (new_node == NULL) {
         printf("Memory allocation failed.\n");

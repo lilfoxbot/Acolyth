@@ -83,6 +83,13 @@ void Destroy_Window(Window* obj){
     obj->isActive = false;
 }
 
+bool Check_Window(Window* obj, Vector2 mousePoint){
+    if (obj == NULL) return false;
+    if (!obj->isActive) return false;
+
+    return CheckCollisionPointRec(mousePoint, obj->body);
+}
+
 ButtonFunction Update_Window(Window* obj, Vector2 mousePoint){
     if (obj == NULL) return BTN_NONE;
     if (!obj->isActive) return BTN_NONE;
@@ -131,8 +138,12 @@ void Draw_Window(Window* obj){
 
     // body
     DrawRectangle(obj->body.x, obj->body.y, obj->body.width, obj->body.height, obj->bodyColor);
-    DrawRectangleLines(obj->body.x, obj->body.y, obj->body.width, obj->body.height, obj->bodyOutlineColor);
-    
+    if (obj->isFocused){
+        DrawRectangleLines(obj->body.x, obj->body.y, obj->body.width, obj->body.height, WHITE);
+    } else {
+        DrawRectangleLines(obj->body.x, obj->body.y, obj->body.width, obj->body.height, obj->bodyOutlineColor);
+    }
+
     // title
     DrawRectangle(obj->titleBar.x, obj->titleBar.y, obj->titleBar.width, obj->titleBar.height, obj->titleBarColor);
     DrawRectangleLines(obj->titleBar.x, obj->titleBar.y, obj->titleBar.width, obj->titleBar.height, obj->bodyOutlineColor);
