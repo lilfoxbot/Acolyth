@@ -184,9 +184,9 @@ int main(void) // @INIT ========================================================
     testWindowThree = Create_Window();
     windowList = Create_List();
 
-    Push(windowList, testWindowThree);
-    Push(windowList, testWindowTwo);
-    Push(windowList, testWindowOne);
+    Push_List(windowList, testWindowThree);
+    Push_List(windowList, testWindowTwo);
+    Push_List(windowList, testWindowOne);
     
     levelTextbox = Create_Textbox();
 
@@ -339,19 +339,30 @@ int main(void) // @INIT ========================================================
                 Update_Textbox(levelTextbox, mousePos);
 
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                    for (int i = windowCount; i >= 0; i--){
+                    
+                    // unfocus all
+                    for (int i = windowList->count; i >= 0; i--){
+                        fetchedWindow = (struct Window *)GetListItem(windowList, i);
+                        if (fetchedWindow){
+                            fetchedWindow->isFocused = false;
+                        }
+                    }
+
+                    // focus
+                    for (int i = windowList->count; i >= 0; i--){
                         fetchedWindow = (struct Window *)GetListItem(windowList, i);
                         if (fetchedWindow){
                             if(Check_Window(fetchedWindow, mousePos)){
                                 // TODO
                                 // Reorder windows
                                 fetchedWindow->isFocused = true;
+                                MoveToFront(windowList, i);
+                                break;
                             } else {
                                 fetchedWindow->isFocused = false;
                             }
                         }
                     }
-                    
                 }
                 
                 for (int i = 0; i < HUD_LIMIT; i++){
