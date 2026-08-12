@@ -93,5 +93,4 @@ void MoveToFront_List(List* list, int idx){
     void* dataToMove = GetItem_List(list, idx);
     Push_List(list, dataToMove);
     FreeNode_List(list, idx+1);
-    //TODO
 }

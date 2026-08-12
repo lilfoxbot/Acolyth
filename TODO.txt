@@ -1,10 +1,9 @@
 === STUFFS ===
 
 - dev console
-    - open/close with tilde (~)
     - console feed (displays entries and Console prints)
     - PrintToConsole function
-    - basic commands: end program, load level, 
+    - basic commands: end program, load level,
     - command history, accessed with up arrow
 
 === TANDEM ===

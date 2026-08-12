@@ -15,6 +15,7 @@
 #include "window.h"
 #include "database.h"
 #include "linkedlist.h"
+#include "console.h"
 
 #define RAYMATH_IMPLEMENTATION
 
@@ -29,7 +30,7 @@
 #define LEVEL_GRID_COLS 5
 #define LEVEL_GRID_DEPTH 10
 
-Vector3 DEFAULT_PLAYER_POSITION = (Vector3){ 0, 5,-3 };
+Vector3 DEFAULT_PLAYER_POSITION = (Vector3){ 0, 5, -3 };
 Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 3.0f, 6.0f };
 Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0.0f, 2.0f, -2.0f };
 
@@ -37,6 +38,7 @@ float screenFade = 1;
 bool screenFading = false;
 bool cursorEnabled = true;
 bool myDebug = false;
+bool consoleOpen = false;
 bool editMode = false;
 float lookSensitivity = 40.0f;
 float camSpeed = 2.0f;
@@ -63,6 +65,8 @@ struct Window* focusedWindow;
 
 int windowCount = 3;
 
+struct Console* myConsole;
+
 struct Textbox* levelTextbox;
 
 struct Pawn* worldPawns[WORLD_DEFAULT_LIMIT];
@@ -86,7 +90,6 @@ void ExecuteButtonFunction(ButtonFunction btnfunc);
 void ResetScene();
 void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxDist);
 void PlaySoundInstance(Sound sound, Vector3 soundPos);
-//static bool IsRayHitNormalValid(Vector3 vector);
 
 typedef enum {
     GS_MENU_MAIN,
@@ -192,8 +195,11 @@ int main(void) // @INIT ========================================================
     testWindowOne->isFocused = true;
 
     levelTextbox = Create_Textbox();
+    myConsole = Create_Console();
 
     // @READY ==========================================================================
+
+    Spawn_Textbox(levelTextbox, (Vector2){600,10}, (Vector2){100,30}, 10);
 
     Spawn_Button(mainmenuButtons[0], (Vector2){500, 500}, (Vector2){200, 30}, "PLAY", 20, BTN_PLAY);
     Spawn_Button(mainmenuButtons[1], (Vector2){500, 600}, (Vector2){200, 30}, "TEST", 20, BTN_TEST);
@@ -203,8 +209,6 @@ int main(void) // @INIT ========================================================
     Spawn_Button(editorButtons[2], (Vector2){btn_edit_origin.x + btn_edit_offset.x*2, btn_edit_origin.y}, (Vector2){60, 30}, "LOAD", 10, BTN_LOAD);
     Spawn_Button(editorButtons[3], (Vector2){btn_edit_origin.x + btn_edit_offset.x*3, btn_edit_origin.y}, (Vector2){60, 30}, "PREV", 10, BTN_PREV);
     Spawn_Button(editorButtons[4], (Vector2){btn_edit_origin.x + btn_edit_offset.x*4, btn_edit_origin.y}, (Vector2){60, 30}, "NEXT", 10, BTN_NEXT);
-
-    Spawn_Textbox(levelTextbox, (Vector2){600,10}, (Vector2){100,30}, 10);
 
     Spawn_Button(windowButtons[0], (Vector2){0, 0}, (Vector2){60, 30}, "voxel", 10, BTN_VOXEL);
     Spawn_Button(windowButtons[1], (Vector2){0, 0}, (Vector2){60, 30}, "turret", 10, BTN_TURRET);
@@ -232,6 +236,13 @@ int main(void) // @INIT ========================================================
         // @INPUT ==========================================================================
         Vector2 mousePos = GetMousePosition();
         Vector4 newPlayerVel = (Vector4){0,0,0,0};
+
+        if (IsKeyPressed(KEY_GRAVE)){ consoleOpen = !consoleOpen; }
+        if (consoleOpen){
+            if (IsKeyPressed(KEY_ENTER)){
+                Submit_Console(myConsole);
+            }
+        }
 
         switch (gamestate){
             case GS_EDIT:
@@ -379,6 +390,7 @@ int main(void) // @INIT ========================================================
                 break;
             default: break;
         }
+        if (consoleOpen) Update_Console(myConsole);
         
         // @COLLISION ==========================================================================
 
@@ -666,7 +678,8 @@ int main(void) // @INIT ========================================================
                     break;
                 case GS_GAMEPLAY: break;
                 default: break;
-            }            
+            }
+            if (consoleOpen) Draw_Console(myConsole);
 
             // Draw HUD
             //DrawRectangle(5, 5, 250, 1000, Fade(SKYBLUE, 0.5f));
