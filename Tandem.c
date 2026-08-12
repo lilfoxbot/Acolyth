@@ -59,6 +59,7 @@ struct Window* testWindowOne;
 struct Window* testWindowTwo;
 struct Window* testWindowThree;
 struct Window* fetchedWindow;
+struct Window* focusedWindow;
 
 int windowCount = 3;
 
@@ -187,7 +188,9 @@ int main(void) // @INIT ========================================================
     Push_List(windowList, testWindowThree);
     Push_List(windowList, testWindowTwo);
     Push_List(windowList, testWindowOne);
-    
+    focusedWindow = testWindowOne;
+    testWindowOne->isFocused = true;
+
     levelTextbox = Create_Textbox();
 
     // @READY ==========================================================================
@@ -206,13 +209,13 @@ int main(void) // @INIT ========================================================
     Spawn_Button(windowButtons[0], (Vector2){0, 0}, (Vector2){60, 30}, "voxel", 10, BTN_VOXEL);
     Spawn_Button(windowButtons[1], (Vector2){0, 0}, (Vector2){60, 30}, "turret", 10, BTN_TURRET);
 
-    Spawn_Window(testWindowOne, (Vector2){1405, 495}, (Vector2){500, 500}, "WINDOW 1");
+    Spawn_Window(testWindowOne, (Vector2){1405, 300}, (Vector2){400, 400}, "WINDOW 1");
     testWindowOne->buttons[0] = windowButtons[0];
     testWindowOne->buttons[1] = windowButtons[1];
     testWindowOne->buttonCount = 2;
 
-    Spawn_Window(testWindowTwo, (Vector2){1205, 495}, (Vector2){500, 500}, "WINDOW 2");
-    Spawn_Window(testWindowThree, (Vector2){1005, 495}, (Vector2){500, 500}, "WINDOW 3");
+    Spawn_Window(testWindowTwo, (Vector2){1205, 400}, (Vector2){400, 400}, "WINDOW 2");
+    Spawn_Window(testWindowThree, (Vector2){1005, 500}, (Vector2){400, 400}, "WINDOW 3");
 
     //Spawn_Player(player, (Vector3){0,5,-3});
     
@@ -333,30 +336,27 @@ int main(void) // @INIT ========================================================
                 break;
             case GS_EDIT_PAUSE:
                 for (int i = 0; i < HUD_LIMIT; i++){
-                    ButtonFunction btnfunc = Update_Button(editorButtons[i], mousePos);
-                    ExecuteButtonFunction(btnfunc);
+                    ExecuteButtonFunction(Update_Button(editorButtons[i], mousePos));
                 }
                 Update_Textbox(levelTextbox, mousePos);
 
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                    
                     // unfocus all
-                    for (int i = windowList->count; i >= 0; i--){
-                        fetchedWindow = (struct Window *)GetListItem(windowList, i);
+                    for (int i = 0; i < windowList->count; i++){
+                        fetchedWindow = (struct Window *)GetItem_List(windowList, i);
                         if (fetchedWindow){
                             fetchedWindow->isFocused = false;
                         }
                     }
-
                     // focus
-                    for (int i = windowList->count; i >= 0; i--){
-                        fetchedWindow = (struct Window *)GetListItem(windowList, i);
+                    for (int i = 0; i < windowList->count; i++){
+                        fetchedWindow = (struct Window *)GetItem_List(windowList, i);
                         if (fetchedWindow){
                             if(Check_Window(fetchedWindow, mousePos)){
-                                // TODO
                                 // Reorder windows
                                 fetchedWindow->isFocused = true;
-                                MoveToFront(windowList, i);
+                                focusedWindow = fetchedWindow;
+                                MoveToFront_List(windowList, i);
                                 break;
                             } else {
                                 fetchedWindow->isFocused = false;
@@ -364,12 +364,11 @@ int main(void) // @INIT ========================================================
                         }
                     }
                 }
-                
-                for (int i = 0; i < HUD_LIMIT; i++){
-                    fetchedWindow = (struct Window *)GetListItem(windowList, i);
-                    ButtonFunction btnfunc = Update_Window(fetchedWindow, mousePos);
-                    ExecuteButtonFunction(btnfunc);
+                for (int i = 0; i < windowList->count; i++){
+                    fetchedWindow = (struct Window *)GetItem_List(windowList, i);
+                    ExecuteButtonFunction(Update_Window(fetchedWindow, mousePos));
                 }
+                
                 break;
             case GS_GAMEPLAY: break;
             case GS_MENU_MAIN:
@@ -660,7 +659,7 @@ int main(void) // @INIT ========================================================
                     for (int i = 0; i < HUD_LIMIT; i++){ Draw_Button(editorButtons[i]); }
                         Draw_Textbox(levelTextbox);
                     for (int i = HUD_LIMIT; i >= 0; i--){
-                        fetchedWindow = (struct Window *)GetListItem(windowList, i);
+                        fetchedWindow = (struct Window *)GetItem_List(windowList, i);
                         Draw_Window(fetchedWindow);
                     }
 

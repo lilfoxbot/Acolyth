@@ -1,13 +1,5 @@
 === STUFFS ===
 
-- MOVE TO FRONT LL
-- only 1 window selection
-
-- Window List
-    - reorder windows, move clicked to top
-    - windows are CHECKed in reverse order of DRAW
-    - window focus, indicated by something...?
-
 - dev console
     - open/close with tilde (~)
     - console feed (displays entries and Console prints)

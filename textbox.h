@@ -40,7 +40,7 @@ Textbox* Create_Textbox(){
 
     obj->color = LIGHTGRAY;
     obj->outlineColor = BLACK;
-    obj->frameCounter;
+    obj->frameCounter = 0;
     
     return obj;
 }
