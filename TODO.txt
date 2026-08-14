@@ -1,10 +1,10 @@
 === STUFFS ===
 
 - dev console
-    - console feed (displays entries and Console prints)
+    - disable other inputs when console open
     - PrintToConsole function
     - basic commands: end program, load level,
-    - command history, accessed with up arrow
+    
 
 === TANDEM ===
 
