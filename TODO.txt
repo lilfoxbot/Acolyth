@@ -1,10 +1,8 @@
 === STUFFS ===
 
-- dev console
-    - disable other inputs when console open
-    - PrintToConsole function
-    - basic commands: end program, load level,
-    
+▼ dev console
+    - basic commands: end program, load level
+    - disable other inputs when console open?
 
 === TANDEM ===
 

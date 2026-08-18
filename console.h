@@ -31,7 +31,7 @@ typedef struct Console{
 
 } Console;
 
-void SetConsoleText(char *dest, size_t dest_size, const char *source){
+void SetText(char *dest, size_t dest_size, const char *source){
     snprintf(dest, dest_size, "%s", source);
 }
 
@@ -49,10 +49,10 @@ Console* Create_Console(){
     obj->inputCharCount = 0;
     obj->inputRectColor = LIGHTGRAY;
     obj->inputOutlineColor = BLACK;
-    SetConsoleText(obj->inputText, sizeof(obj->inputText), "");
+    SetText(obj->inputText, sizeof(obj->inputText), "");
 
     for (int i = 0; i < MAX_FEED; i++){
-        SetConsoleText(obj->feed[i], sizeof(obj->feed[i]), "---");
+        SetText(obj->feed[i], sizeof(obj->feed[i]), "---");
     }
     obj->feedRect.width = 500;
     obj->feedRect.height = 500;
@@ -61,7 +61,7 @@ Console* Create_Console(){
     obj->feedOffset = 10;
 
     for (int i = 0; i < MAX_FEED; i++){
-        SetConsoleText(obj->history[i], sizeof(obj->feed[i]), "");
+        SetText(obj->history[i], sizeof(obj->feed[i]), "");
     }
     obj->historyCount = 0;
     obj->historyIdx = -1;
@@ -103,7 +103,7 @@ void Update_Console(Console* obj){
         if (obj->historyCount > obj->historyIdx + 1){
             obj->historyIdx++;
 
-            SetConsoleText(obj->inputText, sizeof(obj->inputText), obj->history[obj->historyIdx]);
+            SetText(obj->inputText, sizeof(obj->inputText), obj->history[obj->historyIdx]);
             obj->inputCharCount = strlen(obj->history[obj->historyIdx]);
             obj->inputText[obj->inputCharCount+1] = '\0';
         }
@@ -113,7 +113,7 @@ void Update_Console(Console* obj){
         if (obj->historyIdx > 0){
             obj->historyIdx--;
             
-            SetConsoleText(obj->inputText, sizeof(obj->inputText), obj->history[obj->historyIdx]);
+            SetText(obj->inputText, sizeof(obj->inputText), obj->history[obj->historyIdx]);
             obj->inputCharCount = strlen(obj->history[obj->historyIdx]);
             obj->inputText[obj->inputCharCount+1] = '\0';
         }
@@ -126,23 +126,32 @@ void Update_Console(Console* obj){
 void Submit_Console(Console* obj){
     // shuffle feed
     for (int i = MAX_FEED-1; i >= 0; i--){
-        SetConsoleText(obj->feed[i], sizeof(obj->feed[i]), obj->feed[i-1]);
+        SetText(obj->feed[i], sizeof(obj->feed[i]), obj->feed[i-1]);
     }
-    SetConsoleText(obj->feed[0], sizeof(obj->feed[0]), obj->inputText);
+    SetText(obj->feed[0], sizeof(obj->feed[0]), obj->inputText);
 
     // add to history
     // shuffle history
     for (int i = MAX_FEED-1; i >= 0; i--){
-        SetConsoleText(obj->history[i], sizeof(obj->history[i]), obj->history[i-1]);
+        SetText(obj->history[i], sizeof(obj->history[i]), obj->history[i-1]);
     }
-    SetConsoleText(obj->history[0], sizeof(obj->history[0]), obj->inputText);
+    SetText(obj->history[0], sizeof(obj->history[0]), obj->inputText);
     obj->historyCount++;
 
     // reset input
     obj->historyIdx = -1;
     obj->inputCharCount = 0;
-    SetConsoleText(obj->inputText, sizeof(obj->inputText), "");
+    SetText(obj->inputText, sizeof(obj->inputText), "");
     obj->inputText[obj->inputCharCount+1] = '\0';
+}
+
+void Print_Console(Console* obj, const char* out){
+    // shuffle feed
+    for (int i = MAX_FEED-1; i >= 0; i--){
+        SetText(obj->feed[i], sizeof(obj->feed[i]), obj->feed[i-1]);
+    }
+    SetText(obj->feed[0], sizeof(obj->feed[0]), out);
+
 }
 
 void Draw_Console(Console* obj){

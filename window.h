@@ -31,12 +31,12 @@ typedef struct Window{
     char debugString[50];
 } Window;
 
-static void SetText(char *dest, size_t dest_size, const char *source){
+static void SetWindowText(char *dest, size_t dest_size, const char *source){
     snprintf(dest, dest_size, "%s", source);
 }
 
 void UpdateDebugString(Window* obj){
-    SetText(obj->debugString, sizeof(obj->debugString),
+    SetWindowText(obj->debugString, sizeof(obj->debugString),
     TextFormat("Position: %0.2f _ %0.2f", obj->body.x, obj->body.y));
 }
 
@@ -75,7 +75,7 @@ void Spawn_Window(Window* obj, Vector2 pos, Vector2 size, char *title){
     obj->titleBar.x = obj->body.x;
     obj->titleBar.y = obj->body.y;
 
-    SetText(obj->title, sizeof(obj->title), title);
+    SetWindowText(obj->title, sizeof(obj->title), title);
 }
 
 void Destroy_Window(Window* obj){

@@ -90,6 +90,7 @@ void ExecuteButtonFunction(ButtonFunction btnfunc);
 void ResetScene();
 void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxDist);
 void PlaySoundInstance(Sound sound, Vector3 soundPos);
+void PrintToConsole(const char* out);
 
 typedef enum {
     GS_MENU_MAIN,
@@ -242,6 +243,10 @@ int main(void) // @INIT ========================================================
             if (IsKeyPressed(KEY_ENTER)){
                 Submit_Console(myConsole);
             }
+        }
+
+        if (IsKeyPressed(KEY_T)){
+            //PrintToConsole("testy test");
         }
 
         switch (gamestate){
@@ -938,10 +943,6 @@ void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxD
     SetSoundPan(sound, pan);
 }
 
-// bool IsRayHitNormalValid(Vector3 vector){
-//     if (vector.x != 0 && vector.x != 1 && vector.x != -1){ return false; }
-//     if (vector.y != 0 && vector.y != 1 && vector.y != -1){ return false; }
-//     if (vector.z != 0 && vector.z != 1 && vector.z != -1){ return false; }
-
-//     return true;
-// }
+void PrintToConsole(const char* out){
+    Print_Console(myConsole, out);
+}
