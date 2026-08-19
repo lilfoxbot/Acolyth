@@ -1,8 +1,8 @@
 === STUFFS ===
 
-▼ dev console
-    - basic commands: end program, load level
-    - disable other inputs when console open?
+- bigger voxel world
+- encroaching entities
+- GAME state, possess a player pawn
 
 === TANDEM ===
 

@@ -86,6 +86,7 @@ void SpawnWorldPoly(Vector3 newPos);
 Pawn* SpawnWorldPawn(Vector3 newPos, PawnType pt);
 bool IsNormalUp(Vector3 vector);
 bool ContainsInstance(void *arr[], int size, void *target);
+void ExecuteConsoleCommand(ConsoleCommand CC);
 void ExecuteButtonFunction(ButtonFunction btnfunc);
 void ResetScene();
 void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxDist);
@@ -241,7 +242,7 @@ int main(void) // @INIT ========================================================
         if (IsKeyPressed(KEY_GRAVE)){ consoleOpen = !consoleOpen; }
         if (consoleOpen){
             if (IsKeyPressed(KEY_ENTER)){
-                Submit_Console(myConsole);
+                ExecuteConsoleCommand(Submit_Console(myConsole));
             }
         }
 
@@ -274,10 +275,10 @@ int main(void) // @INIT ========================================================
                         DisableCursor();
                         gamestate = GS_EDIT;
                     }
-                        cursorEnabled = !cursorEnabled;
+                    cursorEnabled = !cursorEnabled;
                 }
 
-                if (IsKeyPressed(KEY_R)){ ResetScene(); }
+                if (consoleOpen) break;
                 
                 // camera movement/input
                 camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
@@ -722,6 +723,21 @@ int main(void) // @INIT ========================================================
     //===============================================================================
 
     return 0;
+}
+
+void ExecuteConsoleCommand(ConsoleCommand CC){
+    switch(CC){
+        case CC_END:
+            //CloseWindow();
+            break;
+        case CC_RESET:
+            ResetScene();
+            break;
+        case CC_LOAD:
+            break;
+        case CC_NONE: break;
+        default: break;
+    }
 }
 
 void ExecuteButtonFunction(ButtonFunction btnfunc){

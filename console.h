@@ -6,8 +6,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_INPUT 30
-#define MAX_FEED 30
+#define MAX_INPUT 50
+#define MAX_FEED 50
+
+typedef enum {
+    CC_NONE,
+    CC_END,
+    CC_LOAD,
+    CC_RESET
+    
+} ConsoleCommand;
 
 typedef struct Console{
     bool isActive;
@@ -35,13 +43,21 @@ void SetText(char *dest, size_t dest_size, const char *source){
     snprintf(dest, dest_size, "%s", source);
 }
 
+void Print_Console(Console* obj, const char* out){
+    // shuffle feed
+    for (int i = MAX_FEED-1; i >= 0; i--){
+        SetText(obj->feed[i], sizeof(obj->feed[i]), obj->feed[i-1]);
+    }
+    SetText(obj->feed[0], sizeof(obj->feed[0]), out);
+}
+
 Console* Create_Console(){
     Console* obj = (Console*)malloc(sizeof(Console));
     obj->isActive = true;
     obj->hovered = false;
 
-    obj->inputRect.x = 50;
-    obj->inputRect.y = 900;
+    obj->inputRect.x = 20;
+    obj->inputRect.y = 950;
     obj->inputRect.width = 500;
     obj->inputRect.height = 30;
     obj->inputFontSize = 10;
@@ -85,7 +101,7 @@ void Update_Console(Console* obj){
     int key = GetCharPressed();
 
     // NOTE: Only allow keys in range [32..125] ... and ignore '~'
-    if ((key >= 32) && (key <= 125) && key != 96 && (obj->inputCharCount < MAX_INPUT) )
+    if ((key >= 32) && (key <= 125) && key != 96 && (obj->inputCharCount < MAX_INPUT))
     {
         obj->inputText[obj->inputCharCount] = (char)key;
         obj->inputText[obj->inputCharCount+1] = '\0'; // Add null terminator at the end of the string
@@ -119,39 +135,43 @@ void Update_Console(Console* obj){
         }
     }
 
-    if (obj->hovered) obj->frameCounter++;
-    else obj->frameCounter = 0;
+    obj->frameCounter++;
 }
 
-void Submit_Console(Console* obj){
+ConsoleCommand Submit_Console(Console* obj){
     // shuffle feed
     for (int i = MAX_FEED-1; i >= 0; i--){
         SetText(obj->feed[i], sizeof(obj->feed[i]), obj->feed[i-1]);
     }
     SetText(obj->feed[0], sizeof(obj->feed[0]), obj->inputText);
 
-    // add to history
-    // shuffle history
+    // add to history IF previous submission doesn't match
+    if (strcmp(obj->inputText, obj->history[0]) == 0){ 
+        //Print_Console(obj, "input matches prev");
+    } else {
+        // shuffle history
     for (int i = MAX_FEED-1; i >= 0; i--){
-        SetText(obj->history[i], sizeof(obj->history[i]), obj->history[i-1]);
+            SetText(obj->history[i], sizeof(obj->history[i]), obj->history[i-1]);
+        }
+        SetText(obj->history[0], sizeof(obj->history[0]), obj->inputText);
+        obj->historyCount++;
     }
-    SetText(obj->history[0], sizeof(obj->history[0]), obj->inputText);
-    obj->historyCount++;
+
+    // Parse input for command
+    ConsoleCommand returnCC = CC_NONE;
+    if (obj->inputText[0] == '/'){
+        if (strcmp(obj->inputText+1, "end") == 0 ) returnCC = CC_END;
+        if (strcmp(obj->inputText+1, "reset") == 0 ) returnCC = CC_RESET;
+
+    }
 
     // reset input
     obj->historyIdx = -1;
     obj->inputCharCount = 0;
     SetText(obj->inputText, sizeof(obj->inputText), "");
     obj->inputText[obj->inputCharCount+1] = '\0';
-}
 
-void Print_Console(Console* obj, const char* out){
-    // shuffle feed
-    for (int i = MAX_FEED-1; i >= 0; i--){
-        SetText(obj->feed[i], sizeof(obj->feed[i]), obj->feed[i-1]);
-    }
-    SetText(obj->feed[0], sizeof(obj->feed[0]), out);
-
+    return returnCC;
 }
 
 void Draw_Console(Console* obj){
