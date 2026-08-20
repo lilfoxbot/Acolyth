@@ -16,16 +16,14 @@
 #include "database.h"
 #include "linkedlist.h"
 #include "console.h"
+#include "gridpawn.h"
 
 #define RAYMATH_IMPLEMENTATION
 
 #define MOUSE_MOVE_SENSITIVITY 0.001f
-
 #define WORLD_DEFAULT_LIMIT 100
 #define BOXTREE_INITIAL_SIZE 16
-
 #define HUD_LIMIT 10
-
 #define LEVEL_GRID_ROWS 10
 #define LEVEL_GRID_COLS 5
 #define LEVEL_GRID_DEPTH 10
@@ -34,6 +32,7 @@ Vector3 DEFAULT_PLAYER_POSITION = (Vector3){ 0, 5, -3 };
 Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 3.0f, 6.0f };
 Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0.0f, 2.0f, -2.0f };
 
+Vector2 mousePos;
 float screenFade = 1;
 bool screenFading = false;
 bool cursorEnabled = true;
@@ -48,9 +47,16 @@ float dt = 0;
 float timePassed = 0;
 float playerSpeed = 2.0f;
 
+Vector3 rayHitNormal = (Vector3){0,0,0};
+Vector3 playerColNormal = (Vector3){0,0,0};
+struct Ray r1;
+Color r1Color = RED;
+struct Ray voxelRay;
+
 const int OCT = 8; // octree root size
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
+BoxtreeNode* boxtreeRoot;
 
 struct Button* windowButtons[HUD_LIMIT];
 struct Button* editorButtons[HUD_LIMIT];
@@ -62,11 +68,9 @@ struct Window* testWindowTwo;
 struct Window* testWindowThree;
 struct Window* fetchedWindow;
 struct Window* focusedWindow;
-
 int windowCount = 3;
 
 struct Console* myConsole;
-
 struct Textbox* levelTextbox;
 
 struct Pawn* worldPawns[WORLD_DEFAULT_LIMIT];
@@ -74,6 +78,7 @@ struct Bullet* worldBullets[WORLD_DEFAULT_LIMIT];
 int worldBulletCount = 0;
 struct Poly* worldPolys[WORLD_DEFAULT_LIMIT];
 struct Player* player;
+Vector4 newPlayerVel;
 
 Camera camera = { 0 };
 
@@ -93,13 +98,19 @@ void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxD
 void PlaySoundInstance(Sound sound, Vector3 soundPos);
 void PrintToConsole(const char* out);
 
+void MainInit();
+void MainReady();
+void MainInput();
+void MainUpdate();
+void MainCollide();
+void MainDraw();
+
 typedef enum {
     GS_MENU_MAIN,
     GS_EDIT,
     GS_EDIT_PAUSE,
     GS_GAMEPLAY
 } GameState;
-
 GameState gamestate = GS_MENU_MAIN;
 
 typedef enum {
@@ -112,26 +123,44 @@ int main(void) // @INIT ========================================================
 {
     //const int screenWidth = 1920;
     //const int screenHeight = 1080;
-
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     //SetConfigFlags(FLAG_FULLSCREEN_MODE);
     InitWindow(1920, 1080, "Tandem");
     MaximizeWindow();
-    
     SetTargetFPS(60);
     InitAudioDevice();
     EnableCursor();
     //DisableCursor();
-
     LoadSounds();
 
+    MainInit();
+    MainReady();
+
+    // MAIN GAME LOOP ==========================================================================
+    while (!WindowShouldClose())        // Detect window close button or ESC key
+    {
+        dt = GetFrameTime();
+        timePassed += dt;
+        
+        MainInput();
+        MainUpdate();
+        MainCollide();
+        MainDraw();
+    }
+
+    // De-Initialization 
+    CloseWindow(); // Close window and OpenGL context
+    return 0;
+}
+
+void MainInit(){
     camera.position = CAM_DEFAULT_POS;
     camera.target = CAM_DEFAULT_TARGET;
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
     camera.fovy = 60.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
-    BoxtreeNode* boxtreeRoot = BuildBoxtree((Vector3){0,0,0}, BOXTREE_INITIAL_SIZE, 1);
+    boxtreeRoot = BuildBoxtree((Vector3){0,0,0}, BOXTREE_INITIAL_SIZE, 1);
 
     // @GRID init
     Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
@@ -171,19 +200,10 @@ int main(void) // @INIT ========================================================
     // @Player init
     player = Create_Player();
     
-    struct Ray r1;
     r1.position = (Vector3){0,0,0};
     r1.direction = (Vector3){10,10,0};
-    Color r1Color = RED;
-
-    struct Ray voxelRay;
     voxelRay.position = (Vector3){0,0,0};
     voxelRay.direction = (Vector3){1,1,0};
-
-    // menus
-    for (int i = 0; i < HUD_LIMIT; i++){ windowButtons[i] = Create_Button(); }
-    for (int i = 0; i < HUD_LIMIT; i++){ editorButtons[i] = Create_Button(); }
-    for (int i = 0; i < HUD_LIMIT; i++){ mainmenuButtons[i] = Create_Button(); }
 
     testWindowOne = Create_Window();
     testWindowTwo = Create_Window();
@@ -198,22 +218,11 @@ int main(void) // @INIT ========================================================
 
     levelTextbox = Create_Textbox();
     myConsole = Create_Console();
+}
 
-    // @READY ==========================================================================
-
-    Spawn_Textbox(levelTextbox, (Vector2){600,10}, (Vector2){100,30}, 10);
-
-    Spawn_Button(mainmenuButtons[0], (Vector2){500, 500}, (Vector2){200, 30}, "PLAY", 20, BTN_PLAY);
-    Spawn_Button(mainmenuButtons[1], (Vector2){500, 600}, (Vector2){200, 30}, "TEST", 20, BTN_TEST);
-
-    Spawn_Button(editorButtons[0], btn_edit_origin, (Vector2){60, 30}, "MAIN", 10, BTN_MAIN);
-    Spawn_Button(editorButtons[1], (Vector2){btn_edit_origin.x + btn_edit_offset.x, btn_edit_origin.y}, (Vector2){60, 30}, "SAVE", 10, BTN_SAVE);
-    Spawn_Button(editorButtons[2], (Vector2){btn_edit_origin.x + btn_edit_offset.x*2, btn_edit_origin.y}, (Vector2){60, 30}, "LOAD", 10, BTN_LOAD);
-    Spawn_Button(editorButtons[3], (Vector2){btn_edit_origin.x + btn_edit_offset.x*3, btn_edit_origin.y}, (Vector2){60, 30}, "PREV", 10, BTN_PREV);
-    Spawn_Button(editorButtons[4], (Vector2){btn_edit_origin.x + btn_edit_offset.x*4, btn_edit_origin.y}, (Vector2){60, 30}, "NEXT", 10, BTN_NEXT);
-
-    Spawn_Button(windowButtons[0], (Vector2){0, 0}, (Vector2){60, 30}, "voxel", 10, BTN_VOXEL);
-    Spawn_Button(windowButtons[1], (Vector2){0, 0}, (Vector2){60, 30}, "turret", 10, BTN_TURRET);
+void MainReady(){
+    mainmenuButtons[0] = Create_Button((Vector2){500, 500}, (Vector2){200, 30}, "PLAY", 20, BTN_PLAY);
+    mainmenuButtons[1] = Create_Button((Vector2){500, 600}, (Vector2){200, 30}, "TEST", 20, BTN_TEST);
 
     Spawn_Window(testWindowOne, (Vector2){1405, 300}, (Vector2){400, 400}, "WINDOW 1");
     testWindowOne->buttons[0] = windowButtons[0];
@@ -222,32 +231,17 @@ int main(void) // @INIT ========================================================
 
     Spawn_Window(testWindowTwo, (Vector2){1205, 400}, (Vector2){400, 400}, "WINDOW 2");
     Spawn_Window(testWindowThree, (Vector2){1005, 500}, (Vector2){400, 400}, "WINDOW 3");
+}
 
-    //Spawn_Player(player, (Vector3){0,5,-3});
-    
-    // printf("\n");
-    // printf(TextFormat("%d", sizeof(levelCells) / sizeof(levelCells[0])));
-    // printf("\n");
-
-    // MAIN GAME LOOP ==========================================================================
-    while (!WindowShouldClose())        // Detect window close button or ESC key
-    {
-        dt = GetFrameTime();
-        timePassed += dt;
-        
-        // @INPUT ==========================================================================
-        Vector2 mousePos = GetMousePosition();
-        Vector4 newPlayerVel = (Vector4){0,0,0,0};
+void MainInput(){
+    mousePos = GetMousePosition();
+        newPlayerVel = (Vector4){0,0,0,0};
 
         if (IsKeyPressed(KEY_GRAVE)){ consoleOpen = !consoleOpen; }
         if (consoleOpen){
             if (IsKeyPressed(KEY_ENTER)){
                 ExecuteConsoleCommand(Submit_Console(myConsole));
             }
-        }
-
-        if (IsKeyPressed(KEY_T)){
-            //PrintToConsole("testy test");
         }
 
         switch (gamestate){
@@ -317,412 +311,399 @@ int main(void) // @INIT ========================================================
                 break;
             default: break;
         }
-        
-        // @UPDATE ==========================================================================
-        
-        switch (gamestate){
-            case GS_EDIT:
-                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                    Update_Poly(worldPolys[i], dt);
-                    Update_Bullet(worldBullets[i], dt);
-                }
+}
 
-                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                    int pawnAction = Update_Pawn(worldPawns[i], dt);
-                    switch (pawnAction){
-                        case 1:
-                            SpawnWorldBullet(worldPawns[i]->aimRay);
-                            break;
-                        default: break;
+void MainUpdate(){
+    switch (gamestate){
+        case GS_EDIT:
+            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+                Update_Poly(worldPolys[i], dt);
+                Update_Bullet(worldBullets[i], dt);
+            }
+
+            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+                int pawnAction = Update_Pawn(worldPawns[i], dt);
+                switch (pawnAction){
+                    case 1:
+                        SpawnWorldBullet(worldPawns[i]->aimRay);
+                        break;
+                    default: break;
+                }
+            }
+
+            Update_Player(player, newPlayerVel, dt);
+    
+            Vector3 camF = GetCameraForward(&camera);
+            Vector3 camR = GetCameraRight(&camera);
+            Vector3 camU = GetCameraUp(&camera);
+
+            // Cursor Ray
+            Vector3 aimRay = Vector3Add(camR, camU);
+            aimRay = Vector3Scale(aimRay, 0.2f);
+            aimRay = Vector3Add(aimRay, Vector3Add(camera.position, (Vector3){0,-0.2f,0}));
+            
+            r1.position = aimRay;
+            r1.direction = camF;
+            break;
+        case GS_EDIT_PAUSE:
+            for (int i = 0; i < HUD_LIMIT; i++){
+                ExecuteButtonFunction(Update_Button(editorButtons[i], mousePos));
+            }
+            Update_Textbox(levelTextbox, mousePos);
+
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+                // unfocus all
+                for (int i = 0; i < windowList->count; i++){
+                    fetchedWindow = (struct Window *)GetItem_List(windowList, i);
+                    if (fetchedWindow){
+                        fetchedWindow->isFocused = false;
                     }
                 }
-
-                Update_Player(player, newPlayerVel, dt);
-        
-                Vector3 camF = GetCameraForward(&camera);
-                Vector3 camR = GetCameraRight(&camera);
-                Vector3 camU = GetCameraUp(&camera);
-
-                // Cursor Ray
-                Vector3 aimRay = Vector3Add(camR, camU);
-                aimRay = Vector3Scale(aimRay, 0.2f);
-                aimRay = Vector3Add(aimRay, Vector3Add(camera.position, (Vector3){0,-0.2f,0}));
-                
-                r1.position = aimRay;
-                r1.direction = camF;
-                break;
-            case GS_EDIT_PAUSE:
-                for (int i = 0; i < HUD_LIMIT; i++){
-                    ExecuteButtonFunction(Update_Button(editorButtons[i], mousePos));
-                }
-                Update_Textbox(levelTextbox, mousePos);
-
-                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                    // unfocus all
-                    for (int i = 0; i < windowList->count; i++){
-                        fetchedWindow = (struct Window *)GetItem_List(windowList, i);
-                        if (fetchedWindow){
+                // focus
+                for (int i = 0; i < windowList->count; i++){
+                    fetchedWindow = (struct Window *)GetItem_List(windowList, i);
+                    if (fetchedWindow){
+                        if(Check_Window(fetchedWindow, mousePos)){
+                            // Reorder windows
+                            fetchedWindow->isFocused = true;
+                            focusedWindow = fetchedWindow;
+                            MoveToFront_List(windowList, i);
+                            break;
+                        } else {
                             fetchedWindow->isFocused = false;
                         }
                     }
-                    // focus
-                    for (int i = 0; i < windowList->count; i++){
-                        fetchedWindow = (struct Window *)GetItem_List(windowList, i);
-                        if (fetchedWindow){
-                            if(Check_Window(fetchedWindow, mousePos)){
-                                // Reorder windows
-                                fetchedWindow->isFocused = true;
-                                focusedWindow = fetchedWindow;
-                                MoveToFront_List(windowList, i);
-                                break;
-                            } else {
-                                fetchedWindow->isFocused = false;
-                            }
-                        }
-                    }
                 }
-                for (int i = 0; i < windowList->count; i++){
-                    fetchedWindow = (struct Window *)GetItem_List(windowList, i);
-                    ExecuteButtonFunction(Update_Window(fetchedWindow, mousePos));
-                }
-                
-                break;
-            case GS_GAMEPLAY: break;
-            case GS_MENU_MAIN:
-                for (int i = 0; i < HUD_LIMIT; i++){
-                    ButtonFunction btnfunc = Update_Button(mainmenuButtons[i], mousePos);
-                    ExecuteButtonFunction(btnfunc);
-                }
-                break;
-            default: break;
-        }
-        if (consoleOpen) Update_Console(myConsole);
-        
-        // @COLLISION ==========================================================================
-
-        Vector3 rayHitNormal = (Vector3){0,0,0};
-        Vector3 playerColNormal = (Vector3){0,0,0};
-
-        switch (gamestate){
-            case GS_EDIT:
-                ResetBoxtree(boxtreeRoot);
-                Voxel* voxelHits[50] = {NULL};
-                GetRayVoxels(r1, boxtreeRoot, voxelHits, 50);
-                
-                float closestVoxelDist = 100;
-                struct Voxel* closestHitVoxel = NULL;
-
-                // player checkin
-                Reset_Player(player);
-                GetPlayerNodes(player, boxtreeRoot);
-
-                // pawn checkin
-                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                    if (!worldPawns[i]->isActive) continue;
-                    Reset_Pawn(worldPawns[i]);
-                    GetPawnNodes(worldPawns[i], boxtreeRoot);
-                }
-                
-                // bullet checkin
-                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                    if (!worldBullets[i]->isActive) continue;
-                    Reset_Bullet(worldBullets[i]);
-                    GetBulletNodes(worldBullets[i], boxtreeRoot);
-                }
-
-                // bullet collision
-                for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                    // Bullets
-                    if (!worldBullets[i]->isActive) continue;
-                    if (!worldBullets[i]->isArmed) continue;
-                    // Nodes
-                    for (int j = 0; j < worldBullets[i]->nodeCount; j++){
-
-                        // Other Bullets
-                        for (int l = 0; l < worldBullets[i]->nodes[j]->bulletCount; l++){
-                            // check bullet if self
-                            if (worldBullets[i] == worldBullets[i]->nodes[j]->bullets[l]) continue;
-
-                            if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->bullets[l]->bb)){
-                                if (worldBullets[i]->nodes[j]->bullets[l]->isActive){
-
-                                    worldBullets[i]->color = WHITE;
-                                    if (!worldBullets[i]->destroyFlag){
-                                        worldBullets[i]->destroyFlag = true;
-                                        SpawnWorldPoly(worldBullets[i]->position);
-                                        SpawnWorldPoly(worldBullets[i]->position);
-                                        SpawnWorldPoly(worldBullets[i]->position);
-                                    }
-                                }
-                            }
-                        }
-                        // Voxels
-                        for (int k = 0; k < worldBullets[i]->nodes[j]->voxelCount; k++){
-                            
-                            if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->voxels[k]->bb)){
-                                if (worldBullets[i]->nodes[j]->voxels[k]->isActive){
-                                    worldBullets[i]->nodes[j]->voxels[k]->color = WHITE;
-                                    worldBullets[i]->nodes[j]->voxels[k]->fading = true;
-                                    
-                                    worldBullets[i]->color = WHITE;
-                                    if (!worldBullets[i]->destroyFlag){
-                                        worldBullets[i]->destroyFlag = true;
-                                        SpawnWorldPoly(worldBullets[i]->position);
-                                        SpawnWorldPoly(worldBullets[i]->position);
-                                        SpawnWorldPoly(worldBullets[i]->position);
-                                        SpawnWorldPoly(worldBullets[i]->position);
-                                        SpawnWorldPoly(worldBullets[i]->position);
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Pawns
-                        for (int m = 0; m < worldBullets[i]->nodes[j]->pawnCount; m++){
-                            if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->pawns[m]->bb)){
-                                if (worldBullets[i]->nodes[j]->pawns[m]->isActive){
-                                    Pawn* hitPawn = worldBullets[i]->nodes[j]->pawns[m];
-
-                                    // if bullet has not hit this target, add to hitTargets
-                                    if (!ContainsInstance(worldBullets[i]->hitTargets, 8, hitPawn)){
-                                        worldBullets[i]->hitTargets[worldBullets[i]->hitCount] = hitPawn;
-                                        worldBullets[i]->hitCount++;
-                                        hitPawn->color = WHITE;
-                                        Damage_Pawn(hitPawn);
-                                    }
-
-                                    worldBullets[i]->color = WHITE;
-                                    if (!worldBullets[i]->destroyFlag){
-                                        worldBullets[i]->destroyFlag = true;
-                                        SpawnWorldPoly(worldBullets[i]->position);
-                                        SpawnWorldPoly(worldBullets[i]->position);
-                                        SpawnWorldPoly(worldBullets[i]->position);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // player collision
-                for (int i = 0; i < player->nodeCount; i++){
-                    for (int j = 0; j < player->nodes[i]->voxelCount; j++){
-
-                        if(CheckCollisionBoxes(player->bb, player->nodes[i]->voxels[j]->bb)){
-                            if (player->nodes[i]->voxels[j]->isActive){
-                                Voxel* touchedVoxel = player->nodes[i]->voxels[j];
-                                touchedVoxel->bbColor = WHITE;
-
-                                voxelRay.position = (Vector3){player->position.x, touchedVoxel->position.y, player->position.z};
-                                voxelRay.direction = Vector3Subtract(touchedVoxel->position, voxelRay.position);
-                                RayCollision vrc = GetRayCollisionBox(voxelRay, touchedVoxel->bb);
-                                playerColNormal = vrc.normal;
-
-                                if (player->position.y-player->height/2 > touchedVoxel->position.y+0.45f){
-                                    if (grid3d[(int)touchedVoxel->coordinates.x][(int)touchedVoxel->coordinates.y+1][(int)touchedVoxel->coordinates.z]->isActive){
-
-                                    } else {
-                                        player->position.y = touchedVoxel->position.y + 0.5f + player->height/2;
-                                        player->velocity.y = 0;
-                                    }
-                                    
-                                } else if (player->position.y+player->height/2 < touchedVoxel->position.y-0.45f){
-                                    if (grid3d[(int)touchedVoxel->coordinates.x][(int)touchedVoxel->coordinates.y-1][(int)touchedVoxel->coordinates.z]->isActive){
-
-                                    } else {
-                                        player->position.y = touchedVoxel->position.y - 0.5f - player->height/2;
-                                        player->velocity.y = 0;
-                                    }
-                                    
-                                } else if (playerColNormal.x == 1){
-                                    player->position.x = touchedVoxel->position.x + 0.5f + player->width/2;
-                                    player->velocity.x = 0;
-                                } else if (playerColNormal.x == -1){
-                                    player->position.x = touchedVoxel->position.x - 0.5f - player->width/2;
-                                    player->velocity.x = 0;
-                                } else if (playerColNormal.z == 1){
-                                    player->position.z = touchedVoxel->position.z + 0.5f + player->width/2;
-                                    player->velocity.z = 0;
-                                } else if (playerColNormal.z == -1){
-                                    player->position.z = touchedVoxel->position.z - 0.5f - player->width/2;
-                                    player->velocity.z = 0;
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // edit ray collision
-                if (editMode && !cursorEnabled){
-                    for (int i = 0; i < 50; i++){
-                        if (voxelHits[i] == NULL){
-                            break;
-                        } else {
-                            float dist = Vector3Distance(r1.position, voxelHits[i]->position);
-                            if (dist < closestVoxelDist){
-                                closestVoxelDist = dist;
-                                closestHitVoxel = voxelHits[i];
-                            }
-                        }
-                    }
-
-                    if (closestHitVoxel != NULL) {
-                        RayCollision rc = GetRayCollisionBox(r1, closestHitVoxel->bb);
-                        rayHitNormal = rc.normal;
-
-                        closestHitVoxel->selected = true;
-                        closestHitVoxel->selectedNormal = rayHitNormal;
-
-                        switch(spawnSelection){
-                            case SS_VOXEL:
-                                if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
-                                    Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayHitNormal);
-                                    Voxel* targetVoxel = grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)]
-                                    [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
-                                    [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)];
-
-                                    if (targetVoxel->isOccupied == false && targetVoxel->isActive == false){
-                                        targetVoxel->isActive = true;
-                                    }
-                                }
-                                break;
-                            case SS_TURRET:
-                                if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && IsNormalUp(rayHitNormal)){
-                                    Vector3 NVC = Vector3Add(closestHitVoxel->coordinates, rayHitNormal);
-                                    Voxel* targetVoxel = grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)]
-                                    [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
-                                    [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)];
-
-                                    if (targetVoxel->isOccupied == true || targetVoxel->isActive == true){ break; }
-                                    
-                                    Pawn* newPawn = SpawnWorldPawn(Vector3Add(closestHitVoxel->position, Vector3Scale(rayHitNormal,1.5f)), PAWN_TURRET);
-                                    targetVoxel->isOccupied = true;
-                                    targetVoxel->occupier = OB_TURRET;
-                                    newPawn->rootVoxel = targetVoxel;
-                                }
-                                break;
-                            default:
-                                break;
-                        }
-
-                        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                            Destroy_Voxel(closestHitVoxel);
-                        }
-                    }
-                } else if (!cursorEnabled) {
-                    // shoot a projectile
-                    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                        SpawnWorldBullet(r1);
-                    }
-                }
-                break;
-            default: break;
-        }
-        
-        // @DRAW ==========================================================================
-
-        BeginDrawing();
-            ClearBackground(GRAY);
-            BeginMode3D(camera);
+            }
+            for (int i = 0; i < windowList->count; i++){
+                fetchedWindow = (struct Window *)GetItem_List(windowList, i);
+                ExecuteButtonFunction(Update_Window(fetchedWindow, mousePos));
+            }
             
-            DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, WHITE);
+            break;
+        case GS_GAMEPLAY: break;
+        case GS_MENU_MAIN:
+            for (int i = 0; i < HUD_LIMIT; i++){
+                ButtonFunction btnfunc = Update_Button(mainmenuButtons[i], mousePos);
+                ExecuteButtonFunction(btnfunc);
+            }
+            break;
+        default: break;
+    }
+    if (consoleOpen) Update_Console(myConsole);
+}
 
-            DrawGrid(10, 1.0f);
-            DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
+void MainCollide(){
+    rayHitNormal = (Vector3){0,0,0};
+    playerColNormal = (Vector3){0,0,0};
 
-            if (myDebug) DrawBoxtreeNode(boxtreeRoot);
+    switch (gamestate){
+        case GS_EDIT:
+            ResetBoxtree(boxtreeRoot);
+            Voxel* voxelHits[50] = {NULL};
+            GetRayVoxels(r1, boxtreeRoot, voxelHits, 50);
+            
+            float closestVoxelDist = 100;
+            struct Voxel* closestHitVoxel = NULL;
 
+            // player checkin
+            Reset_Player(player);
+            GetPlayerNodes(player, boxtreeRoot);
+
+            // pawn checkin
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                Draw_Poly(worldPolys[i]);
-                Draw_Pawn(worldPawns[i]);
-                Draw_Bullet(worldBullets[i]);
+                if (!worldPawns[i]->isActive) continue;
+                Reset_Pawn(worldPawns[i]);
+                GetPawnNodes(worldPawns[i], boxtreeRoot);
             }
             
-            for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-                for (int y = 0; y < LEVEL_GRID_COLS; y++){
-                    for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                        Draw_Voxel(grid3d[x][y][z]);
-                        Reset_Voxel(grid3d[x][y][z]);
+            // bullet checkin
+            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+                if (!worldBullets[i]->isActive) continue;
+                Reset_Bullet(worldBullets[i]);
+                GetBulletNodes(worldBullets[i], boxtreeRoot);
+            }
+
+            // bullet collision
+            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+                // Bullets
+                if (!worldBullets[i]->isActive) continue;
+                if (!worldBullets[i]->isArmed) continue;
+                // Nodes
+                for (int j = 0; j < worldBullets[i]->nodeCount; j++){
+
+                    // Other Bullets
+                    for (int l = 0; l < worldBullets[i]->nodes[j]->bulletCount; l++){
+                        // check bullet if self
+                        if (worldBullets[i] == worldBullets[i]->nodes[j]->bullets[l]) continue;
+
+                        if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->bullets[l]->bb)){
+                            if (worldBullets[i]->nodes[j]->bullets[l]->isActive){
+
+                                worldBullets[i]->color = WHITE;
+                                if (!worldBullets[i]->destroyFlag){
+                                    worldBullets[i]->destroyFlag = true;
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                }
+                            }
+                        }
+                    }
+                    // Voxels
+                    for (int k = 0; k < worldBullets[i]->nodes[j]->voxelCount; k++){
+                        
+                        if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->voxels[k]->bb)){
+                            if (worldBullets[i]->nodes[j]->voxels[k]->isActive){
+                                worldBullets[i]->nodes[j]->voxels[k]->color = WHITE;
+                                worldBullets[i]->nodes[j]->voxels[k]->fading = true;
+                                
+                                worldBullets[i]->color = WHITE;
+                                if (!worldBullets[i]->destroyFlag){
+                                    worldBullets[i]->destroyFlag = true;
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Pawns
+                    for (int m = 0; m < worldBullets[i]->nodes[j]->pawnCount; m++){
+                        if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->pawns[m]->bb)){
+                            if (worldBullets[i]->nodes[j]->pawns[m]->isActive){
+                                Pawn* hitPawn = worldBullets[i]->nodes[j]->pawns[m];
+
+                                // if bullet has not hit this target, add to hitTargets
+                                if (!ContainsInstance(worldBullets[i]->hitTargets, 8, hitPawn)){
+                                    worldBullets[i]->hitTargets[worldBullets[i]->hitCount] = hitPawn;
+                                    worldBullets[i]->hitCount++;
+                                    hitPawn->color = WHITE;
+                                    Damage_Pawn(hitPawn);
+                                }
+
+                                worldBullets[i]->color = WHITE;
+                                if (!worldBullets[i]->destroyFlag){
+                                    worldBullets[i]->destroyFlag = true;
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            Draw_Player(player);
+            // player collision
+            for (int i = 0; i < player->nodeCount; i++){
+                for (int j = 0; j < player->nodes[i]->voxelCount; j++){
 
-            switch (gamestate){
-                case GS_EDIT:
-                    DrawRay(r1,r1Color);
-                    break;
-                case GS_GAMEPLAY: break;
-                default: break;
+                    if(CheckCollisionBoxes(player->bb, player->nodes[i]->voxels[j]->bb)){
+                        if (player->nodes[i]->voxels[j]->isActive){
+                            Voxel* touchedVoxel = player->nodes[i]->voxels[j];
+                            touchedVoxel->bbColor = WHITE;
+
+                            voxelRay.position = (Vector3){player->position.x, touchedVoxel->position.y, player->position.z};
+                            voxelRay.direction = Vector3Subtract(touchedVoxel->position, voxelRay.position);
+                            RayCollision vrc = GetRayCollisionBox(voxelRay, touchedVoxel->bb);
+                            playerColNormal = vrc.normal;
+
+                            if (player->position.y-player->height/2 > touchedVoxel->position.y+0.45f){
+                                if (grid3d[(int)touchedVoxel->coordinates.x][(int)touchedVoxel->coordinates.y+1][(int)touchedVoxel->coordinates.z]->isActive){
+
+                                } else {
+                                    player->position.y = touchedVoxel->position.y + 0.5f + player->height/2;
+                                    player->velocity.y = 0;
+                                }
+                                
+                            } else if (player->position.y+player->height/2 < touchedVoxel->position.y-0.45f){
+                                if (grid3d[(int)touchedVoxel->coordinates.x][(int)touchedVoxel->coordinates.y-1][(int)touchedVoxel->coordinates.z]->isActive){
+
+                                } else {
+                                    player->position.y = touchedVoxel->position.y - 0.5f - player->height/2;
+                                    player->velocity.y = 0;
+                                }
+                                
+                            } else if (playerColNormal.x == 1){
+                                player->position.x = touchedVoxel->position.x + 0.5f + player->width/2;
+                                player->velocity.x = 0;
+                            } else if (playerColNormal.x == -1){
+                                player->position.x = touchedVoxel->position.x - 0.5f - player->width/2;
+                                player->velocity.x = 0;
+                            } else if (playerColNormal.z == 1){
+                                player->position.z = touchedVoxel->position.z + 0.5f + player->width/2;
+                                player->velocity.z = 0;
+                            } else if (playerColNormal.z == -1){
+                                player->position.z = touchedVoxel->position.z - 0.5f - player->width/2;
+                                player->velocity.z = 0;
+                            }
+                        }
+                    }
+                }
             }
             
-            EndMode3D(); // ==========================================================================
-            
-            int screenWidth = GetScreenWidth();
-            int screenHeight = GetScreenHeight();
+            // edit ray collision
+            if (editMode && !cursorEnabled){
+                for (int i = 0; i < 50; i++){
+                    if (voxelHits[i] == NULL){
+                        break;
+                    } else {
+                        float dist = Vector3Distance(r1.position, voxelHits[i]->position);
+                        if (dist < closestVoxelDist){
+                            closestVoxelDist = dist;
+                            closestHitVoxel = voxelHits[i];
+                        }
+                    }
+                }
 
-            switch (gamestate){
-                case GS_MENU_MAIN:
-                    DrawText(TextFormat("TANDEM"), screenWidth/2, screenHeight/2, 50, BLACK);
-                    for (int i = 0; i < HUD_LIMIT; i++){ Draw_Button(mainmenuButtons[i]); }
-                    break;
-                case GS_EDIT:
-                    Vector2 center = { screenWidth / 2.0f, screenHeight / 2.0f };
-                    // Draw a simple plus-sign crosshair
-                    DrawLine(center.x - 10, center.y, center.x + 10, center.y, WHITE);
-                    DrawLine(center.x, center.y - 10, center.x, center.y + 10, WHITE);
-                    break;
-                case GS_EDIT_PAUSE:
-                    for (int i = 0; i < HUD_LIMIT; i++){ Draw_Button(editorButtons[i]); }
-                        Draw_Textbox(levelTextbox);
-                    for (int i = HUD_LIMIT; i >= 0; i--){
-                        fetchedWindow = (struct Window *)GetItem_List(windowList, i);
-                        Draw_Window(fetchedWindow);
+                if (closestHitVoxel != NULL) {
+                    RayCollision rc = GetRayCollisionBox(r1, closestHitVoxel->bb);
+                    rayHitNormal = rc.normal;
+
+                    closestHitVoxel->selected = true;
+                    closestHitVoxel->selectedNormal = rayHitNormal;
+
+                    switch(spawnSelection){
+                        case SS_VOXEL:
+                            if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
+                                Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayHitNormal);
+                                Voxel* targetVoxel = grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)]
+                                [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
+                                [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)];
+
+                                if (targetVoxel->isOccupied == false && targetVoxel->isActive == false){
+                                    targetVoxel->isActive = true;
+                                }
+                            }
+                            break;
+                        case SS_TURRET:
+                            if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && IsNormalUp(rayHitNormal)){
+                                Vector3 NVC = Vector3Add(closestHitVoxel->coordinates, rayHitNormal);
+                                Voxel* targetVoxel = grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)]
+                                [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
+                                [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)];
+
+                                if (targetVoxel->isOccupied == true || targetVoxel->isActive == true){ break; }
+                                
+                                Pawn* newPawn = SpawnWorldPawn(Vector3Add(closestHitVoxel->position, Vector3Scale(rayHitNormal,1.5f)), PAWN_TURRET);
+                                targetVoxel->isOccupied = true;
+                                targetVoxel->occupier = OB_TURRET;
+                                newPawn->rootVoxel = targetVoxel;
+                            }
+                            break;
+                        default:
+                            break;
                     }
 
-                    break;
-                case GS_GAMEPLAY: break;
-                default: break;
+                    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+                        Destroy_Voxel(closestHitVoxel);
+                    }
+                }
+            } else if (!cursorEnabled) {
+                // shoot a projectile
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+                    SpawnWorldBullet(r1);
+                }
             }
-            if (consoleOpen) Draw_Console(myConsole);
+            break;
+        default: break;
+    }
+}
 
-            // Draw HUD
-            //DrawRectangle(5, 5, 250, 1000, Fade(SKYBLUE, 0.5f));
-            //DrawRectangleLines(5, 5, 250, 1000, BLUE);
-            
-            DrawText(TextFormat("Time Passed: %0.2f", timePassed), 15, 15, 10, BLACK);
-            DrawText(TextFormat("Current FPS: %d", GetFPS()), 15, 30, 10, BLACK);
-            DrawText(TextFormat("Cam Target: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 15, 45, 10, BLACK);
-            DrawText(TextFormat("Edit Mode: %s", (editMode) ? "ON" : "OFF"), 15, 75, 10, BLACK);
-            DrawText(TextFormat("Selected Level: %d", levelSelection+1), 15, 90, 10, BLACK);
+void MainDraw(){
+    BeginDrawing(); // =====================================================
+    ClearBackground(GRAY);
+    BeginMode3D(camera); // =====================================================
+    
+    DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, WHITE);
 
-            switch(spawnSelection){
-                case SS_VOXEL:
-                    DrawText(TextFormat("Spawn Selection: Voxel"), 15, 105, 10, BLACK);
-                    break;
-                case SS_TURRET:
-                    DrawText(TextFormat("Spawn Selection: Turret"), 15, 105, 10, BLACK);
-                    break;
-                default:
-                    break;
+    DrawGrid(10, 1.0f);
+    DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
+
+    if (myDebug) DrawBoxtreeNode(boxtreeRoot);
+
+    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+        Draw_Poly(worldPolys[i]);
+        Draw_Pawn(worldPawns[i]);
+        Draw_Bullet(worldBullets[i]);
+    }
+    
+    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+        for (int y = 0; y < LEVEL_GRID_COLS; y++){
+            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+                Draw_Voxel(grid3d[x][y][z]);
+                Reset_Voxel(grid3d[x][y][z]);
             }
-            
-            DrawRectangle(0, 0, screenWidth*2, screenHeight*2, Fade(BLACK, screenFade));
-            if (screenFade > 0){ screenFade -= 3*dt; }
-
-        EndDrawing();
-
-        // @CLEANUP =================================================================
-        //DestroyOctreeNode(root);
-        // ==========================================================================
+        }
     }
 
-    // De-Initialization ============================================================
-    CloseWindow();        // Close window and OpenGL context
-    //===============================================================================
+    Draw_Player(player);
 
-    return 0;
+    switch (gamestate){
+        case GS_EDIT:
+            DrawRay(r1,r1Color);
+            break;
+        case GS_GAMEPLAY: break;
+        default: break;
+    }
+    
+    EndMode3D(); // =====================================================
+    
+    int screenWidth = GetScreenWidth();
+    int screenHeight = GetScreenHeight();
+
+    switch (gamestate){
+        case GS_MENU_MAIN:
+            DrawText(TextFormat("TANDEM"), screenWidth/2, screenHeight/2, 50, BLACK);
+            for (int i = 0; i < HUD_LIMIT; i++){ Draw_Button(mainmenuButtons[i]); }
+            break;
+        case GS_EDIT:
+            Vector2 center = { screenWidth / 2.0f, screenHeight / 2.0f };
+            // Draw a simple plus-sign crosshair
+            DrawLine(center.x - 10, center.y, center.x + 10, center.y, WHITE);
+            DrawLine(center.x, center.y - 10, center.x, center.y + 10, WHITE);
+            break;
+        case GS_EDIT_PAUSE:
+            for (int i = HUD_LIMIT; i >= 0; i--){
+                fetchedWindow = (struct Window *)GetItem_List(windowList, i);
+                Draw_Window(fetchedWindow);
+            }
+
+            break;
+        case GS_GAMEPLAY: break;
+        default: break;
+    }
+    if (consoleOpen) Draw_Console(myConsole);
+
+    // Draw HUD
+    //DrawRectangle(5, 5, 250, 1000, Fade(SKYBLUE, 0.5f));
+    //DrawRectangleLines(5, 5, 250, 1000, BLUE);
+    
+    DrawText(TextFormat("Time Passed: %0.2f", timePassed), 15, 15, 10, BLACK);
+    DrawText(TextFormat("Current FPS: %d", GetFPS()), 15, 30, 10, BLACK);
+    DrawText(TextFormat("Cam Target: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 15, 45, 10, BLACK);
+    DrawText(TextFormat("Edit Mode: %s", (editMode) ? "ON" : "OFF"), 15, 75, 10, BLACK);
+    DrawText(TextFormat("Selected Level: %d", levelSelection+1), 15, 90, 10, BLACK);
+
+    switch(spawnSelection){
+        case SS_VOXEL:
+            DrawText(TextFormat("Spawn Selection: Voxel"), 15, 105, 10, BLACK);
+            break;
+        case SS_TURRET:
+            DrawText(TextFormat("Spawn Selection: Turret"), 15, 105, 10, BLACK);
+            break;
+        default:
+            break;
+    }
+    
+    DrawRectangle(0, 0, screenWidth*2, screenHeight*2, Fade(BLACK, screenFade));
+    if (screenFade > 0){ screenFade -= 3*dt; }
+
+    EndDrawing();
 }
 
 void ExecuteConsoleCommand(ConsoleCommand CC){

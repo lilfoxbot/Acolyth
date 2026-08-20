@@ -41,7 +41,7 @@ static void SetBtnTextArray(char *dest, size_t dest_size, const char *source) {
     snprintf(dest, dest_size, "%s", source);
 }
 
-Button* Create_Button(){
+Button* Create_Button(Vector2 pos, Vector2 size, char *label, int fontSize, ButtonFunction btnfunc){
     Button* obj = (Button*)malloc(sizeof(Button));
     obj->isActive = false;
 
@@ -50,14 +50,9 @@ Button* Create_Button(){
     obj->fontSize = 10;
 
     obj->color = LIGHTGRAY;
-    //obj->outlineColor = BLACK;
     obj->colorTL = WHITE;
     obj->colorBR = BLACK;
-    
-    return obj;
-}
 
-void Spawn_Button(Button* obj, Vector2 pos, Vector2 size, char *label, int fontSize, ButtonFunction btnfunc){
     obj->isActive = true;
     obj->rect.x = pos.x;
     obj->rect.y = pos.y;
@@ -67,6 +62,8 @@ void Spawn_Button(Button* obj, Vector2 pos, Vector2 size, char *label, int fontS
 
     SetBtnTextArray(obj->label, sizeof(obj->label), label);
     obj->btnfunc = btnfunc;
+    
+    return obj;
 }
 
 void Destroy_Button(Button* obj){
@@ -100,6 +97,7 @@ ButtonFunction Update_Button(Button* obj, Vector2 mousePoint){
 }
 
 void Draw_Button(Button* obj){
+    if (obj == NULL) return;
     if (!obj->isActive) return;
 
     DrawRectangle(obj->rect.x, obj->rect.y, obj->rect.width, obj->rect.height, obj->color);

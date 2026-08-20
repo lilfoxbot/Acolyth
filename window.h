@@ -25,6 +25,8 @@ typedef struct Window{
     int titleFontSize;
     int fontSize;
 
+    Button* closeBtn;
+
     Button* buttons[4];
     int buttonCount;
 
@@ -58,6 +60,8 @@ Window* Create_Window(){
     obj->bodyOutlineColor = GRAY;
 
     obj->buttonCount = 0;
+
+    //obj->closeBtn = Create_Button();
     
     return obj;
 }
@@ -127,6 +131,8 @@ ButtonFunction Update_Window(Window* obj, Vector2 mousePoint){
         obj->buttons[i]->rect.x = obj->body.x + 30;
         obj->buttons[i]->rect.y = obj->body.y + 30 + (i*40);
     }
+
+    // update close btn
 
     UpdateDebugString(obj);
     return savedBtnFunc;

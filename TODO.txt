@@ -1,8 +1,19 @@
 === STUFFS ===
 
+- button/window creation should be simpler, no need for "spawning"
+
+- Open/Close windows
+- console/button commands with arguments
+
+- Gridpawn, controlled player entity that has gridlocked movement
+
+- GAME state: 
+    -camera attached to pawn
+    -encroaching entities
+
+- camera lerp, automated movement to target
+
 - bigger voxel world
-- encroaching entities
-- GAME state, possess a player pawn
 
 === TANDEM ===
 
@@ -25,13 +36,12 @@
 
 === BUGS ===
 
-- player clips through voxels if falling too fast
-- player clips through top level voxels
 
 === NOTES ===
 
 ▼ inspiration
 - tempest (1981)
+- CONTRA
 - plants vs zombies
 - creeper world
 - rocket slime
