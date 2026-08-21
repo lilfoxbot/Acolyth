@@ -41,7 +41,7 @@ static void SetBtnTextArray(char *dest, size_t dest_size, const char *source) {
     snprintf(dest, dest_size, "%s", source);
 }
 
-Button* Create_Button(Vector2 pos, Vector2 size, char *label, int fontSize, ButtonFunction btnfunc){
+Button* Create_Button(Vector2 pos, Vector2 size, char *label, ButtonFunction btnfunc){
     Button* obj = (Button*)malloc(sizeof(Button));
     obj->isActive = false;
 
@@ -58,7 +58,6 @@ Button* Create_Button(Vector2 pos, Vector2 size, char *label, int fontSize, Butt
     obj->rect.y = pos.y;
     obj->rect.width = size.x;
     obj->rect.height = size.y;
-    obj->fontSize = fontSize;
 
     SetBtnTextArray(obj->label, sizeof(obj->label), label);
     obj->btnfunc = btnfunc;

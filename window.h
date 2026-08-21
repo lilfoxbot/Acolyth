@@ -42,7 +42,7 @@ void UpdateDebugString(Window* obj){
     TextFormat("Position: %0.2f _ %0.2f", obj->body.x, obj->body.y));
 }
 
-Window* Create_Window(){
+Window* Create_Window(Vector2 pos, Vector2 size, char *title){
     Window* obj = (Window*)malloc(sizeof(Window));
     obj->isActive = false;
     obj->isFocused = false;
@@ -59,14 +59,6 @@ Window* Create_Window(){
     obj->bodyColor = DARKGRAY;
     obj->bodyOutlineColor = GRAY;
 
-    obj->buttonCount = 0;
-
-    //obj->closeBtn = Create_Button();
-    
-    return obj;
-}
-
-void Spawn_Window(Window* obj, Vector2 pos, Vector2 size, char *title){
     obj->isActive = true;
     obj->body.x = pos.x;
     obj->body.y = pos.y;
@@ -80,6 +72,12 @@ void Spawn_Window(Window* obj, Vector2 pos, Vector2 size, char *title){
     obj->titleBar.y = obj->body.y;
 
     SetWindowText(obj->title, sizeof(obj->title), title);
+
+    obj->buttonCount = 0;
+
+    //obj->closeBtn = Create_Button();
+    
+    return obj;
 }
 
 void Destroy_Window(Window* obj){

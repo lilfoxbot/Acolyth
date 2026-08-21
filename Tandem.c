@@ -197,7 +197,6 @@ void MainInit(){
         worldPolys[i] = Create_Poly();
     }
 
-    // @Player init
     player = Create_Player();
     
     r1.position = (Vector3){0,0,0};
@@ -205,9 +204,9 @@ void MainInit(){
     voxelRay.position = (Vector3){0,0,0};
     voxelRay.direction = (Vector3){1,1,0};
 
-    testWindowOne = Create_Window();
-    testWindowTwo = Create_Window();
-    testWindowThree = Create_Window();
+    testWindowOne = Create_Window((Vector2){1405, 300}, (Vector2){400, 400}, "WINDOW 1");
+    testWindowTwo = Create_Window((Vector2){1205, 400}, (Vector2){400, 400}, "WINDOW 2");
+    testWindowThree = Create_Window((Vector2){1005, 500}, (Vector2){400, 400}, "WINDOW 3");
     windowList = Create_List();
 
     Push_List(windowList, testWindowThree);
@@ -218,99 +217,95 @@ void MainInit(){
 
     levelTextbox = Create_Textbox();
     myConsole = Create_Console();
+
+    mainmenuButtons[0] = Create_Button((Vector2){500, 500}, (Vector2){200, 30}, "PLAY", BTN_PLAY);
+    mainmenuButtons[0]->fontSize = 20;
+    mainmenuButtons[1] = Create_Button((Vector2){500, 600}, (Vector2){200, 30}, "TEST", BTN_TEST);
+    mainmenuButtons[1]->fontSize = 20;
 }
 
 void MainReady(){
-    mainmenuButtons[0] = Create_Button((Vector2){500, 500}, (Vector2){200, 30}, "PLAY", 20, BTN_PLAY);
-    mainmenuButtons[1] = Create_Button((Vector2){500, 600}, (Vector2){200, 30}, "TEST", 20, BTN_TEST);
-
-    Spawn_Window(testWindowOne, (Vector2){1405, 300}, (Vector2){400, 400}, "WINDOW 1");
-    testWindowOne->buttons[0] = windowButtons[0];
-    testWindowOne->buttons[1] = windowButtons[1];
-    testWindowOne->buttonCount = 2;
-
-    Spawn_Window(testWindowTwo, (Vector2){1205, 400}, (Vector2){400, 400}, "WINDOW 2");
-    Spawn_Window(testWindowThree, (Vector2){1005, 500}, (Vector2){400, 400}, "WINDOW 3");
+    
 }
 
 void MainInput(){
     mousePos = GetMousePosition();
-        newPlayerVel = (Vector4){0,0,0,0};
+    newPlayerVel = (Vector4){0,0,0,0};
 
-        if (IsKeyPressed(KEY_GRAVE)){ consoleOpen = !consoleOpen; }
-        if (consoleOpen){
-            if (IsKeyPressed(KEY_ENTER)){
-                ExecuteConsoleCommand(Submit_Console(myConsole));
+    if (IsKeyPressed(KEY_GRAVE)){ consoleOpen = !consoleOpen; }
+    if (consoleOpen){
+        if (IsKeyPressed(KEY_ENTER)){
+            ExecuteConsoleCommand(Submit_Console(myConsole));
+        }
+    }
+
+    switch (gamestate){
+        case GS_EDIT:
+            if (IsKeyDown(KEY_LEFT)){ newPlayerVel.x += -playerSpeed; }
+            if (IsKeyDown(KEY_RIGHT)){ newPlayerVel.x += playerSpeed; }
+            if (IsKeyDown(KEY_UP)){ newPlayerVel.z += -playerSpeed; }
+            if (IsKeyDown(KEY_DOWN)){ newPlayerVel.z += playerSpeed; }
+            if (IsKeyPressed(KEY_RIGHT_CONTROL)){ newPlayerVel.w = 1; }
+
+            if (IsKeyPressed(KEY_P)){ myDebug = !myDebug; }
+            if (IsKeyPressed(KEY_MINUS)){ SetTargetFPS(60); }
+            if (IsKeyPressed(KEY_EQUAL)){ SetTargetFPS(120); }
+            
+            if (IsKeyPressed(KEY_E)){
+                editMode = !editMode;
+                r1Color = (editMode) ? WHITE : RED;
             }
-        }
 
-        switch (gamestate){
-            case GS_EDIT:
-                if (IsKeyDown(KEY_LEFT)){ newPlayerVel.x += -playerSpeed; }
-                if (IsKeyDown(KEY_RIGHT)){ newPlayerVel.x += playerSpeed; }
-                if (IsKeyDown(KEY_UP)){ newPlayerVel.z += -playerSpeed; }
-                if (IsKeyDown(KEY_DOWN)){ newPlayerVel.z += playerSpeed; }
-                if (IsKeyPressed(KEY_RIGHT_CONTROL)){ newPlayerVel.w = 1; }
-
-                if (IsKeyPressed(KEY_P)){ myDebug = !myDebug; }
-                if (IsKeyPressed(KEY_MINUS)){ SetTargetFPS(60); }
-                if (IsKeyPressed(KEY_EQUAL)){ SetTargetFPS(120); }
-                
-                if (IsKeyPressed(KEY_E)){
-                    editMode = !editMode;
-                    r1Color = (editMode) ? WHITE : RED;
+            if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
+                if (!cursorEnabled){
+                    EnableCursor();
+                    gamestate = GS_EDIT_PAUSE;
+                } else {
+                    DisableCursor();
+                    gamestate = GS_EDIT;
                 }
+                cursorEnabled = !cursorEnabled;
+            }
 
-                if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-                    if (!cursorEnabled){
-                        EnableCursor();
-                        gamestate = GS_EDIT_PAUSE;
-                    } else {
-                        DisableCursor();
-                        gamestate = GS_EDIT;
-                    }
-                    cursorEnabled = !cursorEnabled;
+            if (consoleOpen) break;
+            
+            // camera movement/input
+            camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
+            float newForward = 0;
+            float newRight = 0;
+            float newUp = 0;
+            if (IsKeyDown(KEY_W)) newForward += camSpeed;
+            if (IsKeyDown(KEY_S)) newForward -= camSpeed;
+            if (IsKeyDown(KEY_D)) newRight += camSpeed;
+            if (IsKeyDown(KEY_A)) newRight -= camSpeed;
+            if (IsKeyDown(KEY_SPACE)) newUp += camSpeed;
+            if (IsKeyDown(KEY_LEFT_CONTROL)) newUp -= camSpeed;
+            
+            // camera rotation
+            Vector2 mousePositionDelta = GetMouseDelta();
+            float newYaw = mousePositionDelta.x*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
+            float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
+
+            UpdateCameraPro(&camera, 
+            (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
+            (Vector3){ newYaw, newPitch, 0.0f }, // added rot
+            0.0f); // zoom
+
+            break;
+        case GS_EDIT_PAUSE:
+            if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
+                if (!cursorEnabled){
+                    EnableCursor();
+                    gamestate = GS_EDIT_PAUSE;
+                } else {
+                    DisableCursor();
+                    gamestate = GS_EDIT;
                 }
-
-                if (consoleOpen) break;
-                
-                // camera movement/input
-                camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
-                float newForward = 0;
-                float newRight = 0;
-                float newUp = 0;
-                if (IsKeyDown(KEY_W)) newForward += camSpeed;
-                if (IsKeyDown(KEY_S)) newForward -= camSpeed;
-                if (IsKeyDown(KEY_D)) newRight += camSpeed;
-                if (IsKeyDown(KEY_A)) newRight -= camSpeed;
-                if (IsKeyDown(KEY_SPACE)) newUp += camSpeed;
-                if (IsKeyDown(KEY_LEFT_CONTROL)) newUp -= camSpeed;
-                
-                // camera rotation
-                Vector2 mousePositionDelta = GetMouseDelta();
-                float newYaw = mousePositionDelta.x*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
-                float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
-
-                UpdateCameraPro(&camera, 
-                (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
-                (Vector3){ newYaw, newPitch, 0.0f }, // added rot
-                0.0f); // zoom
-
-                break;
-            case GS_EDIT_PAUSE:
-                if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-                    if (!cursorEnabled){
-                        EnableCursor();
-                        gamestate = GS_EDIT_PAUSE;
-                    } else {
-                        DisableCursor();
-                        gamestate = GS_EDIT;
-                    }
-                    cursorEnabled = !cursorEnabled;
-                }
-                break;
-            default: break;
-        }
+                cursorEnabled = !cursorEnabled;
+            }
+            break;
+        default: break;
+    }
 }
 
 void MainUpdate(){

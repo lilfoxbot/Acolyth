@@ -1,7 +1,5 @@
 === STUFFS ===
 
-- button/window creation should be simpler, no need for "spawning"
-
 - Open/Close windows
 - console/button commands with arguments
 
