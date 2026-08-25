@@ -66,7 +66,7 @@ Window* Create_Window(Vector2 pos, Vector2 size, char *title){
     obj->body.height = size.y;
 
     obj->titleBar.width = obj->body.width;
-    obj->titleBar.height = 20;
+    obj->titleBar.height = 30;
 
     obj->titleBar.x = obj->body.x;
     obj->titleBar.y = obj->body.y;
@@ -75,7 +75,8 @@ Window* Create_Window(Vector2 pos, Vector2 size, char *title){
 
     obj->buttonCount = 0;
 
-    //obj->closeBtn = Create_Button();
+    obj->closeBtn = Create_Button((Vector2){100,100}, (Vector2){20,20}, "", BTN_TEST);
+    obj->closeBtn->defaultColorUP = GRAY;
     
     return obj;
 }
@@ -122,16 +123,22 @@ ButtonFunction Update_Window(Window* obj, Vector2 mousePoint){
     // update buttons
     ButtonFunction savedBtnFunc;
     for (int i = 0; i < obj->buttonCount; i++){
-        ButtonFunction btnFunc;
-        btnFunc = Update_Button(obj->buttons[i], mousePoint);
-        if (btnFunc != BTN_NONE){ savedBtnFunc = btnFunc; }
-        // update button positions
         obj->buttons[i]->rect.x = obj->body.x + 30;
         obj->buttons[i]->rect.y = obj->body.y + 30 + (i*40);
+        if (obj->isFocused){
+            ButtonFunction btnFunc = Update_Button(obj->buttons[i], mousePoint);
+            if (btnFunc != BTN_NONE){ savedBtnFunc = btnFunc; }
+        }
     }
 
     // update close btn
-
+    obj->closeBtn->rect.x = obj->body.x + obj->body.width - 24;
+    obj->closeBtn->rect.y = obj->body.y + 4;
+    if (obj->isFocused){
+        ButtonFunction btnFunc = Update_Button(obj->closeBtn, mousePoint);
+        if (btnFunc != BTN_NONE){ obj->isActive = false; }
+    }
+    
     UpdateDebugString(obj);
     return savedBtnFunc;
 }
@@ -157,6 +164,7 @@ void Draw_Window(Window* obj){
     for (int i = 0; i < obj->buttonCount; i++){
         Draw_Button(obj->buttons[i]);
     }
+    Draw_Button(obj->closeBtn);
 
     // debug
     DrawText(obj->debugString, obj->body.x + 4, obj->body.y + obj->body.height - 10, obj->titleFontSize, BLACK);

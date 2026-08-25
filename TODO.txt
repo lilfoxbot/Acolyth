@@ -1,7 +1,6 @@
 === STUFFS ===
 
-- Open/Close windows
-- console/button commands with arguments
+ - "gameplay" state
 
 - Gridpawn, controlled player entity that has gridlocked movement
 
@@ -12,6 +11,7 @@
 - camera lerp, automated movement to target
 
 - bigger voxel world
+- console/button commands with arguments (pass in ArgHandler OBJ to console command submission)
 
 === TANDEM ===
 

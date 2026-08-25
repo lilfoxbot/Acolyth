@@ -28,8 +28,9 @@ typedef struct Button{
     Rectangle rect;
     char label[20];
     int fontSize;
+    Color defaultColorUP;
+    Color defaultColorDOWN;
     Color color;
-    //Color outlineColor;
     Color colorTL;
     Color colorBR;
 
@@ -49,7 +50,8 @@ Button* Create_Button(Vector2 pos, Vector2 size, char *label, ButtonFunction btn
     obj->rect.height = 30;
     obj->fontSize = 10;
 
-    obj->color = LIGHTGRAY;
+    obj->defaultColorUP = LIGHTGRAY;
+    obj->defaultColorDOWN = DARKGRAY;
     obj->colorTL = WHITE;
     obj->colorBR = BLACK;
 
@@ -78,18 +80,18 @@ ButtonFunction Update_Button(Button* obj, Vector2 mousePoint){
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
             obj->colorTL = BLACK;
             obj->colorBR = WHITE;
-            obj->color = DARKGRAY;
+            obj->color = obj->defaultColorDOWN;
         } else {
             obj->colorTL = WHITE;
             obj->colorBR = BLACK;
-            obj->color = LIGHTGRAY;
+            obj->color = obj->defaultColorUP;
         }
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) return obj->btnfunc;
         
     } else {
         obj->colorTL = WHITE;
         obj->colorBR = BLACK;
-        obj->color = LIGHTGRAY;
+        obj->color = obj->defaultColorUP;
     }
 
     return BTN_NONE;

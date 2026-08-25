@@ -43,7 +43,7 @@ float lookSensitivity = 40.0f;
 float camSpeed = 2.0f;
 float armX = 0;
 float armY = 0;
-float dt = 0;
+float DT = 0;
 float timePassed = 0;
 float playerSpeed = 2.0f;
 
@@ -79,6 +79,8 @@ int worldBulletCount = 0;
 struct Poly* worldPolys[WORLD_DEFAULT_LIMIT];
 struct Player* player;
 Vector4 newPlayerVel;
+
+struct Gridpawn* myGridPawn;
 
 Camera camera = { 0 };
 
@@ -139,8 +141,8 @@ int main(void) // @INIT ========================================================
     // MAIN GAME LOOP ==========================================================================
     while (!WindowShouldClose())        // Detect window close button or ESC key
     {
-        dt = GetFrameTime();
-        timePassed += dt;
+        DT = GetFrameTime();
+        timePassed += DT;
         
         MainInput();
         MainUpdate();
@@ -222,10 +224,12 @@ void MainInit(){
     mainmenuButtons[0]->fontSize = 20;
     mainmenuButtons[1] = Create_Button((Vector2){500, 600}, (Vector2){200, 30}, "TEST", BTN_TEST);
     mainmenuButtons[1]->fontSize = 20;
+
+    myGridPawn = Create_Gridpawn();
 }
 
 void MainReady(){
-    
+    Spawn_Gridpawn(myGridPawn, (Vector3){0,0,2});
 }
 
 void MainInput(){
@@ -287,7 +291,7 @@ void MainInput(){
             float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
 
             UpdateCameraPro(&camera, 
-            (Vector3){ newForward*dt, newRight*dt, newUp*dt }, // added pos
+            (Vector3){ newForward*DT, newRight*DT, newUp*DT }, // added pos
             (Vector3){ newYaw, newPitch, 0.0f }, // added rot
             0.0f); // zoom
 
@@ -312,12 +316,12 @@ void MainUpdate(){
     switch (gamestate){
         case GS_EDIT:
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                Update_Poly(worldPolys[i], dt);
-                Update_Bullet(worldBullets[i], dt);
+                Update_Poly(worldPolys[i], DT);
+                Update_Bullet(worldBullets[i], DT);
             }
 
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                int pawnAction = Update_Pawn(worldPawns[i], dt);
+                int pawnAction = Update_Pawn(worldPawns[i], DT);
                 switch (pawnAction){
                     case 1:
                         SpawnWorldBullet(worldPawns[i]->aimRay);
@@ -326,7 +330,7 @@ void MainUpdate(){
                 }
             }
 
-            Update_Player(player, newPlayerVel, dt);
+            Update_Player(player, newPlayerVel, DT);
     
             Vector3 camF = GetCameraForward(&camera);
             Vector3 camR = GetCameraRight(&camera);
@@ -376,7 +380,9 @@ void MainUpdate(){
             }
             
             break;
-        case GS_GAMEPLAY: break;
+        case GS_GAMEPLAY:
+            Update_Gridpawn(myGridPawn, DT);
+            break;
         case GS_MENU_MAIN:
             for (int i = 0; i < HUD_LIMIT; i++){
                 ButtonFunction btnfunc = Update_Button(mainmenuButtons[i], mousePos);
@@ -615,7 +621,6 @@ void MainDraw(){
     BeginMode3D(camera); // =====================================================
     
     DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, WHITE);
-
     DrawGrid(10, 1.0f);
     DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
 
@@ -642,7 +647,9 @@ void MainDraw(){
         case GS_EDIT:
             DrawRay(r1,r1Color);
             break;
-        case GS_GAMEPLAY: break;
+        case GS_GAMEPLAY:
+            Draw_Gridpawn(myGridPawn);
+            break;
         default: break;
     }
     
@@ -696,7 +703,7 @@ void MainDraw(){
     }
     
     DrawRectangle(0, 0, screenWidth*2, screenHeight*2, Fade(BLACK, screenFade));
-    if (screenFade > 0){ screenFade -= 3*dt; }
+    if (screenFade > 0){ screenFade -= 3*DT; }
 
     EndDrawing();
 }
