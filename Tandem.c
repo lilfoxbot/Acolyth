@@ -229,7 +229,7 @@ void MainInit(){
 }
 
 void MainReady(){
-    Spawn_Gridpawn(myGridPawn, (Vector3){0,0,2});
+    Spawn_Gridpawn(myGridPawn, (Vector3){0,2,0});
 }
 
 void MainInput(){
@@ -381,6 +381,12 @@ void MainUpdate(){
             
             break;
         case GS_GAMEPLAY:
+            
+            if (IsKeyDown(KEY_LEFT)){ myGridPawn->position = Vector3Add(myGridPawn->position, (Vector3){-1,0,0}); }
+            if (IsKeyDown(KEY_RIGHT)){ myGridPawn->position = Vector3Add(myGridPawn->position, (Vector3){1,0,0}); }
+            // if (IsKeyDown(KEY_UP)){ newPlayerVel.z += -playerSpeed; }
+            // if (IsKeyDown(KEY_DOWN)){ newPlayerVel.z += playerSpeed; }
+            
             Update_Gridpawn(myGridPawn, DT);
             break;
         case GS_MENU_MAIN:
@@ -716,6 +722,12 @@ void ExecuteConsoleCommand(ConsoleCommand CC){
         case CC_RESET:
             ResetScene();
             break;
+        case CC_RESTART:
+            ResetScene();
+            gamestate = GS_MENU_MAIN;
+            camera.position = CAM_DEFAULT_POS;
+            camera.target = CAM_DEFAULT_TARGET;
+            break;
         case CC_LOAD:
             break;
         case CC_NONE: break;
@@ -769,7 +781,7 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
             spawnSelection = SS_TURRET;
             break;
         case BTN_PLAY:
-            //gamestate = GS_GAMEPLAY;
+            gamestate = GS_GAMEPLAY;
             break;
         case BTN_TEST:
             gamestate = GS_EDIT;

@@ -13,7 +13,8 @@ typedef enum {
     CC_NONE,
     CC_END,
     CC_LOAD,
-    CC_RESET
+    CC_RESET,
+    CC_RESTART
     
 } ConsoleCommand;
 
@@ -162,7 +163,7 @@ ConsoleCommand Submit_Console(Console* obj){
     if (obj->inputText[0] == '/'){
         if (strcmp(obj->inputText+1, "end") == 0 ) returnCC = CC_END;
         if (strcmp(obj->inputText+1, "reset") == 0 ) returnCC = CC_RESET;
-
+        if (strcmp(obj->inputText+1, "restart") == 0 ) returnCC = CC_RESTART;
     }
 
     // reset input

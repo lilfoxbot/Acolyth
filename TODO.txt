@@ -1,8 +1,8 @@
 === STUFFS ===
 
- - "gameplay" state
-
 - Gridpawn, controlled player entity that has gridlocked movement
+
+- able to drag multiple windows (should be just 1)
 
 - GAME state: 
     -camera attached to pawn
