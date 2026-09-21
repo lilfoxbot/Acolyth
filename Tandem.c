@@ -382,10 +382,17 @@ void MainUpdate(){
             break;
         case GS_GAMEPLAY:
             
-            if (IsKeyDown(KEY_LEFT)){ myGridPawn->position = Vector3Add(myGridPawn->position, (Vector3){-1,0,0}); }
-            if (IsKeyDown(KEY_RIGHT)){ myGridPawn->position = Vector3Add(myGridPawn->position, (Vector3){1,0,0}); }
-            // if (IsKeyDown(KEY_UP)){ newPlayerVel.z += -playerSpeed; }
-            // if (IsKeyDown(KEY_DOWN)){ newPlayerVel.z += playerSpeed; }
+            // gridpawn movement, (pokemon gridlock)
+            if (!myGridPawn->moving){
+                int moveX = 0;
+                int moveY = 0;
+                if (IsKeyDown(KEY_LEFT)){ moveX += -1; myGridPawn->moving = true; }
+                if (IsKeyDown(KEY_RIGHT)){ moveX += 1; myGridPawn->moving = true; }
+                if (IsKeyDown(KEY_UP) && moveX == 0){ moveY += -1; myGridPawn->moving = true; }
+                if (IsKeyDown(KEY_DOWN) && moveX == 0){ moveY += 1; myGridPawn->moving = true; } 
+                myGridPawn->targetPos = Vector3Add(myGridPawn->position, (Vector3){moveX, 0, moveY});
+                myGridPawn->velocity = (Vector3){moveX*myGridPawn->moveSpeed,0,moveY*myGridPawn->moveSpeed};
+            }
             
             Update_Gridpawn(myGridPawn, DT);
             break;

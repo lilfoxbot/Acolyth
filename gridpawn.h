@@ -11,6 +11,8 @@ typedef struct Gridpawn{
     Vector3 position;
     Vector3 velocity;
     Vector3 targetPos;
+    bool moving;
+    float moveSpeed;
 
     float height;
     float width;
@@ -26,7 +28,9 @@ Gridpawn* Create_Gridpawn(){
 
     obj->position = (Vector3){0,2,0};
     obj->velocity = (Vector3){0,0,0};
-    obj->targetPos = (Vector3){0,0,0};
+    obj->targetPos = (Vector3){0,2,0};
+    obj->moving = false;
+    obj->moveSpeed = 0.02f;
 
     obj->bb.min = (Vector3){0,0,0};
     obj->bb.max = (Vector3){0,0,0};
@@ -54,9 +58,7 @@ void Destroy_Gridpawn(Gridpawn* obj){
 void Update_Gridpawn(Gridpawn* obj, float deltaTime){
     if (!obj->isActive) return;
 
-    //obj->velocity = obj->targetPos;
-    //obj->position = Vector3Add(obj->position, obj->velocity);
-    //obj->position = obj->targetPos;
+    obj->position = Vector3Add(obj->position, obj->velocity);
 
     obj->bb.min = (Vector3){obj->position.x - obj->width / 2,
                             obj->position.y - obj->height / 2,
@@ -72,4 +74,7 @@ void Draw_Gridpawn(Gridpawn* obj){
 
     DrawCube(obj->position, obj->size, obj->size, obj->size, obj->color);
     DrawBoundingBox(obj->bb, obj->bbColor);
+
+    // targetPOS debug
+    DrawCubeWires(obj->targetPos, obj->size, obj->size, obj->size, WHITE);
 }
