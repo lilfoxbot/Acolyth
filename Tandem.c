@@ -86,6 +86,20 @@ Camera camera = { 0 };
 
 char levelString[LEVEL_GRID_ROWS*LEVEL_GRID_COLS*LEVEL_GRID_DEPTH];
 
+typedef enum {
+    GS_MENU_MAIN,
+    GS_GAMEPLAY,
+    GS_EDIT,
+    GS_EDIT_PAUSE,
+} GameState;
+GameState gamestate = GS_MENU_MAIN;
+
+typedef enum {
+    SS_VOXEL,
+    SS_TURRET
+} SpawnSelection;
+SpawnSelection spawnSelection = SS_VOXEL;
+
 void LoadLevel();
 void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode);
 void SpawnWorldBullet(Ray ray);
@@ -99,6 +113,8 @@ void ResetScene();
 void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxDist);
 void PlaySoundInstance(Sound sound, Vector3 soundPos);
 void PrintToConsole(const char* out);
+const char* GetGameStateAsString(GameState gs);
+void ToggleCursor();
 
 void MainInit();
 void MainReady();
@@ -106,20 +122,6 @@ void MainInput();
 void MainUpdate();
 void MainCollide();
 void MainDraw();
-
-typedef enum {
-    GS_MENU_MAIN,
-    GS_EDIT,
-    GS_EDIT_PAUSE,
-    GS_GAMEPLAY
-} GameState;
-GameState gamestate = GS_MENU_MAIN;
-
-typedef enum {
-    SS_VOXEL,
-    SS_TURRET
-} SpawnSelection;
-SpawnSelection spawnSelection = SS_VOXEL;
 
 int main(void) // @INIT ========================================================================
 {
@@ -132,7 +134,6 @@ int main(void) // @INIT ========================================================
     SetTargetFPS(60);
     InitAudioDevice();
     EnableCursor();
-    //DisableCursor();
     LoadSounds();
 
     MainInit();
@@ -261,14 +262,9 @@ void MainInput(){
             }
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-                if (!cursorEnabled){
-                    EnableCursor();
-                    gamestate = GS_EDIT_PAUSE;
-                } else {
-                    DisableCursor();
-                    gamestate = GS_EDIT;
-                }
-                cursorEnabled = !cursorEnabled;
+                ToggleCursor();
+                gamestate = GS_EDIT_PAUSE;
+                break;
             }
 
             if (consoleOpen) break;
@@ -298,14 +294,8 @@ void MainInput(){
             break;
         case GS_EDIT_PAUSE:
             if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-                if (!cursorEnabled){
-                    EnableCursor();
-                    gamestate = GS_EDIT_PAUSE;
-                } else {
-                    DisableCursor();
-                    gamestate = GS_EDIT;
-                }
-                cursorEnabled = !cursorEnabled;
+                ToggleCursor();
+                gamestate = GS_EDIT;
             }
             break;
         default: break;
@@ -376,6 +366,7 @@ void MainUpdate(){
             }
             for (int i = 0; i < windowList->count; i++){
                 fetchedWindow = (struct Window *)GetItem_List(windowList, i);
+                if (i == 0){ Window_Drag(fetchedWindow, mousePos); }
                 ExecuteButtonFunction(Update_Window(fetchedWindow, mousePos));
             }
             
@@ -386,12 +377,32 @@ void MainUpdate(){
             if (!myGridPawn->moving){
                 int moveX = 0;
                 int moveY = 0;
-                if (IsKeyDown(KEY_LEFT)){ moveX += -1; myGridPawn->moving = true; }
-                if (IsKeyDown(KEY_RIGHT)){ moveX += 1; myGridPawn->moving = true; }
-                if (IsKeyDown(KEY_UP) && moveX == 0){ moveY += -1; myGridPawn->moving = true; }
-                if (IsKeyDown(KEY_DOWN) && moveX == 0){ moveY += 1; myGridPawn->moving = true; } 
+                if (IsKeyDown(KEY_LEFT)){ 
+                    moveX += -1;
+                    myGridPawn->moving = true;
+                }
+                if (IsKeyDown(KEY_RIGHT)){
+                    moveX += 1;
+                    myGridPawn->moving = true;
+                }
+                if (IsKeyDown(KEY_UP) && moveX == 0){
+                    moveY += -1;
+                    myGridPawn->moving = true;
+                }
+                if (IsKeyDown(KEY_DOWN) && moveX == 0){
+                    moveY += 1;
+                    myGridPawn->moving = true;
+                }
+
                 myGridPawn->targetPos = Vector3Add(myGridPawn->position, (Vector3){moveX, 0, moveY});
                 myGridPawn->velocity = (Vector3){moveX*myGridPawn->moveSpeed,0,moveY*myGridPawn->moveSpeed};
+
+                if (myGridPawn->targetPos.x != 0){
+                    myGridPawn->targetVector = myGridPawn->targetPos.x;
+                } else {
+                    myGridPawn->targetVector = myGridPawn->targetPos.y;
+                }
+
             }
             
             Update_Gridpawn(myGridPawn, DT);
@@ -698,9 +709,10 @@ void MainDraw(){
     //DrawRectangle(5, 5, 250, 1000, Fade(SKYBLUE, 0.5f));
     //DrawRectangleLines(5, 5, 250, 1000, BLUE);
     
-    DrawText(TextFormat("Time Passed: %0.2f", timePassed), 15, 15, 10, BLACK);
-    DrawText(TextFormat("Current FPS: %d", GetFPS()), 15, 30, 10, BLACK);
-    DrawText(TextFormat("Cam Target: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 15, 45, 10, BLACK);
+    DrawText(TextFormat("Game State: %s", GetGameStateAsString(gamestate)), 15, 15, 10, BLACK);
+    DrawText(TextFormat("Time Passed: %0.2f", timePassed), 15, 30, 10, BLACK);
+    DrawText(TextFormat("Current FPS: %d", GetFPS()), 15, 45, 10, BLACK);
+    DrawText(TextFormat("Cam Target: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 15, 60, 10, BLACK);
     DrawText(TextFormat("Edit Mode: %s", (editMode) ? "ON" : "OFF"), 15, 75, 10, BLACK);
     DrawText(TextFormat("Selected Level: %d", levelSelection+1), 15, 90, 10, BLACK);
 
@@ -731,9 +743,11 @@ void ExecuteConsoleCommand(ConsoleCommand CC){
             break;
         case CC_RESTART:
             ResetScene();
+            EnableCursor();
             gamestate = GS_MENU_MAIN;
             camera.position = CAM_DEFAULT_POS;
             camera.target = CAM_DEFAULT_TARGET;
+            consoleOpen = false;
             break;
         case CC_LOAD:
             break;
@@ -963,4 +977,23 @@ void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxD
 
 void PrintToConsole(const char* out){
     Print_Console(myConsole, out);
+}
+
+const char* GetGameStateAsString(GameState gs){
+   switch (gs) {
+      case GS_MENU_MAIN:    return "MENU_MAIN";
+      case GS_GAMEPLAY:     return "GAMEPLAY";
+      case GS_EDIT:         return "EDIT";
+      case GS_EDIT_PAUSE:   return "EDIT_PAUSE";
+      default:              return "???";
+   }
+}
+
+void ToggleCursor(){
+    if (!cursorEnabled){
+        EnableCursor();
+    } else {
+        DisableCursor();
+    }
+    cursorEnabled = !cursorEnabled;
 }

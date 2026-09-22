@@ -93,9 +93,9 @@ bool Check_Window(Window* obj, Vector2 mousePoint){
     return CheckCollisionPointRec(mousePoint, obj->body);
 }
 
-ButtonFunction Update_Window(Window* obj, Vector2 mousePoint){
-    if (obj == NULL) return BTN_NONE;
-    if (!obj->isActive) return BTN_NONE;
+void Window_Drag(Window* obj, Vector2 mousePoint){
+    if (obj == NULL) return;
+    if (!obj->isActive) return;
 
     if (CheckCollisionPointRec(mousePoint, obj->titleBar)){
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
@@ -115,13 +115,18 @@ ButtonFunction Update_Window(Window* obj, Vector2 mousePoint){
         obj->body.y = tempVec.y;
         obj->dragPoint = mousePoint;
     }
+}
+
+ButtonFunction Update_Window(Window* obj, Vector2 mousePoint){
+    if (obj == NULL) return BTN_NONE;
+    if (!obj->isActive) return BTN_NONE;
 
     // update titlebar pos
     obj->titleBar.x = obj->body.x;
     obj->titleBar.y = obj->body.y;
 
     // update buttons
-    ButtonFunction savedBtnFunc;
+    ButtonFunction savedBtnFunc = BTN_NONE;
     for (int i = 0; i < obj->buttonCount; i++){
         obj->buttons[i]->rect.x = obj->body.x + 30;
         obj->buttons[i]->rect.y = obj->body.y + 30 + (i*40);

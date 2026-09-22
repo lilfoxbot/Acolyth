@@ -11,6 +11,10 @@ typedef struct Gridpawn{
     Vector3 position;
     Vector3 velocity;
     Vector3 targetPos;
+
+    float moveVector;
+    float targetVector;
+
     bool moving;
     float moveSpeed;
 
@@ -57,6 +61,13 @@ void Destroy_Gridpawn(Gridpawn* obj){
 
 void Update_Gridpawn(Gridpawn* obj, float deltaTime){
     if (!obj->isActive) return;
+
+    if (obj->moving){
+        if (Vector3Distance(obj->position, obj->targetPos) < obj->moveSpeed*2){
+            obj->moving = false;
+            obj->position = obj->targetPos;
+        }
+    }
 
     obj->position = Vector3Add(obj->position, obj->velocity);
 

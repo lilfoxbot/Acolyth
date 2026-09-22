@@ -1,8 +1,8 @@
 === STUFFS ===
 
-- Gridpawn, controlled player entity that has gridlocked movement
+- menu with buttons to open/close windows
 
-- able to drag multiple windows (should be just 1)
+- mass exodus, rename all functions to use format: "Object_DoThing" instead of "DoThing_Object" 
 
 - GAME state: 
     -camera attached to pawn
@@ -15,22 +15,7 @@
 
 === TANDEM ===
 
-▼ objectives
-- crystal
-- tar spawn
-- turret
 
-▼ enemy
-- tar source
-- tar spread
-
-▼ player
-- player possession (knight)
-- hand model
-- player ejection
-
-▼ sound
-- bullet_hit
 
 === BUGS ===
 
