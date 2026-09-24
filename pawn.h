@@ -36,7 +36,7 @@ typedef struct Pawn{
     int nodeCount;
 } Pawn;
 
-Pawn* Create_Pawn(){
+Pawn* Pawn_Construct(){
     Pawn* obj = (Pawn*)malloc(sizeof(Pawn));
     obj->isActive = false;
 
@@ -62,7 +62,7 @@ Pawn* Create_Pawn(){
     return obj;
 }
 
-void Spawn_Pawn(Pawn* obj, Vector3 newPos, PawnType pt){
+void Pawn_Spawn(Pawn* obj, Vector3 newPos, PawnType pt){
     obj->isActive = true;
     obj->pawnType = pt;
     obj->position = newPos;
@@ -75,20 +75,20 @@ void Spawn_Pawn(Pawn* obj, Vector3 newPos, PawnType pt){
     obj->hp = 3;
 }
 
-void Destroy_Pawn(Pawn* obj){
+void Pawn_Destroy(Pawn* obj){
     if (!obj->isActive) return;
     obj->isActive = false;
     obj->rootVoxel->isOccupied = false;
 }
 
-void Reset_Pawn(Pawn* obj){
+void Pawn_Reset(Pawn* obj){
     if (!obj->isActive) return;
 
     obj->nodeCount = 0;
     memset(obj->nodes, 0, sizeof(obj->nodes));
 }
 
-int Update_Pawn(Pawn* obj, float deltaTime){
+int Pawn_Update(Pawn* obj, float deltaTime){
     if (!obj->isActive) return 0;
 
     switch (obj->pawnType){
@@ -109,14 +109,14 @@ int Update_Pawn(Pawn* obj, float deltaTime){
     return 0;
 }
 
-void Damage_Pawn(Pawn* obj){
+void Pawn_Damage(Pawn* obj){
     obj->hp--;
     if (obj->hp <= 0){
-        Destroy_Pawn(obj);
+        Pawn_Destroy(obj);
     }
 }
 
-void Draw_Pawn(Pawn* obj){
+void Pawn_Draw(Pawn* obj){
     if (!obj->isActive) return;
 
     DrawCube(obj->position, obj->size.x, obj->size.y, obj->size.z, obj->color);

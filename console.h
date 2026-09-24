@@ -14,7 +14,7 @@ typedef enum {
     CC_END,
     CC_LOAD,
     CC_RESET,
-    CC_RESTART
+    CC_MAIN
     
 } ConsoleCommand;
 
@@ -44,7 +44,7 @@ void SetText(char *dest, size_t dest_size, const char *source){
     snprintf(dest, dest_size, "%s", source);
 }
 
-void Print_Console(Console* obj, const char* out){
+void Console_Print(Console* obj, const char* out){
     // shuffle feed
     for (int i = MAX_FEED-1; i >= 0; i--){
         SetText(obj->feed[i], sizeof(obj->feed[i]), obj->feed[i-1]);
@@ -52,7 +52,7 @@ void Print_Console(Console* obj, const char* out){
     SetText(obj->feed[0], sizeof(obj->feed[0]), out);
 }
 
-Console* Create_Console(){
+Console* Console_Construct(){
     Console* obj = (Console*)malloc(sizeof(Console));
     obj->isActive = true;
     obj->hovered = false;
@@ -88,12 +88,12 @@ Console* Create_Console(){
     return obj;
 }
 
-void Close_Console(Console* obj){
+void Console_Close(Console* obj){
     if (!obj->isActive) return;
     obj->isActive = false;
 }
 
-void Update_Console(Console* obj){
+void Console_Update(Console* obj){
     if (!obj->isActive) return;
     
     //obj->hovered = true;
@@ -139,7 +139,7 @@ void Update_Console(Console* obj){
     obj->frameCounter++;
 }
 
-ConsoleCommand Submit_Console(Console* obj){
+ConsoleCommand Console_Submit(Console* obj){
     // shuffle feed
     for (int i = MAX_FEED-1; i >= 0; i--){
         SetText(obj->feed[i], sizeof(obj->feed[i]), obj->feed[i-1]);
@@ -163,7 +163,7 @@ ConsoleCommand Submit_Console(Console* obj){
     if (obj->inputText[0] == '/'){
         if (strcmp(obj->inputText+1, "end") == 0 ) returnCC = CC_END;
         if (strcmp(obj->inputText+1, "reset") == 0 ) returnCC = CC_RESET;
-        if (strcmp(obj->inputText+1, "restart") == 0 ) returnCC = CC_RESTART;
+        if (strcmp(obj->inputText+1, "main") == 0 ) returnCC = CC_MAIN;
     }
 
     // reset input
@@ -175,7 +175,7 @@ ConsoleCommand Submit_Console(Console* obj){
     return returnCC;
 }
 
-void Draw_Console(Console* obj){
+void Console_Draw(Console* obj){
     if (!obj->isActive) return;
 
     // INPUT

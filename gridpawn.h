@@ -26,7 +26,7 @@ typedef struct Gridpawn{
     Color bbColor;
 } Gridpawn;
 
-Gridpawn* Create_Gridpawn(){
+Gridpawn* Gridpawn_Construct(){
     Gridpawn* obj = (Gridpawn*)malloc(sizeof(Gridpawn));
     obj->isActive = false;
 
@@ -49,17 +49,17 @@ Gridpawn* Create_Gridpawn(){
     return obj;
 }
 
-void Spawn_Gridpawn(Gridpawn* obj, Vector3 newPos){
+void Gridpawn_Spawn(Gridpawn* obj, Vector3 newPos){
     obj->isActive = true;
     obj->position = newPos;
 }
 
-void Destroy_Gridpawn(Gridpawn* obj){
+void Gridpawn_Destroy(Gridpawn* obj){
     if (!obj->isActive) return;
     obj->isActive = false;
 }
 
-void Update_Gridpawn(Gridpawn* obj, float deltaTime){
+void Gridpawn_Update(Gridpawn* obj, float deltaTime){
     if (!obj->isActive) return;
 
     if (obj->moving){
@@ -80,7 +80,18 @@ void Update_Gridpawn(Gridpawn* obj, float deltaTime){
                             obj->position.z + obj->width / 2};
 }
 
-void Draw_Gridpawn(Gridpawn* obj){
+void Gridpawn_Reset(Gridpawn* obj){
+    obj->position = (Vector3){0,2,0};
+    obj->velocity = (Vector3){0,0,0};
+    obj->targetPos = (Vector3){0,2,0};
+    obj->moving = false;
+    obj->moveSpeed = 0.02f;
+
+    obj->bb.min = (Vector3){0,0,0};
+    obj->bb.max = (Vector3){0,0,0};
+}
+
+void Gridpawn_Draw(Gridpawn* obj){
     if (!obj->isActive) return;
 
     DrawCube(obj->position, obj->size, obj->size, obj->size, obj->color);

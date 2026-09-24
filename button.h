@@ -13,6 +13,7 @@ typedef enum {
     BTN_NONE,
     BTN_MAIN,
     BTN_PLAY,
+    BTN_SETTINGS,
     BTN_TEST,
     BTN_SAVE,
     BTN_LOAD,
@@ -42,7 +43,7 @@ static void SetBtnTextArray(char *dest, size_t dest_size, const char *source) {
     snprintf(dest, dest_size, "%s", source);
 }
 
-Button* Create_Button(Vector2 pos, Vector2 size, char *label, ButtonFunction btnfunc){
+Button* Button_Construct(Vector2 pos, Vector2 size, char *label, ButtonFunction btnfunc){
     Button* obj = (Button*)malloc(sizeof(Button));
     obj->isActive = false;
 
@@ -67,12 +68,12 @@ Button* Create_Button(Vector2 pos, Vector2 size, char *label, ButtonFunction btn
     return obj;
 }
 
-void Destroy_Button(Button* obj){
+void Button_Destroy(Button* obj){
     if (!obj->isActive) return;
     obj->isActive = false;
 }
 
-ButtonFunction Update_Button(Button* obj, Vector2 mousePoint){
+ButtonFunction Button_Update(Button* obj, Vector2 mousePoint){
     if (obj == NULL) return BTN_NONE;
     if (!obj->isActive) return BTN_NONE;
 
@@ -97,7 +98,7 @@ ButtonFunction Update_Button(Button* obj, Vector2 mousePoint){
     return BTN_NONE;
 }
 
-void Draw_Button(Button* obj){
+void Button_Draw(Button* obj){
     if (obj == NULL) return;
     if (!obj->isActive) return;
 
@@ -107,5 +108,5 @@ void Draw_Button(Button* obj){
     DrawLine(obj->rect.x, obj->rect.y + obj->rect.height, obj->rect.x + obj->rect.width, obj->rect.y + obj->rect.height, obj->colorBR); // BOT
     DrawLine(obj->rect.x + obj->rect.width, obj->rect.y, obj->rect.x + obj->rect.width, obj->rect.y + obj->rect.height, obj->colorBR); // RIGHT
 
-    DrawText(obj->label, obj->rect.x+5, obj->rect.y+obj->rect.height/2-6, obj->fontSize, BLACK);
+    DrawText(obj->label, obj->rect.x+5, obj->rect.y+obj->rect.height/2-7, obj->fontSize, BLACK);
 }

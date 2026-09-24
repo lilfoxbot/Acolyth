@@ -30,7 +30,7 @@ typedef struct BoxtreeNode {
     struct Pawn* pawns[32];
 } BoxtreeNode;
 
-BoxtreeNode* CreateBoxtreeNode(Vector3 center, int size, int depth) {
+BoxtreeNode* Boxtree_CreateNode(Vector3 center, int size, int depth) {
     BoxtreeNode* node = (BoxtreeNode*)malloc(sizeof(BoxtreeNode));
     node->position = center;
     node->size = size;
@@ -51,10 +51,10 @@ BoxtreeNode* CreateBoxtreeNode(Vector3 center, int size, int depth) {
     return node;
 }
 
-BoxtreeNode* BuildBoxtree(Vector3 center, int size, int depth) {
+BoxtreeNode* Boxtree_Build(Vector3 center, int size, int depth) {
     if (depth > MAX_BOXTREE_DEPTH) return NULL;
 
-    BoxtreeNode* boxTreeNode = CreateBoxtreeNode(center, size, depth);
+    BoxtreeNode* boxTreeNode = Boxtree_CreateNode(center, size, depth);
     int newSize = size / 2; 
     Vector3 RTF = Vector3Add(center,(Vector3){newSize/2,newSize/2,newSize/2});
     Vector3 LTF = Vector3Add(center,(Vector3){-newSize/2,newSize/2,newSize/2});
@@ -66,26 +66,26 @@ BoxtreeNode* BuildBoxtree(Vector3 center, int size, int depth) {
     Vector3 RBB = Vector3Add(center,(Vector3){newSize/2,-newSize/2,-newSize/2});
 
     // right-top-front
-    boxTreeNode->children[0] = BuildBoxtree(RTF, newSize, depth + 1);
+    boxTreeNode->children[0] = Boxtree_Build(RTF, newSize, depth + 1);
     // left-top-front
-    boxTreeNode->children[1] = BuildBoxtree(LTF, newSize, depth + 1);
+    boxTreeNode->children[1] = Boxtree_Build(LTF, newSize, depth + 1);
     // left-bottom-front
-    boxTreeNode->children[2] = BuildBoxtree(LBF, newSize, depth + 1);
+    boxTreeNode->children[2] = Boxtree_Build(LBF, newSize, depth + 1);
     // right-bottom-front
-    boxTreeNode->children[3] = BuildBoxtree(RBF, newSize, depth + 1);
+    boxTreeNode->children[3] = Boxtree_Build(RBF, newSize, depth + 1);
     // right-top-back
-    boxTreeNode->children[4] = BuildBoxtree(RTB, newSize, depth + 1);
+    boxTreeNode->children[4] = Boxtree_Build(RTB, newSize, depth + 1);
     // left-top-back
-    boxTreeNode->children[5] = BuildBoxtree(LTB, newSize, depth + 1);
+    boxTreeNode->children[5] = Boxtree_Build(LTB, newSize, depth + 1);
     // left-bottom-back
-    boxTreeNode->children[6] = BuildBoxtree(LBB, newSize, depth + 1);
+    boxTreeNode->children[6] = Boxtree_Build(LBB, newSize, depth + 1);
     // right-bottom-back
-    boxTreeNode->children[7] = BuildBoxtree(RBB, newSize, depth + 1);
+    boxTreeNode->children[7] = Boxtree_Build(RBB, newSize, depth + 1);
     
     return boxTreeNode;
 }
 
-void ResetBoxtree(BoxtreeNode* node) {
+void Boxtree_Reset(BoxtreeNode* node) {
     if (node == NULL) return;
 
     node->isRayHit = false;
@@ -98,11 +98,11 @@ void ResetBoxtree(BoxtreeNode* node) {
     memset(node->pawns, 0, sizeof(node->pawns));
 
     for (int i = 0; i < 8; i++) {
-        ResetBoxtree(node->children[i]);
+        Boxtree_Reset(node->children[i]);
     }
 }
 
-void DrawBoxtreeNode(BoxtreeNode* node) {
+void Boxtree_DrawNode(BoxtreeNode* node) {
     if (node == NULL) return;
     
     if(node->depth == MAX_BOXTREE_DEPTH){
@@ -117,13 +117,13 @@ void DrawBoxtreeNode(BoxtreeNode* node) {
     }
 
     for (int i = 0; i < 8; i++) {
-        DrawBoxtreeNode(node->children[i]);
+        Boxtree_DrawNode(node->children[i]);
     }
 }
 
 // @CHECKIN ===
 
-void GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int maxHits) {
+void Boxtree_GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int maxHits) {
     if (node == NULL) return;
 
     if (GetRayCollisionBox(ray, node->bb).hit){
@@ -144,13 +144,13 @@ void GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int maxHits) {
             }
         } else {
             for (int i = 0; i < 8; i++) {
-                GetRayVoxels(ray, node->children[i], hitVoxels, maxHits);
+                Boxtree_GetRayVoxels(ray, node->children[i], hitVoxels, maxHits);
             }
         }
     }
 }
 
-void GetBulletNodes(Bullet* bullet, BoxtreeNode* node){
+void Boxtree_GetBulletNodes(Bullet* bullet, BoxtreeNode* node){
     if (node == NULL || !bullet->isActive) return;
     
     if (CheckCollisionBoxes(node->bb, bullet->bb)){
@@ -167,13 +167,13 @@ void GetBulletNodes(Bullet* bullet, BoxtreeNode* node){
 
         } else {
             for (int i = 0; i < 8; i++) {
-                GetBulletNodes(bullet, node->children[i]);
+                Boxtree_GetBulletNodes(bullet, node->children[i]);
             }
         }
     }
 }
 
-void GetPawnNodes(Pawn* pawn, BoxtreeNode* node){
+void Boxtree_GetPawnNodes(Pawn* pawn, BoxtreeNode* node){
     if (node == NULL || !pawn->isActive) return;
 
     if (CheckCollisionBoxes(node->bb, pawn->bb)){
@@ -185,13 +185,13 @@ void GetPawnNodes(Pawn* pawn, BoxtreeNode* node){
             node->pawnCount++;
         } else {
             for (int i = 0; i < 8; i++) {
-                GetPawnNodes(pawn, node->children[i]);
+                Boxtree_GetPawnNodes(pawn, node->children[i]);
             }
         }
     }
 }
 
-void GetPlayerNodes(Player* player, BoxtreeNode* node){
+void Boxtree_GetPlayerNodes(Player* player, BoxtreeNode* node){
     if (node == NULL || !player->isActive) return;
 
     if (CheckCollisionBoxes(node->bb, player->bb)){
@@ -201,7 +201,7 @@ void GetPlayerNodes(Player* player, BoxtreeNode* node){
             node->nodeTouched = true;
         } else {
             for (int i = 0; i < 8; i++) {
-                GetPlayerNodes(player, node->children[i]);
+                Boxtree_GetPlayerNodes(player, node->children[i]);
             }
         }
     }

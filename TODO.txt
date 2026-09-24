@@ -1,9 +1,5 @@
 === STUFFS ===
 
-- menu with buttons to open/close windows
-
-- mass exodus, rename all functions to use format: "Object_DoThing" instead of "DoThing_Object" 
-
 - GAME state: 
     -camera attached to pawn
     -encroaching entities
@@ -15,10 +11,7 @@
 
 === TANDEM ===
 
-
-
 === BUGS ===
-
 
 === NOTES ===
 
@@ -29,23 +22,7 @@
 - creeper world
 - rocket slime
 
-▼ ideas
-- small enclosed voxel environments
-- each environment is filled with white/black tar that spreads
-- "structures" on map that activate when touched by tar
-- win condition: white tar reaches black crystal
-- fail condition: black tar reaches white crystal
-- swap between first-person and top-down views
-- first-person player can shoot and place turrets to fight tar
-- top-down player can manipulate structures
-- blastoff transition between levels (tempest)
-
-▼ structures
-- crystal: win condition
-- gate: allows swap between first-person and top-down
-- turret: shoots nearby tar
-
-▼ NEW ENVIRONMENT SETUP
+=== NEW ENVIRONMENT SETUP ===
 
 1 - install raylib
 

@@ -40,7 +40,7 @@ Vector3 GetRandomVector(int range, float multiplier){
     GetRandomValue(-range,range)*(multiplier)};
 }
 
-Poly* Create_Poly(){
+Poly* Poly_Construct(){
     Poly* poly = (Poly*)malloc(sizeof(Poly));
     poly->isActive = false;
 
@@ -59,7 +59,7 @@ Poly* Create_Poly(){
     return poly;
 }
 
-void Spawn_Poly(Poly* poly, Vector3 newPos){
+void Poly_Spawn(Poly* poly, Vector3 newPos){
     poly->isActive = true;
 
     poly->position = newPos;
@@ -75,19 +75,18 @@ void Spawn_Poly(Poly* poly, Vector3 newPos){
     poly->threePos = Vector3Add(poly->position, poly->three);
 }
 
-void Destroy_Poly(Poly* poly){
+void Poly_Destroy(Poly* poly){
     if (!poly->isActive) return;
 
     poly->isActive = false;
 }
 
-void Update_Poly(Poly* poly, float deltaTime){
+void Poly_Update(Poly* poly, float deltaTime){
     if (!poly->isActive) return;
 
     poly->lifetime += deltaTime;
     if (poly->lifetime > poly->endtime) poly->isActive = false;
 
-    // TODO: add vertical speed
     poly->velocity = Vector3Add(poly->velocity, (Vector3){0,0.01f*deltaTime,0});
     poly->position = Vector3Add(poly->position, poly->velocity);
 
@@ -108,7 +107,7 @@ void Update_Poly(Poly* poly, float deltaTime){
     
 }
 
-void Draw_Poly(Poly* poly){
+void Poly_Draw(Poly* poly){
     if (!poly->isActive) return;
 
     DrawTriangle3D(poly->onePos, poly->twoPos, poly->threePos, poly->polyColor);

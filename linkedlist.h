@@ -18,7 +18,7 @@ typedef struct Node {
     struct Node *prev;
 } Node;
 
-List* Create_List(){
+List* List_Construct(){
     List* obj = (List*)malloc(sizeof(List));
     obj->head = NULL;
     obj->cur = NULL;
@@ -28,7 +28,7 @@ List* Create_List(){
     return obj;
 }
 
-void* GetItem_List(List* list, int idx){
+void* List_GetItem(List* list, int idx){
     if (list->count == 0){ return NULL; }
     list->cur = list->head;
     for (int i = 0; i < list->count; i++){
@@ -38,7 +38,7 @@ void* GetItem_List(List* list, int idx){
     return NULL;
 }
 
-Node* GetNode_List(List* list, int idx){
+Node* List_GetNode(List* list, int idx){
     if (list->count == 0){ return NULL; }
     list->cur = list->head;
     for (int i = 0; i < list->count; i++){
@@ -48,8 +48,8 @@ Node* GetNode_List(List* list, int idx){
     return NULL;
 } 
 
-void FreeNode_List(List* list, int idx){
-    Node* nodeToFree = GetNode_List(list, idx);
+void List_FreeNode(List* list, int idx){
+    Node* nodeToFree = List_GetNode(list, idx);
 
     if (nodeToFree == list->head){
         list->head = nodeToFree->next;
@@ -73,7 +73,7 @@ void FreeNode_List(List* list, int idx){
 //     }
 // }
 
-void Push_List(List* list, void *new_data){
+void List_Push(List* list, void *new_data){
     Node *new_node = (Node *)malloc(sizeof(Node));
     if (new_node == NULL) {
         printf("Memory allocation failed.\n");
@@ -89,8 +89,8 @@ void Push_List(List* list, void *new_data){
     list->count++;
 }
 
-void MoveToFront_List(List* list, int idx){
-    void* dataToMove = GetItem_List(list, idx);
-    Push_List(list, dataToMove);
-    FreeNode_List(list, idx+1);
+void List_MoveToFront(List* list, int idx){
+    void* dataToMove = List_GetItem(list, idx);
+    List_Push(list, dataToMove);
+    List_FreeNode(list, idx+1);
 }

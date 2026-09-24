@@ -34,7 +34,7 @@ typedef struct Bullet {
     int nodeCount;
 } Bullet;
 
-Bullet* Create_Bullet() {
+Bullet* Bullet_Construct(){
     Bullet* obj = (Bullet*)malloc(sizeof(Bullet));
     obj->isActive = false;
     obj->isArmed = false;
@@ -66,7 +66,7 @@ Bullet* Create_Bullet() {
     return obj;
 }
 
-void Spawn_Bullet(Bullet* obj, Vector3 newPos, Vector3 newDir){
+void Bullet_Spawn(Bullet* obj, Vector3 newPos, Vector3 newDir){
     obj->isActive = true;
     obj->isArmed = false;
     obj->lifeSpan = 0;
@@ -78,7 +78,7 @@ void Spawn_Bullet(Bullet* obj, Vector3 newPos, Vector3 newDir){
     obj->direction = newDir;
 }
 
-void Destroy_Bullet(Bullet* obj){
+void Bullet_Destroy(Bullet* obj){
     if (!obj->isActive) return;
     
     obj->isActive = false; 
@@ -86,7 +86,7 @@ void Destroy_Bullet(Bullet* obj){
     obj->color = obj->defaultColor;
 }
 
-void Reset_Bullet(Bullet* obj){
+void Bullet_Reset(Bullet* obj){
     if (!obj->isActive) return;
 
     obj->nodeCount = 0;
@@ -95,7 +95,7 @@ void Reset_Bullet(Bullet* obj){
     memset(obj->hitTargets, 0, sizeof(obj->hitTargets));
 }
 
-void Update_Bullet(Bullet* obj, float deltatime){
+void Bullet_Update(Bullet* obj, float deltatime){
     if (!obj->isActive) return;
 
     obj->velocity = Vector3Scale(Vector3Scale(obj->direction, obj->speed), deltatime);
@@ -110,13 +110,13 @@ void Update_Bullet(Bullet* obj, float deltatime){
     obj->lifeSpan += deltatime;
     if (obj->lifeSpan > obj->armTimer) obj->isArmed = true;
     if (obj->lifeSpan > obj->lifeSpanLimit){
-        Destroy_Bullet(obj);
+        Bullet_Destroy(obj);
     } else if (obj->destroyFlag){
-        Destroy_Bullet(obj);
+        Bullet_Destroy(obj);
     }
 }
 
-void Draw_Bullet(Bullet* obj) {
+void Bullet_Draw(Bullet* obj) {
     if (!obj->isActive) return;
 
     if (obj->isArmed){

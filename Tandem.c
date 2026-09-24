@@ -53,7 +53,7 @@ struct Ray r1;
 Color r1Color = RED;
 struct Ray voxelRay;
 
-const int OCT = 8; // octree root size
+const int OCTREE_ROOT_SIZE = 8; // octree root size
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
 BoxtreeNode* boxtreeRoot;
@@ -61,6 +61,9 @@ BoxtreeNode* boxtreeRoot;
 struct Button* windowButtons[HUD_LIMIT];
 struct Button* editorButtons[HUD_LIMIT];
 struct Button* mainmenuButtons[HUD_LIMIT];
+struct Button* pauseButtons[HUD_LIMIT];
+struct Window* pauseWindow;
+struct Window* settingsWindow;
 
 struct List* windowList;
 struct Window* testWindowOne;
@@ -87,12 +90,13 @@ Camera camera = { 0 };
 char levelString[LEVEL_GRID_ROWS*LEVEL_GRID_COLS*LEVEL_GRID_DEPTH];
 
 typedef enum {
-    GS_MENU_MAIN,
+    GS_MAIN,
     GS_GAMEPLAY,
+    GS_PAUSE,
     GS_EDIT,
     GS_EDIT_PAUSE,
 } GameState;
-GameState gamestate = GS_MENU_MAIN;
+GameState gamestate = GS_MAIN;
 
 typedef enum {
     SS_VOXEL,
@@ -114,7 +118,7 @@ void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxD
 void PlaySoundInstance(Sound sound, Vector3 soundPos);
 void PrintToConsole(const char* out);
 const char* GetGameStateAsString(GameState gs);
-void ToggleCursor();
+void GoToMain();
 
 void MainInit();
 void MainReady();
@@ -163,7 +167,7 @@ void MainInit(){
     camera.fovy = 60.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
-    boxtreeRoot = BuildBoxtree((Vector3){0,0,0}, BOXTREE_INITIAL_SIZE, 1);
+    boxtreeRoot = Boxtree_Build((Vector3){0,0,0}, BOXTREE_INITIAL_SIZE, 1);
 
     // @GRID init
     Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
@@ -172,7 +176,7 @@ void MainInit(){
     for (int x = 0; x < LEVEL_GRID_ROWS; x++){
         for (int y = 0; y < LEVEL_GRID_COLS; y++){
             for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                Voxel* newVoxel = Create_Voxel((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, (Vector3){x, y, z}, 1);
+                Voxel* newVoxel = Voxel_Construct((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, (Vector3){x, y, z}, 1);
                 grid3d[x][y][z] = newVoxel;
                 PlaceVoxelInBoxtree(newVoxel, boxtreeRoot);
                 gridIndex++;
@@ -195,9 +199,9 @@ void MainInit(){
 
     // OBJECT POOLS
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-        worldBullets[i] = Create_Bullet();
-        worldPawns[i] = Create_Pawn();
-        worldPolys[i] = Create_Poly();
+        worldBullets[i] = Bullet_Construct();
+        worldPawns[i] = Pawn_Construct();
+        worldPolys[i] = Poly_Construct();
     }
 
     player = Create_Player();
@@ -207,30 +211,46 @@ void MainInit(){
     voxelRay.position = (Vector3){0,0,0};
     voxelRay.direction = (Vector3){1,1,0};
 
-    testWindowOne = Create_Window((Vector2){1405, 300}, (Vector2){400, 400}, "WINDOW 1");
-    testWindowTwo = Create_Window((Vector2){1205, 400}, (Vector2){400, 400}, "WINDOW 2");
-    testWindowThree = Create_Window((Vector2){1005, 500}, (Vector2){400, 400}, "WINDOW 3");
-    windowList = Create_List();
+    testWindowOne = Window_Construct((Vector2){1405, 300}, (Vector2){400, 400}, "WINDOW 1");
+    testWindowTwo = Window_Construct((Vector2){1205, 400}, (Vector2){400, 400}, "WINDOW 2");
+    testWindowThree = Window_Construct((Vector2){1005, 500}, (Vector2){400, 400}, "WINDOW 3");
+    windowList = List_Construct();
 
-    Push_List(windowList, testWindowThree);
-    Push_List(windowList, testWindowTwo);
-    Push_List(windowList, testWindowOne);
+    List_Push(windowList, testWindowThree);
+    List_Push(windowList, testWindowTwo);
+    List_Push(windowList, testWindowOne);
     focusedWindow = testWindowOne;
     testWindowOne->isFocused = true;
 
-    levelTextbox = Create_Textbox();
-    myConsole = Create_Console();
+    myConsole = Console_Construct();
 
-    mainmenuButtons[0] = Create_Button((Vector2){500, 500}, (Vector2){200, 30}, "PLAY", BTN_PLAY);
+    mainmenuButtons[0] = Button_Construct((Vector2){500, 500}, (Vector2){200, 30}, "PLAY", BTN_PLAY);
     mainmenuButtons[0]->fontSize = 20;
-    mainmenuButtons[1] = Create_Button((Vector2){500, 600}, (Vector2){200, 30}, "TEST", BTN_TEST);
+    mainmenuButtons[1] = Button_Construct((Vector2){500, 600}, (Vector2){200, 30}, "TEST", BTN_TEST);
     mainmenuButtons[1]->fontSize = 20;
 
-    myGridPawn = Create_Gridpawn();
+    pauseButtons[0] = Button_Construct((Vector2){500, -500}, (Vector2){200, 30}, "RESUME", BTN_PLAY);
+    pauseButtons[0]->fontSize = 20;
+    pauseButtons[1] = Button_Construct((Vector2){500, -500}, (Vector2){200, 30}, "SETTINGS", BTN_SETTINGS);
+    pauseButtons[1]->fontSize = 20;
+    pauseButtons[2] = Button_Construct((Vector2){500, -500}, (Vector2){200, 30}, "MAIN", BTN_MAIN);
+    pauseButtons[2]->fontSize = 20;
+
+    pauseWindow = Window_Construct((Vector2){1405, 300}, (Vector2){400, 400}, "PAUSE");
+    pauseWindow->buttons[0] = pauseButtons[0];
+    pauseWindow->buttons[1] = pauseButtons[1];
+    pauseWindow->buttons[2] = pauseButtons[2];
+    pauseWindow->buttonCount = 3;
+
+    settingsWindow = Window_Construct((Vector2){1405, 300}, (Vector2){400, 400}, "SETTINGS");
+    settingsWindow->hasCloseBtn = true;
+    settingsWindow->parentWindow = pauseWindow;
+
+    myGridPawn = Gridpawn_Construct();
 }
 
 void MainReady(){
-    Spawn_Gridpawn(myGridPawn, (Vector3){0,2,0});
+    Gridpawn_Spawn(myGridPawn, (Vector3){0,2,0});
 }
 
 void MainInput(){
@@ -240,7 +260,7 @@ void MainInput(){
     if (IsKeyPressed(KEY_GRAVE)){ consoleOpen = !consoleOpen; }
     if (consoleOpen){
         if (IsKeyPressed(KEY_ENTER)){
-            ExecuteConsoleCommand(Submit_Console(myConsole));
+            ExecuteConsoleCommand(Console_Submit(myConsole));
         }
     }
 
@@ -262,7 +282,7 @@ void MainInput(){
             }
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-                ToggleCursor();
+                EnableCursor();
                 gamestate = GS_EDIT_PAUSE;
                 break;
             }
@@ -294,7 +314,7 @@ void MainInput(){
             break;
         case GS_EDIT_PAUSE:
             if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-                ToggleCursor();
+                DisableCursor();
                 gamestate = GS_EDIT;
             }
             break;
@@ -306,12 +326,12 @@ void MainUpdate(){
     switch (gamestate){
         case GS_EDIT:
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                Update_Poly(worldPolys[i], DT);
-                Update_Bullet(worldBullets[i], DT);
+                Poly_Update(worldPolys[i], DT);
+                Bullet_Update(worldBullets[i], DT);
             }
 
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                int pawnAction = Update_Pawn(worldPawns[i], DT);
+                int pawnAction = Pawn_Update(worldPawns[i], DT);
                 switch (pawnAction){
                     case 1:
                         SpawnWorldBullet(worldPawns[i]->aimRay);
@@ -319,8 +339,6 @@ void MainUpdate(){
                     default: break;
                 }
             }
-
-            Update_Player(player, newPlayerVel, DT);
     
             Vector3 camF = GetCameraForward(&camera);
             Vector3 camR = GetCameraRight(&camera);
@@ -336,27 +354,26 @@ void MainUpdate(){
             break;
         case GS_EDIT_PAUSE:
             for (int i = 0; i < HUD_LIMIT; i++){
-                ExecuteButtonFunction(Update_Button(editorButtons[i], mousePos));
+                ExecuteButtonFunction(Button_Update(editorButtons[i], mousePos));
             }
-            Update_Textbox(levelTextbox, mousePos);
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                 // unfocus all
                 for (int i = 0; i < windowList->count; i++){
-                    fetchedWindow = (struct Window *)GetItem_List(windowList, i);
+                    fetchedWindow = (struct Window *)List_GetItem(windowList, i);
                     if (fetchedWindow){
                         fetchedWindow->isFocused = false;
                     }
                 }
                 // focus
                 for (int i = 0; i < windowList->count; i++){
-                    fetchedWindow = (struct Window *)GetItem_List(windowList, i);
+                    fetchedWindow = (struct Window *)List_GetItem(windowList, i);
                     if (fetchedWindow){
-                        if(Check_Window(fetchedWindow, mousePos)){
+                        if(Window_Check(fetchedWindow, mousePos)){
                             // Reorder windows
                             fetchedWindow->isFocused = true;
                             focusedWindow = fetchedWindow;
-                            MoveToFront_List(windowList, i);
+                            List_MoveToFront(windowList, i);
                             break;
                         } else {
                             fetchedWindow->isFocused = false;
@@ -365,9 +382,9 @@ void MainUpdate(){
                 }
             }
             for (int i = 0; i < windowList->count; i++){
-                fetchedWindow = (struct Window *)GetItem_List(windowList, i);
+                fetchedWindow = (struct Window *)List_GetItem(windowList, i);
                 if (i == 0){ Window_Drag(fetchedWindow, mousePos); }
-                ExecuteButtonFunction(Update_Window(fetchedWindow, mousePos));
+                ExecuteButtonFunction(Window_Update(fetchedWindow, mousePos));
             }
             
             break;
@@ -405,17 +422,36 @@ void MainUpdate(){
 
             }
             
-            Update_Gridpawn(myGridPawn, DT);
+            if (IsKeyPressed(KEY_P)){
+                gamestate = GS_PAUSE;
+                pauseWindow->isActive = true;
+                pauseWindow->isFocused = true;
+            }
+            
+            Gridpawn_Update(myGridPawn, DT);
             break;
-        case GS_MENU_MAIN:
+        case GS_PAUSE:
+            
+            ExecuteButtonFunction(Window_Update(pauseWindow, mousePos));
+            ExecuteButtonFunction(Window_Update(settingsWindow, mousePos));
+            
+            if (IsKeyPressed(KEY_P)){
+                gamestate = GS_GAMEPLAY;
+                pauseWindow->isActive = false;
+                pauseWindow->isFocused = false;
+                settingsWindow->isActive = false;
+                settingsWindow->isFocused = false;
+            }
+            break;
+        case GS_MAIN:
             for (int i = 0; i < HUD_LIMIT; i++){
-                ButtonFunction btnfunc = Update_Button(mainmenuButtons[i], mousePos);
+                ButtonFunction btnfunc = Button_Update(mainmenuButtons[i], mousePos);
                 ExecuteButtonFunction(btnfunc);
             }
             break;
         default: break;
     }
-    if (consoleOpen) Update_Console(myConsole);
+    if (consoleOpen) Console_Update(myConsole);
 }
 
 void MainCollide(){
@@ -424,29 +460,25 @@ void MainCollide(){
 
     switch (gamestate){
         case GS_EDIT:
-            ResetBoxtree(boxtreeRoot);
+            Boxtree_Reset(boxtreeRoot);
             Voxel* voxelHits[50] = {NULL};
-            GetRayVoxels(r1, boxtreeRoot, voxelHits, 50);
+            Boxtree_GetRayVoxels(r1, boxtreeRoot, voxelHits, 50);
             
             float closestVoxelDist = 100;
             struct Voxel* closestHitVoxel = NULL;
 
-            // player checkin
-            Reset_Player(player);
-            GetPlayerNodes(player, boxtreeRoot);
-
             // pawn checkin
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                 if (!worldPawns[i]->isActive) continue;
-                Reset_Pawn(worldPawns[i]);
-                GetPawnNodes(worldPawns[i], boxtreeRoot);
+                Pawn_Reset(worldPawns[i]);
+                Boxtree_GetPawnNodes(worldPawns[i], boxtreeRoot);
             }
             
             // bullet checkin
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                 if (!worldBullets[i]->isActive) continue;
-                Reset_Bullet(worldBullets[i]);
-                GetBulletNodes(worldBullets[i], boxtreeRoot);
+                Bullet_Reset(worldBullets[i]);
+                Boxtree_GetBulletNodes(worldBullets[i], boxtreeRoot);
             }
 
             // bullet collision
@@ -507,7 +539,7 @@ void MainCollide(){
                                     worldBullets[i]->hitTargets[worldBullets[i]->hitCount] = hitPawn;
                                     worldBullets[i]->hitCount++;
                                     hitPawn->color = WHITE;
-                                    Damage_Pawn(hitPawn);
+                                    Pawn_Damage(hitPawn);
                                 }
 
                                 worldBullets[i]->color = WHITE;
@@ -585,7 +617,7 @@ void MainCollide(){
                     }
                 }
 
-                if (closestHitVoxel != NULL) {
+                if (closestHitVoxel != NULL){
                     RayCollision rc = GetRayCollisionBox(r1, closestHitVoxel->bb);
                     rayHitNormal = rc.normal;
 
@@ -620,12 +652,11 @@ void MainCollide(){
                                 newPawn->rootVoxel = targetVoxel;
                             }
                             break;
-                        default:
-                            break;
+                        default: break;
                     }
 
                     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                        Destroy_Voxel(closestHitVoxel);
+                        Voxel_Destroy(closestHitVoxel);
                     }
                 }
             } else if (!cursorEnabled) {
@@ -648,31 +679,32 @@ void MainDraw(){
     DrawGrid(10, 1.0f);
     DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
 
-    if (myDebug) DrawBoxtreeNode(boxtreeRoot);
+    if (myDebug) Boxtree_DrawNode(boxtreeRoot);
 
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-        Draw_Poly(worldPolys[i]);
-        Draw_Pawn(worldPawns[i]);
-        Draw_Bullet(worldBullets[i]);
+        Poly_Draw(worldPolys[i]);
+        Pawn_Draw(worldPawns[i]);
+        Bullet_Draw(worldBullets[i]);
     }
     
     for (int x = 0; x < LEVEL_GRID_ROWS; x++){
         for (int y = 0; y < LEVEL_GRID_COLS; y++){
             for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                Draw_Voxel(grid3d[x][y][z]);
-                Reset_Voxel(grid3d[x][y][z]);
+                Voxel_Draw(grid3d[x][y][z]);
+                Voxel_Reset(grid3d[x][y][z]);
             }
         }
     }
-
-    Draw_Player(player);
 
     switch (gamestate){
         case GS_EDIT:
             DrawRay(r1,r1Color);
             break;
         case GS_GAMEPLAY:
-            Draw_Gridpawn(myGridPawn);
+            Gridpawn_Draw(myGridPawn);
+            break;
+        case GS_PAUSE:
+            Gridpawn_Draw(myGridPawn);
             break;
         default: break;
     }
@@ -683,9 +715,9 @@ void MainDraw(){
     int screenHeight = GetScreenHeight();
 
     switch (gamestate){
-        case GS_MENU_MAIN:
+        case GS_MAIN:
             DrawText(TextFormat("TANDEM"), screenWidth/2, screenHeight/2, 50, BLACK);
-            for (int i = 0; i < HUD_LIMIT; i++){ Draw_Button(mainmenuButtons[i]); }
+            for (int i = 0; i < HUD_LIMIT; i++){ Button_Draw(mainmenuButtons[i]); }
             break;
         case GS_EDIT:
             Vector2 center = { screenWidth / 2.0f, screenHeight / 2.0f };
@@ -695,15 +727,18 @@ void MainDraw(){
             break;
         case GS_EDIT_PAUSE:
             for (int i = HUD_LIMIT; i >= 0; i--){
-                fetchedWindow = (struct Window *)GetItem_List(windowList, i);
-                Draw_Window(fetchedWindow);
+                fetchedWindow = (struct Window *)List_GetItem(windowList, i);
+                Window_Draw(fetchedWindow);
             }
-
             break;
         case GS_GAMEPLAY: break;
+        case GS_PAUSE:
+            Window_Draw(pauseWindow);
+            Window_Draw(settingsWindow);
+            break;
         default: break;
     }
-    if (consoleOpen) Draw_Console(myConsole);
+    if (consoleOpen) Console_Draw(myConsole);
 
     // Draw HUD
     //DrawRectangle(5, 5, 250, 1000, Fade(SKYBLUE, 0.5f));
@@ -741,13 +776,9 @@ void ExecuteConsoleCommand(ConsoleCommand CC){
         case CC_RESET:
             ResetScene();
             break;
-        case CC_RESTART:
-            ResetScene();
-            EnableCursor();
-            gamestate = GS_MENU_MAIN;
-            camera.position = CAM_DEFAULT_POS;
-            camera.target = CAM_DEFAULT_TARGET;
-            consoleOpen = false;
+        case CC_MAIN:
+            GoToMain();
+            
             break;
         case CC_LOAD:
             break;
@@ -758,6 +789,15 @@ void ExecuteConsoleCommand(ConsoleCommand CC){
 
 void ExecuteButtonFunction(ButtonFunction btnfunc){
     switch (btnfunc){
+        case BTN_MAIN:
+            ResetScene();
+            EnableCursor();
+            Gridpawn_Reset(myGridPawn);
+            gamestate = GS_MAIN;
+            camera.position = CAM_DEFAULT_POS;
+            camera.target = CAM_DEFAULT_TARGET;
+            consoleOpen = false;
+            break;
         case BTN_SAVE:
             PlaySound(bullet_shot);
             int lsIndex = 0;
@@ -807,15 +847,24 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
         case BTN_TEST:
             gamestate = GS_EDIT;
             DisableCursor();
-            cursorEnabled = false;
             break;
-        case BTN_MAIN:
-            gamestate = GS_MENU_MAIN;
-            ResetScene();
+        case BTN_SETTINGS:
+            settingsWindow->isActive = true;
+            settingsWindow->isFocused = true;
+            pauseWindow->isFocused = false;
             break;
         case BTN_NONE: break;
         default: break;
     }
+}
+
+void GoToMain(){
+    ResetScene();
+    EnableCursor();
+    gamestate = GS_MAIN;
+    camera.position = CAM_DEFAULT_POS;
+    camera.target = CAM_DEFAULT_TARGET;
+    consoleOpen = false;
 }
 
 void LoadLevel(){
@@ -900,7 +949,7 @@ void SpawnWorldBullet(Ray ray){
     // find empty slot in bullet object pool
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         if (!worldBullets[i]->isActive){
-            Spawn_Bullet(worldBullets[i], ray.position, ray.direction);
+            Bullet_Spawn(worldBullets[i], ray.position, ray.direction);
             break;
         }
     }
@@ -910,7 +959,7 @@ void SpawnWorldBullet(Ray ray){
 void SpawnWorldPoly(Vector3 newPos){
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         if (!worldPolys[i]->isActive){
-            Spawn_Poly(worldPolys[i], newPos);
+            Poly_Spawn(worldPolys[i], newPos);
             break;
         }
     }
@@ -919,7 +968,7 @@ void SpawnWorldPoly(Vector3 newPos){
 Pawn* SpawnWorldPawn(Vector3 newPos, PawnType pt){
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         if (!worldPawns[i]->isActive){
-            Spawn_Pawn(worldPawns[i], newPos, pt);
+            Pawn_Spawn(worldPawns[i], newPos, pt);
             return worldPawns[i];
         }
     }
@@ -976,24 +1025,16 @@ void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxD
 }
 
 void PrintToConsole(const char* out){
-    Print_Console(myConsole, out);
+    Console_Print(myConsole, out);
 }
 
 const char* GetGameStateAsString(GameState gs){
    switch (gs) {
-      case GS_MENU_MAIN:    return "MENU_MAIN";
+      case GS_MAIN:         return "MAIN";
       case GS_GAMEPLAY:     return "GAMEPLAY";
+      case GS_PAUSE:        return "PAUSE";
       case GS_EDIT:         return "EDIT";
       case GS_EDIT_PAUSE:   return "EDIT_PAUSE";
       default:              return "???";
    }
-}
-
-void ToggleCursor(){
-    if (!cursorEnabled){
-        EnableCursor();
-    } else {
-        DisableCursor();
-    }
-    cursorEnabled = !cursorEnabled;
 }
