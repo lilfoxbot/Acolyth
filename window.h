@@ -12,6 +12,7 @@ typedef struct Window{
     bool isFocused;
     bool dragging;
     Vector2 dragPoint;
+    Vector2 defaultPos;
 
     Rectangle body;
     Color bodyColor;
@@ -67,6 +68,8 @@ Window* Window_Construct(Vector2 pos, Vector2 size, char *title){
     obj->body.width = size.x;
     obj->body.height = size.y;
 
+    obj->defaultPos = pos;
+
     obj->titleBar.width = obj->body.width;
     obj->titleBar.height = 30;
 
@@ -82,13 +85,32 @@ Window* Window_Construct(Vector2 pos, Vector2 size, char *title){
     obj->hasCloseBtn = false;
 
     obj->parentWindow = NULL;
+    SetWindowText(obj->debugString, sizeof(obj->title), "debugString");
     
     return obj;
 }
 
-void Window_Destroy(Window* obj){
+void Window_Close(Window* obj){
     if (!obj->isActive) return;
     obj->isActive = false;
+    obj->isFocused = false;
+    obj->body.x = -500;
+    obj->body.y = -500;
+    obj->titleBar.x = -500;
+    obj->titleBar.y = -500;
+    obj->closeBtn->rect.x = -500;
+    obj->closeBtn->rect.y = -500;
+    for (int i = 0; i < obj->buttonCount; i++){
+        obj->buttons[i]->rect.x = -500;
+        obj->buttons[i]->rect.y = -500;
+    }
+}
+
+void Window_Open(Window* obj){
+    obj->isActive = true;
+    obj->isFocused = true;
+    obj->body.x = obj->defaultPos.x;
+    obj->body.y = obj->defaultPos.y; 
 }
 
 bool Window_Check(Window* obj, Vector2 mousePoint){
@@ -150,7 +172,7 @@ ButtonFunction Window_Update(Window* obj, Vector2 mousePoint){
         if (obj->isFocused){
             ButtonFunction btnFunc = Button_Update(obj->closeBtn, mousePoint);
             if (btnFunc != BTN_NONE){
-                obj->isActive = false;
+                Window_Close(obj);
                 obj->parentWindow->isFocused = true;
             }
         }

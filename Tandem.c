@@ -129,12 +129,11 @@ void MainDraw();
 
 int main(void) // @INIT ========================================================================
 {
-    //const int screenWidth = 1920;
-    //const int screenHeight = 1080;
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    //SetConfigFlags(FLAG_FULLSCREEN_MODE);
-    InitWindow(1920, 1080, "Tandem");
+    //InitWindow(1920, 1080, "Tandem");
+    InitWindow(1280, 720, "Tandem");
     MaximizeWindow();
+
     SetTargetFPS(60);
     InitAudioDevice();
     EnableCursor();
@@ -236,13 +235,13 @@ void MainInit(){
     pauseButtons[2] = Button_Construct((Vector2){500, -500}, (Vector2){200, 30}, "MAIN", BTN_MAIN);
     pauseButtons[2]->fontSize = 20;
 
-    pauseWindow = Window_Construct((Vector2){1405, 300}, (Vector2){400, 400}, "PAUSE");
+    pauseWindow = Window_Construct((Vector2){(GetScreenWidth()/2)-200, (GetScreenHeight()/2)-200}, (Vector2){400, 400}, "PAUSE");
     pauseWindow->buttons[0] = pauseButtons[0];
     pauseWindow->buttons[1] = pauseButtons[1];
     pauseWindow->buttons[2] = pauseButtons[2];
     pauseWindow->buttonCount = 3;
 
-    settingsWindow = Window_Construct((Vector2){1405, 300}, (Vector2){400, 400}, "SETTINGS");
+    settingsWindow = Window_Construct((Vector2){(GetScreenWidth()/2), (GetScreenHeight()/2)}, (Vector2){400, 400}, "SETTINGS");
     settingsWindow->hasCloseBtn = true;
     settingsWindow->parentWindow = pauseWindow;
 
@@ -422,10 +421,10 @@ void MainUpdate(){
 
             }
             
+            // PAUSE
             if (IsKeyPressed(KEY_P)){
                 gamestate = GS_PAUSE;
-                pauseWindow->isActive = true;
-                pauseWindow->isFocused = true;
+                Window_Open(pauseWindow);
             }
             
             Gridpawn_Update(myGridPawn, DT);
@@ -435,12 +434,11 @@ void MainUpdate(){
             ExecuteButtonFunction(Window_Update(pauseWindow, mousePos));
             ExecuteButtonFunction(Window_Update(settingsWindow, mousePos));
             
+            // UNPAUSE
             if (IsKeyPressed(KEY_P)){
                 gamestate = GS_GAMEPLAY;
-                pauseWindow->isActive = false;
-                pauseWindow->isFocused = false;
-                settingsWindow->isActive = false;
-                settingsWindow->isFocused = false;
+                Window_Close(pauseWindow);
+                Window_Close(settingsWindow);
             }
             break;
         case GS_MAIN:
@@ -843,14 +841,15 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
             break;
         case BTN_PLAY:
             gamestate = GS_GAMEPLAY;
+            Window_Close(pauseWindow);
+            Window_Close(settingsWindow);
             break;
         case BTN_TEST:
             gamestate = GS_EDIT;
             DisableCursor();
             break;
         case BTN_SETTINGS:
-            settingsWindow->isActive = true;
-            settingsWindow->isFocused = true;
+            Window_Open(settingsWindow);
             pauseWindow->isFocused = false;
             break;
         case BTN_NONE: break;

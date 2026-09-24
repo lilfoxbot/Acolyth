@@ -1,5 +1,9 @@
 === STUFFS ===
 
+- window locations
+
+- main window
+
 - GAME state: 
     -camera attached to pawn
     -encroaching entities
