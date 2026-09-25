@@ -1,8 +1,8 @@
 === STUFFS ===
 
-- window locations
+- allow camera movement in edit_pause
 
-- main window
+- cursor toggle hotkey
 
 - GAME state: 
     -camera attached to pawn

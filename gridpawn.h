@@ -30,11 +30,11 @@ Gridpawn* Gridpawn_Construct(){
     Gridpawn* obj = (Gridpawn*)malloc(sizeof(Gridpawn));
     obj->isActive = false;
 
-    obj->position = (Vector3){0,2,0};
+    obj->position = (Vector3){0,1,0};
     obj->velocity = (Vector3){0,0,0};
-    obj->targetPos = (Vector3){0,2,0};
+    obj->targetPos = (Vector3){0,1,0};
     obj->moving = false;
-    obj->moveSpeed = 0.02f;
+    obj->moveSpeed = 0.04f;
 
     obj->bb.min = (Vector3){0,0,0};
     obj->bb.max = (Vector3){0,0,0};

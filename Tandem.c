@@ -35,7 +35,6 @@ Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0.0f, 2.0f, -2.0f };
 Vector2 mousePos;
 float screenFade = 1;
 bool screenFading = false;
-bool cursorEnabled = true;
 bool myDebug = false;
 bool consoleOpen = false;
 bool editMode = false;
@@ -58,9 +57,9 @@ const float LEVEL_GRID_CELL_SIZE = 1.0f;
 struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
 BoxtreeNode* boxtreeRoot;
 
-struct Button* windowButtons[HUD_LIMIT];
-struct Button* editorButtons[HUD_LIMIT];
-struct Button* mainmenuButtons[HUD_LIMIT];
+struct Button* mainButtons[HUD_LIMIT];
+struct Window* mainWindow;
+
 struct Button* pauseButtons[HUD_LIMIT];
 struct Window* pauseWindow;
 struct Window* settingsWindow;
@@ -74,14 +73,11 @@ struct Window* focusedWindow;
 int windowCount = 3;
 
 struct Console* myConsole;
-struct Textbox* levelTextbox;
 
 struct Pawn* worldPawns[WORLD_DEFAULT_LIMIT];
 struct Bullet* worldBullets[WORLD_DEFAULT_LIMIT];
 int worldBulletCount = 0;
 struct Poly* worldPolys[WORLD_DEFAULT_LIMIT];
-struct Player* player;
-Vector4 newPlayerVel;
 
 struct Gridpawn* myGridPawn;
 
@@ -93,10 +89,10 @@ typedef enum {
     GS_MAIN,
     GS_GAMEPLAY,
     GS_PAUSE,
-    GS_EDIT,
-    GS_EDIT_PAUSE,
+    GS_TEST,
+    GS_TEST_PAUSE,
 } GameState;
-GameState gamestate = GS_MAIN;
+GameState GAME_STATE = GS_MAIN;
 
 typedef enum {
     SS_VOXEL,
@@ -119,6 +115,7 @@ void PlaySoundInstance(Sound sound, Vector3 soundPos);
 void PrintToConsole(const char* out);
 const char* GetGameStateAsString(GameState gs);
 void GoToMain();
+void ChangeGameState(GameState gs);
 
 void MainInit();
 void MainReady();
@@ -202,8 +199,6 @@ void MainInit(){
         worldPawns[i] = Pawn_Construct();
         worldPolys[i] = Poly_Construct();
     }
-
-    player = Create_Player();
     
     r1.position = (Vector3){0,0,0};
     r1.direction = (Vector3){10,10,0};
@@ -223,18 +218,27 @@ void MainInit(){
 
     myConsole = Console_Construct();
 
-    mainmenuButtons[0] = Button_Construct((Vector2){500, 500}, (Vector2){200, 30}, "PLAY", BTN_PLAY);
-    mainmenuButtons[0]->fontSize = 20;
-    mainmenuButtons[1] = Button_Construct((Vector2){500, 600}, (Vector2){200, 30}, "TEST", BTN_TEST);
-    mainmenuButtons[1]->fontSize = 20;
+    mainButtons[0] = Button_Construct((Vector2){500, 500}, (Vector2){200, 30}, "PLAY", BTN_PLAY);
+    mainButtons[0]->fontSize = 20;
+    mainButtons[1] = Button_Construct((Vector2){500, 600}, (Vector2){200, 30}, "TEST", BTN_TEST);
+    mainButtons[1]->fontSize = 20;
+    mainButtons[2] = Button_Construct((Vector2){500, 700}, (Vector2){200, 30}, "SETTINGS", BTN_SETTINGS_MAIN);
+    mainButtons[2]->fontSize = 20;
+
+
+    mainWindow = Window_Construct((Vector2){(GetScreenWidth()/2)-400, (GetScreenHeight()/2)-200}, (Vector2){400, 400}, "MAIN");
+    mainWindow->buttons[0] = mainButtons[0];
+    mainWindow->buttons[1] = mainButtons[1];
+    mainWindow->buttons[2] = mainButtons[2];
+    mainWindow->buttonCount = 3;
+    mainWindow->isFocused = true;
 
     pauseButtons[0] = Button_Construct((Vector2){500, -500}, (Vector2){200, 30}, "RESUME", BTN_PLAY);
     pauseButtons[0]->fontSize = 20;
-    pauseButtons[1] = Button_Construct((Vector2){500, -500}, (Vector2){200, 30}, "SETTINGS", BTN_SETTINGS);
+    pauseButtons[1] = Button_Construct((Vector2){500, -500}, (Vector2){200, 30}, "SETTINGS", BTN_SETTINGS_PAUSE);
     pauseButtons[1]->fontSize = 20;
     pauseButtons[2] = Button_Construct((Vector2){500, -500}, (Vector2){200, 30}, "MAIN", BTN_MAIN);
     pauseButtons[2]->fontSize = 20;
-
     pauseWindow = Window_Construct((Vector2){(GetScreenWidth()/2)-200, (GetScreenHeight()/2)-200}, (Vector2){400, 400}, "PAUSE");
     pauseWindow->buttons[0] = pauseButtons[0];
     pauseWindow->buttons[1] = pauseButtons[1];
@@ -254,7 +258,6 @@ void MainReady(){
 
 void MainInput(){
     mousePos = GetMousePosition();
-    newPlayerVel = (Vector4){0,0,0,0};
 
     if (IsKeyPressed(KEY_GRAVE)){ consoleOpen = !consoleOpen; }
     if (consoleOpen){
@@ -263,13 +266,8 @@ void MainInput(){
         }
     }
 
-    switch (gamestate){
-        case GS_EDIT:
-            if (IsKeyDown(KEY_LEFT)){ newPlayerVel.x += -playerSpeed; }
-            if (IsKeyDown(KEY_RIGHT)){ newPlayerVel.x += playerSpeed; }
-            if (IsKeyDown(KEY_UP)){ newPlayerVel.z += -playerSpeed; }
-            if (IsKeyDown(KEY_DOWN)){ newPlayerVel.z += playerSpeed; }
-            if (IsKeyPressed(KEY_RIGHT_CONTROL)){ newPlayerVel.w = 1; }
+    switch (GAME_STATE){
+        case GS_TEST:
 
             if (IsKeyPressed(KEY_P)){ myDebug = !myDebug; }
             if (IsKeyPressed(KEY_MINUS)){ SetTargetFPS(60); }
@@ -282,7 +280,7 @@ void MainInput(){
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
                 EnableCursor();
-                gamestate = GS_EDIT_PAUSE;
+                ChangeGameState(GS_TEST_PAUSE);
                 break;
             }
 
@@ -311,10 +309,9 @@ void MainInput(){
             0.0f); // zoom
 
             break;
-        case GS_EDIT_PAUSE:
+        case GS_TEST_PAUSE:
             if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-                DisableCursor();
-                gamestate = GS_EDIT;
+                ChangeGameState(GS_TEST);
             }
             break;
         default: break;
@@ -322,8 +319,8 @@ void MainInput(){
 }
 
 void MainUpdate(){
-    switch (gamestate){
-        case GS_EDIT:
+    switch (GAME_STATE){
+        case GS_TEST:
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                 Poly_Update(worldPolys[i], DT);
                 Bullet_Update(worldBullets[i], DT);
@@ -351,10 +348,7 @@ void MainUpdate(){
             r1.position = aimRay;
             r1.direction = camF;
             break;
-        case GS_EDIT_PAUSE:
-            for (int i = 0; i < HUD_LIMIT; i++){
-                ExecuteButtonFunction(Button_Update(editorButtons[i], mousePos));
-            }
+        case GS_TEST_PAUSE:
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                 // unfocus all
@@ -423,7 +417,7 @@ void MainUpdate(){
             
             // PAUSE
             if (IsKeyPressed(KEY_P)){
-                gamestate = GS_PAUSE;
+                ChangeGameState(GS_PAUSE);
                 Window_Open(pauseWindow);
             }
             
@@ -436,16 +430,17 @@ void MainUpdate(){
             
             // UNPAUSE
             if (IsKeyPressed(KEY_P)){
-                gamestate = GS_GAMEPLAY;
+                ChangeGameState(GS_GAMEPLAY);
                 Window_Close(pauseWindow);
                 Window_Close(settingsWindow);
             }
             break;
         case GS_MAIN:
-            for (int i = 0; i < HUD_LIMIT; i++){
-                ButtonFunction btnfunc = Button_Update(mainmenuButtons[i], mousePos);
-                ExecuteButtonFunction(btnfunc);
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+                mainWindow->isActive = true;
             }
+            ExecuteButtonFunction(Window_Update(mainWindow, mousePos));
+            ExecuteButtonFunction(Window_Update(settingsWindow, mousePos));
             break;
         default: break;
     }
@@ -456,8 +451,8 @@ void MainCollide(){
     rayHitNormal = (Vector3){0,0,0};
     playerColNormal = (Vector3){0,0,0};
 
-    switch (gamestate){
-        case GS_EDIT:
+    switch (GAME_STATE){
+        case GS_TEST:
             Boxtree_Reset(boxtreeRoot);
             Voxel* voxelHits[50] = {NULL};
             Boxtree_GetRayVoxels(r1, boxtreeRoot, voxelHits, 50);
@@ -552,57 +547,9 @@ void MainCollide(){
                     }
                 }
             }
-
-            // player collision
-            for (int i = 0; i < player->nodeCount; i++){
-                for (int j = 0; j < player->nodes[i]->voxelCount; j++){
-
-                    if(CheckCollisionBoxes(player->bb, player->nodes[i]->voxels[j]->bb)){
-                        if (player->nodes[i]->voxels[j]->isActive){
-                            Voxel* touchedVoxel = player->nodes[i]->voxels[j];
-                            touchedVoxel->bbColor = WHITE;
-
-                            voxelRay.position = (Vector3){player->position.x, touchedVoxel->position.y, player->position.z};
-                            voxelRay.direction = Vector3Subtract(touchedVoxel->position, voxelRay.position);
-                            RayCollision vrc = GetRayCollisionBox(voxelRay, touchedVoxel->bb);
-                            playerColNormal = vrc.normal;
-
-                            if (player->position.y-player->height/2 > touchedVoxel->position.y+0.45f){
-                                if (grid3d[(int)touchedVoxel->coordinates.x][(int)touchedVoxel->coordinates.y+1][(int)touchedVoxel->coordinates.z]->isActive){
-
-                                } else {
-                                    player->position.y = touchedVoxel->position.y + 0.5f + player->height/2;
-                                    player->velocity.y = 0;
-                                }
-                                
-                            } else if (player->position.y+player->height/2 < touchedVoxel->position.y-0.45f){
-                                if (grid3d[(int)touchedVoxel->coordinates.x][(int)touchedVoxel->coordinates.y-1][(int)touchedVoxel->coordinates.z]->isActive){
-
-                                } else {
-                                    player->position.y = touchedVoxel->position.y - 0.5f - player->height/2;
-                                    player->velocity.y = 0;
-                                }
-                                
-                            } else if (playerColNormal.x == 1){
-                                player->position.x = touchedVoxel->position.x + 0.5f + player->width/2;
-                                player->velocity.x = 0;
-                            } else if (playerColNormal.x == -1){
-                                player->position.x = touchedVoxel->position.x - 0.5f - player->width/2;
-                                player->velocity.x = 0;
-                            } else if (playerColNormal.z == 1){
-                                player->position.z = touchedVoxel->position.z + 0.5f + player->width/2;
-                                player->velocity.z = 0;
-                            } else if (playerColNormal.z == -1){
-                                player->position.z = touchedVoxel->position.z - 0.5f - player->width/2;
-                                player->velocity.z = 0;
-                            }
-                        }
-                    }
-                }
-            }
             
             // edit ray collision
-            if (editMode && !cursorEnabled){
+            if (editMode){
                 for (int i = 0; i < 50; i++){
                     if (voxelHits[i] == NULL){
                         break;
@@ -657,7 +604,7 @@ void MainCollide(){
                         Voxel_Destroy(closestHitVoxel);
                     }
                 }
-            } else if (!cursorEnabled) {
+            } else {
                 // shoot a projectile
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                     SpawnWorldBullet(r1);
@@ -694,8 +641,8 @@ void MainDraw(){
         }
     }
 
-    switch (gamestate){
-        case GS_EDIT:
+    switch (GAME_STATE){
+        case GS_TEST:
             DrawRay(r1,r1Color);
             break;
         case GS_GAMEPLAY:
@@ -712,18 +659,19 @@ void MainDraw(){
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    switch (gamestate){
+    switch (GAME_STATE){
         case GS_MAIN:
             DrawText(TextFormat("TANDEM"), screenWidth/2, screenHeight/2, 50, BLACK);
-            for (int i = 0; i < HUD_LIMIT; i++){ Button_Draw(mainmenuButtons[i]); }
+            Window_Draw(mainWindow);
+            Window_Draw(settingsWindow);
             break;
-        case GS_EDIT:
+        case GS_TEST:
             Vector2 center = { screenWidth / 2.0f, screenHeight / 2.0f };
             // Draw a simple plus-sign crosshair
             DrawLine(center.x - 10, center.y, center.x + 10, center.y, WHITE);
             DrawLine(center.x, center.y - 10, center.x, center.y + 10, WHITE);
             break;
-        case GS_EDIT_PAUSE:
+        case GS_TEST_PAUSE:
             for (int i = HUD_LIMIT; i >= 0; i--){
                 fetchedWindow = (struct Window *)List_GetItem(windowList, i);
                 Window_Draw(fetchedWindow);
@@ -742,7 +690,7 @@ void MainDraw(){
     //DrawRectangle(5, 5, 250, 1000, Fade(SKYBLUE, 0.5f));
     //DrawRectangleLines(5, 5, 250, 1000, BLUE);
     
-    DrawText(TextFormat("Game State: %s", GetGameStateAsString(gamestate)), 15, 15, 10, BLACK);
+    DrawText(TextFormat("Game State: %s", GetGameStateAsString(GAME_STATE)), 15, 15, 10, BLACK);
     DrawText(TextFormat("Time Passed: %0.2f", timePassed), 15, 30, 10, BLACK);
     DrawText(TextFormat("Current FPS: %d", GetFPS()), 15, 45, 10, BLACK);
     DrawText(TextFormat("Cam Target: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 15, 60, 10, BLACK);
@@ -776,7 +724,6 @@ void ExecuteConsoleCommand(ConsoleCommand CC){
             break;
         case CC_MAIN:
             GoToMain();
-            
             break;
         case CC_LOAD:
             break;
@@ -788,13 +735,7 @@ void ExecuteConsoleCommand(ConsoleCommand CC){
 void ExecuteButtonFunction(ButtonFunction btnfunc){
     switch (btnfunc){
         case BTN_MAIN:
-            ResetScene();
-            EnableCursor();
-            Gridpawn_Reset(myGridPawn);
-            gamestate = GS_MAIN;
-            camera.position = CAM_DEFAULT_POS;
-            camera.target = CAM_DEFAULT_TARGET;
-            consoleOpen = false;
+            GoToMain();
             break;
         case BTN_SAVE:
             PlaySound(bullet_shot);
@@ -840,17 +781,23 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
             spawnSelection = SS_TURRET;
             break;
         case BTN_PLAY:
-            gamestate = GS_GAMEPLAY;
+            ChangeGameState(GS_GAMEPLAY);
             Window_Close(pauseWindow);
             Window_Close(settingsWindow);
+            Window_Close(mainWindow);
             break;
         case BTN_TEST:
-            gamestate = GS_EDIT;
-            DisableCursor();
+            ChangeGameState(GS_TEST);
             break;
-        case BTN_SETTINGS:
-            Window_Open(settingsWindow);
+        case BTN_SETTINGS_PAUSE:
             pauseWindow->isFocused = false;
+            settingsWindow->parentWindow = pauseWindow;
+            Window_Open(settingsWindow);
+            break;
+        case BTN_SETTINGS_MAIN:
+            mainWindow->isFocused = false;
+            settingsWindow->parentWindow = mainWindow;
+            Window_Open(settingsWindow);
             break;
         case BTN_NONE: break;
         default: break;
@@ -860,7 +807,7 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
 void GoToMain(){
     ResetScene();
     EnableCursor();
-    gamestate = GS_MAIN;
+    ChangeGameState(GS_MAIN);
     camera.position = CAM_DEFAULT_POS;
     camera.target = CAM_DEFAULT_TARGET;
     consoleOpen = false;
@@ -918,9 +865,6 @@ void ResetScene(){
             }
         }
     }
-
-    player->position = DEFAULT_PLAYER_POSITION;
-    player->velocity = (Vector3){0,0,0};
 }
 
 void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
@@ -1032,8 +976,32 @@ const char* GetGameStateAsString(GameState gs){
       case GS_MAIN:         return "MAIN";
       case GS_GAMEPLAY:     return "GAMEPLAY";
       case GS_PAUSE:        return "PAUSE";
-      case GS_EDIT:         return "EDIT";
-      case GS_EDIT_PAUSE:   return "EDIT_PAUSE";
+      case GS_TEST:         return "TEST";
+      case GS_TEST_PAUSE:   return "TEST_PAUSE";
       default:              return "???";
    }
+}
+
+void ChangeGameState(GameState gs){
+    // Exit State
+    switch (GAME_STATE){
+        default: break;
+    }
+    GAME_STATE = gs;
+    // Enter State
+    switch (gs){
+        case GS_MAIN:
+            EnableCursor();
+            break;
+        case GS_GAMEPLAY:
+            DisableCursor();
+            break;
+        case GS_TEST:
+            DisableCursor();
+            break;
+        case GS_TEST_PAUSE:
+            EnableCursor();
+            break;
+        default: break;
+    }
 }
