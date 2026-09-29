@@ -1,8 +1,6 @@
 === STUFFS ===
 
-- allow camera movement in edit_pause
-
-- cursor toggle hotkey
+- Camera states (free, snap, lerp)
 
 - GAME state: 
     -camera attached to pawn
@@ -23,7 +21,6 @@
 - tempest (1981)
 - CONTRA
 - plants vs zombies
-- creeper world
 - rocket slime
 
 === NEW ENVIRONMENT SETUP ===

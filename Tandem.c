@@ -95,6 +95,13 @@ typedef enum {
 GameState GAME_STATE = GS_MAIN;
 
 typedef enum {
+    CS_FREE,
+    CS_SNAP,
+    CS_LERP
+} CameraState;
+CameraState CAMERA_STATE = CS_FREE;
+
+typedef enum {
     SS_VOXEL,
     SS_TURRET
 } SpawnSelection;
@@ -116,6 +123,7 @@ void PrintToConsole(const char* out);
 const char* GetGameStateAsString(GameState gs);
 void GoToMain();
 void ChangeGameState(GameState gs);
+void AllowFreeCameraControl();
 
 void MainInit();
 void MainReady();
@@ -279,40 +287,22 @@ void MainInput(){
             }
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
-                EnableCursor();
                 ChangeGameState(GS_TEST_PAUSE);
                 break;
             }
 
             if (consoleOpen) break;
             
-            // camera movement/input
-            camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
-            float newForward = 0;
-            float newRight = 0;
-            float newUp = 0;
-            if (IsKeyDown(KEY_W)) newForward += camSpeed;
-            if (IsKeyDown(KEY_S)) newForward -= camSpeed;
-            if (IsKeyDown(KEY_D)) newRight += camSpeed;
-            if (IsKeyDown(KEY_A)) newRight -= camSpeed;
-            if (IsKeyDown(KEY_SPACE)) newUp += camSpeed;
-            if (IsKeyDown(KEY_LEFT_CONTROL)) newUp -= camSpeed;
-            
-            // camera rotation
-            Vector2 mousePositionDelta = GetMouseDelta();
-            float newYaw = mousePositionDelta.x*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
-            float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
-
-            UpdateCameraPro(&camera, 
-            (Vector3){ newForward*DT, newRight*DT, newUp*DT }, // added pos
-            (Vector3){ newYaw, newPitch, 0.0f }, // added rot
-            0.0f); // zoom
+            AllowFreeCameraControl();
 
             break;
         case GS_TEST_PAUSE:
             if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)){
                 ChangeGameState(GS_TEST);
             }
+
+            AllowFreeCameraControl();
+
             break;
         default: break;
     }
@@ -445,6 +435,20 @@ void MainUpdate(){
         default: break;
     }
     if (consoleOpen) Console_Update(myConsole);
+
+    switch(CAMERA_STATE){
+        case CS_SNAP:
+            // position matches snap point
+            Vector3 snapPoint = myGridPawn->position;
+            camera.position = snapPoint;
+            
+            // UpdateCameraPro(&camera, 
+            // (Vector3){ snapPoint.x*DT, snapPoint.y*DT, snapPoint.z*DT }, // added pos
+            // (Vector3){ newYaw, newPitch, 0.0f }, // added rot
+            // 0.0f); // zoom
+            break; 
+        default: break;
+    }
 }
 
 void MainCollide(){
@@ -918,6 +922,30 @@ Pawn* SpawnWorldPawn(Vector3 newPos, PawnType pt){
     return NULL;
 }
 
+void AllowFreeCameraControl(){
+    // camera movement/input
+    camSpeed = (IsKeyDown(KEY_LEFT_SHIFT)) ? 5.0f : 2.0f;
+    float newForward = 0;
+    float newRight = 0;
+    float newUp = 0;
+    if (IsKeyDown(KEY_W)) newForward += camSpeed;
+    if (IsKeyDown(KEY_S)) newForward -= camSpeed;
+    if (IsKeyDown(KEY_D)) newRight += camSpeed;
+    if (IsKeyDown(KEY_A)) newRight -= camSpeed;
+    if (IsKeyDown(KEY_SPACE)) newUp += camSpeed;
+    if (IsKeyDown(KEY_LEFT_CONTROL)) newUp -= camSpeed;
+    
+    // camera rotation
+    Vector2 mousePositionDelta = GetMouseDelta();
+    float newYaw = mousePositionDelta.x*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
+    float newPitch = mousePositionDelta.y*MOUSE_MOVE_SENSITIVITY*lookSensitivity;
+
+    UpdateCameraPro(&camera, 
+    (Vector3){ newForward*DT, newRight*DT, newUp*DT }, // added pos
+    (Vector3){ newYaw, newPitch, 0.0f }, // added rot
+    0.0f); // zoom
+}
+
 bool IsNormalUp(Vector3 vector){
     if (vector.x != 0){ return false; }
     if (vector.y != 1){ return false; }
@@ -995,12 +1023,13 @@ void ChangeGameState(GameState gs){
             break;
         case GS_GAMEPLAY:
             DisableCursor();
+            CAMERA_STATE = CS_SNAP;
             break;
         case GS_TEST:
             DisableCursor();
             break;
         case GS_TEST_PAUSE:
-            EnableCursor();
+            //EnableCursor();
             break;
         default: break;
     }
