@@ -30,7 +30,7 @@
 
 Vector3 DEFAULT_PLAYER_POSITION = (Vector3){ 0, 5, -3 };
 Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 3.0f, 6.0f };
-Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0.0f, 2.0f, -2.0f };
+Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0, 0, -1000 };
 
 Vector2 mousePos;
 float screenFade = 1;
@@ -80,19 +80,22 @@ int worldBulletCount = 0;
 struct Poly* worldPolys[WORLD_DEFAULT_LIMIT];
 
 struct Gridpawn* myGridPawn;
+Vector3 gridpawnStartPos = {0,2,7};
 
 Camera camera = { 0 };
+Vector3 cameraMoveTarget = {0,0,0};
 
 char levelString[LEVEL_GRID_ROWS*LEVEL_GRID_COLS*LEVEL_GRID_DEPTH];
 
 typedef enum {
     GS_MAIN,
-    GS_GAMEPLAY,
+    GS_PLAY,
     GS_PAUSE,
     GS_TEST,
     GS_TEST_PAUSE,
 } GameState;
 GameState GAME_STATE = GS_MAIN;
+char gameStateDebug[30] = "MAIN";
 
 typedef enum {
     CS_FREE,
@@ -100,6 +103,7 @@ typedef enum {
     CS_LERP
 } CameraState;
 CameraState CAMERA_STATE = CS_FREE;
+char cameraStateDebug[30] = "FREE";
 
 typedef enum {
     SS_VOXEL,
@@ -120,9 +124,9 @@ void ResetScene();
 void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxDist);
 void PlaySoundInstance(Sound sound, Vector3 soundPos);
 void PrintToConsole(const char* out);
-const char* GetGameStateAsString(GameState gs);
 void GoToMain();
 void ChangeGameState(GameState gs);
+void ChangeCameraState(CameraState cs);
 void AllowFreeCameraControl();
 
 void MainInit();
@@ -261,7 +265,7 @@ void MainInit(){
 }
 
 void MainReady(){
-    Gridpawn_Spawn(myGridPawn, (Vector3){0,2,0});
+    //Gridpawn_Spawn(myGridPawn, gridpawnStartPos);
 }
 
 void MainInput(){
@@ -371,7 +375,7 @@ void MainUpdate(){
             }
             
             break;
-        case GS_GAMEPLAY:
+        case GS_PLAY:
             
             // gridpawn movement, (pokemon gridlock)
             if (!myGridPawn->moving){
@@ -402,7 +406,30 @@ void MainUpdate(){
                 } else {
                     myGridPawn->targetVector = myGridPawn->targetPos.y;
                 }
+            }
 
+            if (IsKeyPressed(KEY_T)){
+                ChangeCameraState(CS_LERP);
+                cameraMoveTarget = Vector3Add(camera.position, (Vector3){0,0,-5});
+            }
+            if (IsKeyPressed(KEY_Y)){
+                ChangeCameraState(CS_SNAP);
+            }
+
+            switch(CAMERA_STATE){
+                case CS_SNAP:
+                    cameraMoveTarget = myGridPawn->position;
+                    camera.position = cameraMoveTarget;
+                    camera.target = (Vector3){0,0,-1000};
+                    break;
+                case CS_LERP:
+                    cameraMoveTarget = myGridPawn->position;
+                    camera.position = Vector3Lerp(camera.position, cameraMoveTarget, 0.04f);
+                    if (Vector3Distance(camera.position, cameraMoveTarget) < 0.1){
+                        ChangeCameraState(CS_SNAP);
+                    }
+                    break;
+                default: break;
             }
             
             // PAUSE
@@ -420,14 +447,14 @@ void MainUpdate(){
             
             // UNPAUSE
             if (IsKeyPressed(KEY_P)){
-                ChangeGameState(GS_GAMEPLAY);
+                ChangeGameState(GS_PLAY);
                 Window_Close(pauseWindow);
                 Window_Close(settingsWindow);
             }
             break;
         case GS_MAIN:
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                mainWindow->isActive = true;
+                Window_Open(mainWindow);
             }
             ExecuteButtonFunction(Window_Update(mainWindow, mousePos));
             ExecuteButtonFunction(Window_Update(settingsWindow, mousePos));
@@ -435,20 +462,6 @@ void MainUpdate(){
         default: break;
     }
     if (consoleOpen) Console_Update(myConsole);
-
-    switch(CAMERA_STATE){
-        case CS_SNAP:
-            // position matches snap point
-            Vector3 snapPoint = myGridPawn->position;
-            camera.position = snapPoint;
-            
-            // UpdateCameraPro(&camera, 
-            // (Vector3){ snapPoint.x*DT, snapPoint.y*DT, snapPoint.z*DT }, // added pos
-            // (Vector3){ newYaw, newPitch, 0.0f }, // added rot
-            // 0.0f); // zoom
-            break; 
-        default: break;
-    }
 }
 
 void MainCollide(){
@@ -649,8 +662,9 @@ void MainDraw(){
         case GS_TEST:
             DrawRay(r1,r1Color);
             break;
-        case GS_GAMEPLAY:
+        case GS_PLAY:
             Gridpawn_Draw(myGridPawn);
+            DrawCubeWires(cameraMoveTarget, 0.5f, 0.5f, 0.5f, RED);
             break;
         case GS_PAUSE:
             Gridpawn_Draw(myGridPawn);
@@ -681,7 +695,7 @@ void MainDraw(){
                 Window_Draw(fetchedWindow);
             }
             break;
-        case GS_GAMEPLAY: break;
+        case GS_PLAY: break;
         case GS_PAUSE:
             Window_Draw(pauseWindow);
             Window_Draw(settingsWindow);
@@ -694,12 +708,14 @@ void MainDraw(){
     //DrawRectangle(5, 5, 250, 1000, Fade(SKYBLUE, 0.5f));
     //DrawRectangleLines(5, 5, 250, 1000, BLUE);
     
-    DrawText(TextFormat("Game State: %s", GetGameStateAsString(GAME_STATE)), 15, 15, 10, BLACK);
-    DrawText(TextFormat("Time Passed: %0.2f", timePassed), 15, 30, 10, BLACK);
-    DrawText(TextFormat("Current FPS: %d", GetFPS()), 15, 45, 10, BLACK);
-    DrawText(TextFormat("Cam Target: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 15, 60, 10, BLACK);
-    DrawText(TextFormat("Edit Mode: %s", (editMode) ? "ON" : "OFF"), 15, 75, 10, BLACK);
-    DrawText(TextFormat("Selected Level: %d", levelSelection+1), 15, 90, 10, BLACK);
+    DrawText(TextFormat("Time Passed: %0.2f", timePassed), 15, 15*1, 10, BLACK);
+    DrawText(TextFormat("Game State: %s", gameStateDebug), 15, 15*2, 10, BLACK);
+    DrawText(TextFormat("Camera State: %s", cameraStateDebug), 15, 15*3, 10, BLACK);
+    
+    DrawText(TextFormat("Current FPS: %d", GetFPS()), 15, 15*4, 10, BLACK);
+    DrawText(TextFormat("Cam Target: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 15, 15*5, 10, BLACK);
+    DrawText(TextFormat("Edit Mode: %s", (editMode) ? "ON" : "OFF"), 15, 15*6, 10, BLACK);
+    DrawText(TextFormat("Selected Level: %d", levelSelection+1), 15, 15*7, 10, BLACK);
 
     switch(spawnSelection){
         case SS_VOXEL:
@@ -785,7 +801,7 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
             spawnSelection = SS_TURRET;
             break;
         case BTN_PLAY:
-            ChangeGameState(GS_GAMEPLAY);
+            ChangeGameState(GS_PLAY);
             Window_Close(pauseWindow);
             Window_Close(settingsWindow);
             Window_Close(mainWindow);
@@ -812,6 +828,7 @@ void GoToMain(){
     ResetScene();
     EnableCursor();
     ChangeGameState(GS_MAIN);
+    CAMERA_STATE = CS_FREE;
     camera.position = CAM_DEFAULT_POS;
     camera.target = CAM_DEFAULT_TARGET;
     consoleOpen = false;
@@ -995,42 +1012,64 @@ void SetSoundPosition(Camera listener, Sound sound, Vector3 position, float maxD
     SetSoundPan(sound, pan);
 }
 
-void PrintToConsole(const char* out){
-    Console_Print(myConsole, out);
-}
-
-const char* GetGameStateAsString(GameState gs){
-   switch (gs) {
-      case GS_MAIN:         return "MAIN";
-      case GS_GAMEPLAY:     return "GAMEPLAY";
-      case GS_PAUSE:        return "PAUSE";
-      case GS_TEST:         return "TEST";
-      case GS_TEST_PAUSE:   return "TEST_PAUSE";
-      default:              return "???";
-   }
-}
-
 void ChangeGameState(GameState gs){
     // Exit State
     switch (GAME_STATE){
         default: break;
     }
+    // Change State
     GAME_STATE = gs;
     // Enter State
     switch (gs){
         case GS_MAIN:
+            strcpy(gameStateDebug, "MAIN");
+            PrintToConsole("Game state: MAIN");
             EnableCursor();
             break;
-        case GS_GAMEPLAY:
+        case GS_PLAY:
+            strcpy(gameStateDebug, "PLAY");
+            PrintToConsole("Game state: PLAY");
+            Gridpawn_Spawn(myGridPawn, gridpawnStartPos);
             DisableCursor();
-            CAMERA_STATE = CS_SNAP;
+            ChangeCameraState(CS_LERP);
             break;
         case GS_TEST:
+            strcpy(gameStateDebug, "TEST");
+            PrintToConsole("Game state: TEST");
             DisableCursor();
+            ChangeCameraState(CS_FREE);
             break;
         case GS_TEST_PAUSE:
-            //EnableCursor();
+            strcpy(gameStateDebug, "TEST_PAUSE");
+            PrintToConsole("Game state: TEST_PAUSE");
             break;
         default: break;
     }
+}
+
+void ChangeCameraState(CameraState cs){
+    // Exit State
+    switch (CAMERA_STATE){
+        default: break;
+    }
+    // Change State
+    CAMERA_STATE = cs;
+    // Enter State
+    switch(cs){
+        case CS_FREE:
+            strcpy(gameStateDebug, "FREE");
+            PrintToConsole("Camera state: FREE");
+            break;
+        case CS_SNAP:
+            PrintToConsole("Camera state: SNAP");
+            break;
+        case CS_LERP:
+            PrintToConsole("Camera state: LERP");
+            break;
+        default: break;
+    }
+}
+
+void PrintToConsole(const char* out){
+    Console_Print(myConsole, out);
 }

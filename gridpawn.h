@@ -98,5 +98,5 @@ void Gridpawn_Draw(Gridpawn* obj){
     DrawBoundingBox(obj->bb, obj->bbColor);
 
     // targetPOS debug
-    DrawCubeWires(obj->targetPos, obj->size, obj->size, obj->size, WHITE);
+    //DrawCubeWires(obj->targetPos, obj->size, obj->size, obj->size, WHITE);
 }

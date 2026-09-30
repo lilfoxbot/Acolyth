@@ -1,12 +1,6 @@
 === STUFFS ===
 
-- Camera states (free, snap, lerp)
-
-- GAME state: 
-    -camera attached to pawn
-    -encroaching entities
-
-- camera lerp, automated movement to target
+-encroaching entities
 
 - bigger voxel world
 - console/button commands with arguments (pass in ArgHandler OBJ to console command submission)
