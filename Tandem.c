@@ -32,6 +32,11 @@ Vector3 DEFAULT_PLAYER_POSITION = (Vector3){ 0, 5, -3 };
 Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 3.0f, 6.0f };
 Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0, 0, -1000 };
 
+Color bgColor = { 200, 100, 50, 255 };
+Vector3 bgColorTarget = { 200, 100, 50 };
+float bgColorRate = 0.02;
+//Color bgColor = { 200, 100, 50, 255 }; cool orange
+
 Vector2 mousePos;
 float screenFade = 1;
 bool screenFading = false;
@@ -92,7 +97,7 @@ typedef enum {
     GS_PLAY,
     GS_PAUSE,
     GS_TEST,
-    GS_TEST_PAUSE,
+    GS_TEST_PAUSE
 } GameState;
 GameState GAME_STATE = GS_MAIN;
 char gameStateDebug[30] = "MAIN";
@@ -128,6 +133,7 @@ void GoToMain();
 void ChangeGameState(GameState gs);
 void ChangeCameraState(CameraState cs);
 void AllowFreeCameraControl();
+void UpdateBackground();
 
 void MainInit();
 void MainReady();
@@ -377,44 +383,16 @@ void MainUpdate(){
             break;
         case GS_PLAY:
             
-            // gridpawn movement, (pokemon gridlock)
-            if (!myGridPawn->moving){
-                int moveX = 0;
-                int moveY = 0;
-                if (IsKeyDown(KEY_LEFT)){ 
-                    moveX += -1;
-                    myGridPawn->moving = true;
-                }
-                if (IsKeyDown(KEY_RIGHT)){
-                    moveX += 1;
-                    myGridPawn->moving = true;
-                }
-                if (IsKeyDown(KEY_UP) && moveX == 0){
-                    moveY += -1;
-                    myGridPawn->moving = true;
-                }
-                if (IsKeyDown(KEY_DOWN) && moveX == 0){
-                    moveY += 1;
-                    myGridPawn->moving = true;
-                }
-
-                myGridPawn->targetPos = Vector3Add(myGridPawn->position, (Vector3){moveX, 0, moveY});
-                myGridPawn->velocity = (Vector3){moveX*myGridPawn->moveSpeed,0,moveY*myGridPawn->moveSpeed};
-
-                if (myGridPawn->targetPos.x != 0){
-                    myGridPawn->targetVector = myGridPawn->targetPos.x;
-                } else {
-                    myGridPawn->targetVector = myGridPawn->targetPos.y;
-                }
+            // movement (lerp)
+            int moveX = 0;
+            if (IsKeyDown(KEY_LEFT)){ 
+                moveX += -1;
             }
-
-            if (IsKeyPressed(KEY_T)){
-                ChangeCameraState(CS_LERP);
-                cameraMoveTarget = Vector3Add(camera.position, (Vector3){0,0,-5});
+            if (IsKeyDown(KEY_RIGHT)){
+                moveX += 1;
             }
-            if (IsKeyPressed(KEY_Y)){
-                ChangeCameraState(CS_SNAP);
-            }
+            if (moveX != 0)
+            myGridPawn->targetPos = Vector3Add(myGridPawn->position, (Vector3){moveX, 0, 0});
 
             switch(CAMERA_STATE){
                 case CS_SNAP:
@@ -425,7 +403,7 @@ void MainUpdate(){
                 case CS_LERP:
                     cameraMoveTarget = myGridPawn->position;
                     camera.position = Vector3Lerp(camera.position, cameraMoveTarget, 0.04f);
-                    if (Vector3Distance(camera.position, cameraMoveTarget) < 0.1){
+                    if (Vector3Distance(camera.position, cameraMoveTarget) < 0.02){
                         ChangeCameraState(CS_SNAP);
                     }
                     break;
@@ -454,7 +432,7 @@ void MainUpdate(){
             break;
         case GS_MAIN:
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                Window_Open(mainWindow);
+                if (!mainWindow->isActive) Window_Open(mainWindow);
             }
             ExecuteButtonFunction(Window_Update(mainWindow, mousePos));
             ExecuteButtonFunction(Window_Update(settingsWindow, mousePos));
@@ -634,10 +612,10 @@ void MainCollide(){
 
 void MainDraw(){
     BeginDrawing(); // =====================================================
-    ClearBackground(GRAY);
+    UpdateBackground();
     BeginMode3D(camera); // =====================================================
     
-    DrawSphere((Vector3){ 0.0f, 10.0f, -50.0f }, 1.0f, WHITE);
+    DrawSphere((Vector3){ 0.0f, 10.0f, -100.0f }, 1.0f, WHITE);
     DrawGrid(10, 1.0f);
     DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
 
@@ -715,7 +693,7 @@ void MainDraw(){
     DrawText(TextFormat("Current FPS: %d", GetFPS()), 15, 15*4, 10, BLACK);
     DrawText(TextFormat("Cam Target: %0.2f _ %0.2f _ %0.2f", camera.target.x, camera.target.y, camera.target.z), 15, 15*5, 10, BLACK);
     DrawText(TextFormat("Edit Mode: %s", (editMode) ? "ON" : "OFF"), 15, 15*6, 10, BLACK);
-    DrawText(TextFormat("Selected Level: %d", levelSelection+1), 15, 15*7, 10, BLACK);
+    DrawText(TextFormat("Selected Level: %d", levelSelection+1), 15, 15*8, 10, BLACK);
 
     switch(spawnSelection){
         case SS_VOXEL:
@@ -805,6 +783,8 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
             Window_Close(pauseWindow);
             Window_Close(settingsWindow);
             Window_Close(mainWindow);
+            bgColor = (Color){200,200,200,255};
+            bgColorTarget = (Vector3){50,50,50};
             break;
         case BTN_TEST:
             ChangeGameState(GS_TEST);
@@ -1030,6 +1010,7 @@ void ChangeGameState(GameState gs){
             strcpy(gameStateDebug, "PLAY");
             PrintToConsole("Game state: PLAY");
             Gridpawn_Spawn(myGridPawn, gridpawnStartPos);
+            Gridpawn_Reset(myGridPawn);
             DisableCursor();
             ChangeCameraState(CS_LERP);
             break;
@@ -1072,4 +1053,11 @@ void ChangeCameraState(CameraState cs){
 
 void PrintToConsole(const char* out){
     Console_Print(myConsole, out);
+}
+
+void UpdateBackground(){
+    Vector3 bgColorVector = { bgColor.r, bgColor.g, bgColor.b };
+    bgColorVector = Vector3Lerp(bgColorVector, bgColorTarget, bgColorRate);
+    bgColor = (Color){ bgColorVector.x, bgColorVector.y, bgColorVector.z, 255 };
+    ClearBackground(bgColor);
 }

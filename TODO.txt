@@ -1,9 +1,16 @@
 === STUFFS ===
 
--encroaching entities
+- instead of gridlock, lerp movement
+- limit movement to left/right (for now)
+- "aim mode" with crosshair, locks position, and prevents movement
 
-- bigger voxel world
-- console/button commands with arguments (pass in ArgHandler OBJ to console command submission)
+- bigger voxel world (tunnel):
+    - scalable voxels (stretch)
+    - multiple 2d voxel grids that face center (floor/ceiling/walls)
+
+- encroaching entities
+
+- console/button commands with arguments (need example)
 
 === TANDEM ===
 
