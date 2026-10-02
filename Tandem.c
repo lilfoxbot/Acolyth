@@ -387,12 +387,19 @@ void MainUpdate(){
             int moveX = 0;
             if (IsKeyDown(KEY_LEFT)){ 
                 moveX += -1;
+                myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){-myGridPawn->accelRate,0,0});
             }
             if (IsKeyDown(KEY_RIGHT)){
                 moveX += 1;
+                myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){myGridPawn->accelRate,0,0});
             }
-            if (moveX != 0)
-            myGridPawn->targetPos = Vector3Add(myGridPawn->position, (Vector3){moveX, 0, 0});
+            if (moveX != 0){
+
+                //myGridPawn->targetPos = Vector3Add(myGridPawn->position, (Vector3){moveX, 0, 0});
+                //myGridPawn->accel += myGridPawn->accelRate;
+            } else {
+                //myGridPawn->accel = 0;
+            }
 
             switch(CAMERA_STATE){
                 case CS_SNAP:
@@ -402,7 +409,7 @@ void MainUpdate(){
                     break;
                 case CS_LERP:
                     cameraMoveTarget = myGridPawn->position;
-                    camera.position = Vector3Lerp(camera.position, cameraMoveTarget, 0.04f);
+                    camera.position = Vector3Lerp(camera.position, cameraMoveTarget, 0.05f);
                     if (Vector3Distance(camera.position, cameraMoveTarget) < 0.02){
                         ChangeCameraState(CS_SNAP);
                     }
@@ -642,7 +649,7 @@ void MainDraw(){
             break;
         case GS_PLAY:
             Gridpawn_Draw(myGridPawn);
-            DrawCubeWires(cameraMoveTarget, 0.5f, 0.5f, 0.5f, RED);
+            //DrawCubeWires(cameraMoveTarget, 0.5f, 0.5f, 0.5f, RED);
             break;
         case GS_PAUSE:
             Gridpawn_Draw(myGridPawn);

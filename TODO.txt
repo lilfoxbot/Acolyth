@@ -1,8 +1,8 @@
 === STUFFS ===
 
-- instead of gridlock, lerp movement
-- limit movement to left/right (for now)
-- "aim mode" with crosshair, locks position, and prevents movement
+- "aim rays" drawn from gridpawn
+- 3D crosshair
+- aim ray control
 
 - bigger voxel world (tunnel):
     - scalable voxels (stretch)
@@ -10,7 +10,7 @@
 
 - encroaching entities
 
-- console/button commands with arguments (need example)
+- console/button commands with arguments (need to think of example)
 
 === TANDEM ===
 
