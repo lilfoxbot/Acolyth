@@ -30,6 +30,7 @@ typedef struct Gridpawn{
 
     Ray rayLeft;
     Ray rayRight;
+    float aimSpeed;
 
 } Gridpawn;
 
@@ -53,10 +54,11 @@ Gridpawn* Gridpawn_Construct(){
     obj->color = BLACK;
     obj->bbColor = WHITE;
 
+    obj->aimSpeed = 0.1f;
     obj->rayLeft.position = (Vector3){0,0,0};
-    obj->rayLeft.direction = (Vector3){0,0,-1000};
+    obj->rayLeft.direction = (Vector3){0,0,-10};
     obj->rayRight.position = (Vector3){0,0,0};
-    obj->rayRight.direction = (Vector3){0,0,-1000};
+    obj->rayRight.direction = (Vector3){0,0,-10};
 
     return obj;
 }
@@ -74,11 +76,7 @@ void Gridpawn_Destroy(Gridpawn* obj){
 void Gridpawn_Update(Gridpawn* obj, float deltaTime){
     if (!obj->isActive) return;
 
-    //obj->position = Vector3Lerp(obj->position, obj->targetPos, obj->moveSpeed + obj->accel);
     obj->position = Vector3Add(obj->position, obj->velocity);
-    // drag
-    obj->velocity = Vector3Lerp(obj->velocity, (Vector3){0,0,0}, obj->drag);
-
     obj->bb.min = (Vector3){obj->position.x - obj->width / 2,
                             obj->position.y - obj->height / 2,
                             obj->position.z - obj->width / 2};
@@ -86,6 +84,12 @@ void Gridpawn_Update(Gridpawn* obj, float deltaTime){
     obj->bb.max = (Vector3){obj->position.x + obj->width / 2, 
                             obj->position.y + obj->height / 2, 
                             obj->position.z + obj->width / 2};
+    
+    obj->rayLeft.position = Vector3Add(obj->position, (Vector3){-0.1f,-0.1f,0});
+    obj->rayRight.position = Vector3Add(obj->position, (Vector3){0.1f,-0.1f,0});
+    // drag
+    obj->velocity = Vector3Lerp(obj->velocity, (Vector3){0,0,0}, obj->drag);
+    
 }
 
 void Gridpawn_Reset(Gridpawn* obj){
@@ -110,4 +114,9 @@ void Gridpawn_Draw(Gridpawn* obj){
 
     DrawRay(obj->rayLeft, RED);
     DrawRay(obj->rayRight, RED);
+
+    // draw crosshair
+    //DrawCubeWires(obj->rayRight.direction, 0.5f, 0.5f, 0.5f, WHITE);
+    DrawCubeWires(Vector3Add(obj->rayRight.position, obj->rayRight.direction), 0.5f, 0.5f, 0.1f, WHITE);
+    DrawCubeWires(Vector3Add(obj->rayLeft.position, obj->rayLeft.direction), 0.5f, 0.5f, 0.1f, WHITE);
 }

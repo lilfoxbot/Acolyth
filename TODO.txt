@@ -1,8 +1,9 @@
 === STUFFS ===
 
-- "aim rays" drawn from gridpawn
-- 3D crosshair
-- aim ray control
+- bullet collision is not correct in GS_Play
+- limits on aim range
+
+- bullet aesthetics, cluster of polygons that orbit around bullet position
 
 - bigger voxel world (tunnel):
     - scalable voxels (stretch)
@@ -12,11 +13,7 @@
 
 - console/button commands with arguments (need to think of example)
 
-=== TANDEM ===
-
-=== BUGS ===
-
-=== NOTES ===
+=== NOTES
 
 ▼ inspiration
 - tempest (1981)

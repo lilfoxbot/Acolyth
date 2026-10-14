@@ -382,30 +382,63 @@ void MainUpdate(){
             
             break;
         case GS_PLAY:
+            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+                Poly_Update(worldPolys[i], DT);
+                Bullet_Update(worldBullets[i], DT);
+            }
+
+            if (IsKeyPressed(KEY_SPACE)){
+                SpawnWorldBullet(myGridPawn->rayRight);
+                myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){myGridPawn->accelRate + -(myGridPawn->rayRight.direction.x*0.002f),0,0});
+                //SpawnWorldBullet(myGridPawn->rayLeft);
+            }
             
-            // movement (lerp)
-            int moveX = 0;
-            if (IsKeyDown(KEY_LEFT)){ 
-                moveX += -1;
-                myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){-myGridPawn->accelRate,0,0});
+            // left arm
+            if (IsKeyDown(KEY_A)){
+                //myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){-myGridPawn->accelRate,0,0});
+                myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){-1*myGridPawn->aimSpeed,0,0});
+            }
+            if (IsKeyDown(KEY_D)){
+                //myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){myGridPawn->accelRate,0,0});
+                myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){1*myGridPawn->aimSpeed,0,0});
+            }
+            if (IsKeyDown(KEY_W)){
+                myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){0,1*myGridPawn->aimSpeed,0});
+            }
+            if (IsKeyDown(KEY_S)){
+                myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){0,-1*myGridPawn->aimSpeed,0});
+            }
+            
+            // right arm
+            if (IsKeyDown(KEY_LEFT)){
+                //myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){-myGridPawn->accelRate,0,0});
+                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){-1*myGridPawn->aimSpeed,0,0});
             }
             if (IsKeyDown(KEY_RIGHT)){
-                moveX += 1;
-                myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){myGridPawn->accelRate,0,0});
+                //myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){myGridPawn->accelRate,0,0});
+                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){1*myGridPawn->aimSpeed,0,0});
             }
-            if (moveX != 0){
-
-                //myGridPawn->targetPos = Vector3Add(myGridPawn->position, (Vector3){moveX, 0, 0});
-                //myGridPawn->accel += myGridPawn->accelRate;
-            } else {
-                //myGridPawn->accel = 0;
+            if (IsKeyDown(KEY_UP)){
+                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,1*myGridPawn->aimSpeed,0});
+            }
+            if (IsKeyDown(KEY_DOWN)){
+                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,-1*myGridPawn->aimSpeed,0});
+            }
+            
+            // PAUSE
+            if (IsKeyPressed(KEY_P)){
+                ChangeGameState(GS_PAUSE);
+                Window_Open(pauseWindow);
             }
 
+            Gridpawn_Update(myGridPawn, DT);
+            
+            // camera updating BEFORE gridpawn adds a "weighty" effect
             switch(CAMERA_STATE){
                 case CS_SNAP:
                     cameraMoveTarget = myGridPawn->position;
                     camera.position = cameraMoveTarget;
-                    camera.target = (Vector3){0,0,-1000};
+                    camera.target = Vector3Add(camera.position, (Vector3){0,0,-500});
                     break;
                 case CS_LERP:
                     cameraMoveTarget = myGridPawn->position;
@@ -417,13 +450,6 @@ void MainUpdate(){
                 default: break;
             }
             
-            // PAUSE
-            if (IsKeyPressed(KEY_P)){
-                ChangeGameState(GS_PAUSE);
-                Window_Open(pauseWindow);
-            }
-            
-            Gridpawn_Update(myGridPawn, DT);
             break;
         case GS_PAUSE:
             
@@ -454,6 +480,88 @@ void MainCollide(){
     playerColNormal = (Vector3){0,0,0};
 
     switch (GAME_STATE){
+        case GS_PLAY:
+            // bullet checkin
+            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+                if (!worldBullets[i]->isActive) continue;
+                Bullet_Reset(worldBullets[i]);
+                Boxtree_GetBulletNodes(worldBullets[i], boxtreeRoot);
+            }
+
+            // bullet collision
+            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+                // Bullets
+                if (!worldBullets[i]->isActive) continue;
+                if (!worldBullets[i]->isArmed) continue;
+                // Nodes
+                for (int j = 0; j < worldBullets[i]->nodeCount; j++){
+
+                    // Other Bullets
+                    for (int l = 0; l < worldBullets[i]->nodes[j]->bulletCount; l++){
+                        // check bullet if self
+                        if (worldBullets[i] == worldBullets[i]->nodes[j]->bullets[l]) continue;
+
+                        if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->bullets[l]->bb)){
+                            if (worldBullets[i]->nodes[j]->bullets[l]->isActive){
+
+                                worldBullets[i]->color = WHITE;
+                                if (!worldBullets[i]->destroyFlag){
+                                    worldBullets[i]->destroyFlag = true;
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                }
+                            }
+                        }
+                    }
+                    // Voxels
+                    for (int k = 0; k < worldBullets[i]->nodes[j]->voxelCount; k++){
+                        
+                        if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->voxels[k]->bb)){
+                            if (worldBullets[i]->nodes[j]->voxels[k]->isActive){
+                                worldBullets[i]->nodes[j]->voxels[k]->color = WHITE;
+                                worldBullets[i]->nodes[j]->voxels[k]->fading = true;
+                                
+                                worldBullets[i]->color = WHITE;
+                                if (!worldBullets[i]->destroyFlag){
+                                    worldBullets[i]->destroyFlag = true;
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Pawns
+                    for (int m = 0; m < worldBullets[i]->nodes[j]->pawnCount; m++){
+                        if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->pawns[m]->bb)){
+                            if (worldBullets[i]->nodes[j]->pawns[m]->isActive){
+                                Pawn* hitPawn = worldBullets[i]->nodes[j]->pawns[m];
+
+                                // if bullet has not hit this target, add to hitTargets
+                                if (!ContainsInstance(worldBullets[i]->hitTargets, 8, hitPawn)){
+                                    worldBullets[i]->hitTargets[worldBullets[i]->hitCount] = hitPawn;
+                                    worldBullets[i]->hitCount++;
+                                    hitPawn->color = WHITE;
+                                    Pawn_Damage(hitPawn);
+                                }
+
+                                worldBullets[i]->color = WHITE;
+                                if (!worldBullets[i]->destroyFlag){
+                                    worldBullets[i]->destroyFlag = true;
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                    SpawnWorldPoly(worldBullets[i]->position);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            break;
         case GS_TEST:
             Boxtree_Reset(boxtreeRoot);
             Voxel* voxelHits[50] = {NULL};
@@ -622,7 +730,7 @@ void MainDraw(){
     UpdateBackground();
     BeginMode3D(camera); // =====================================================
     
-    DrawSphere((Vector3){ 0.0f, 10.0f, -100.0f }, 1.0f, WHITE);
+    DrawSphere((Vector3){ 0.0f, 20.0f, -500.0f }, 10.0f, WHITE);
     DrawGrid(10, 1.0f);
     DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
 
@@ -690,8 +798,8 @@ void MainDraw(){
     if (consoleOpen) Console_Draw(myConsole);
 
     // Draw HUD
-    //DrawRectangle(5, 5, 250, 1000, Fade(SKYBLUE, 0.5f));
-    //DrawRectangleLines(5, 5, 250, 1000, BLUE);
+    DrawRectangle(5, 5, 200, 250, Fade(LIGHTGRAY, 0.5f));
+    DrawRectangleLines(5, 5, 200, 250, BLACK);
     
     DrawText(TextFormat("Time Passed: %0.2f", timePassed), 15, 15*1, 10, BLACK);
     DrawText(TextFormat("Game State: %s", gameStateDebug), 15, 15*2, 10, BLACK);
