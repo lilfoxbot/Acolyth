@@ -13,6 +13,7 @@ typedef enum {
     BTN_NONE,
     BTN_MAIN,
     BTN_PLAY,
+    BTN_RESUME,
     BTN_SETTINGS_PAUSE,
     BTN_SETTINGS_MAIN,
     BTN_TEST,

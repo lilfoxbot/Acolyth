@@ -134,6 +134,7 @@ void ChangeGameState(GameState gs);
 void ChangeCameraState(CameraState cs);
 void AllowFreeCameraControl();
 void UpdateBackground();
+void StartGame();
 
 void MainInit();
 void MainReady();
@@ -151,7 +152,7 @@ int main(void) // @INIT ========================================================
 
     SetTargetFPS(60);
     InitAudioDevice();
-    EnableCursor();
+    DisableCursor();
     LoadSounds();
 
     MainInit();
@@ -251,7 +252,7 @@ void MainInit(){
     mainWindow->buttonCount = 3;
     mainWindow->isFocused = true;
 
-    pauseButtons[0] = Button_Construct((Vector2){500, -500}, (Vector2){200, 30}, "RESUME", BTN_PLAY);
+    pauseButtons[0] = Button_Construct((Vector2){500, -500}, (Vector2){200, 30}, "RESUME", BTN_RESUME);
     pauseButtons[0]->fontSize = 20;
     pauseButtons[1] = Button_Construct((Vector2){500, -500}, (Vector2){200, 30}, "SETTINGS", BTN_SETTINGS_PAUSE);
     pauseButtons[1]->fontSize = 20;
@@ -389,40 +390,45 @@ void MainUpdate(){
 
             if (IsKeyPressed(KEY_SPACE)){
                 SpawnWorldBullet(myGridPawn->rayRight);
-                myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){myGridPawn->accelRate + -(myGridPawn->rayRight.direction.x*0.002f),0,0});
-                //SpawnWorldBullet(myGridPawn->rayLeft);
+                myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){(myGridPawn->rayRight.direction.x*-0.002f),0,0});
+                SpawnWorldBullet(myGridPawn->rayLeft);
+                myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){(myGridPawn->rayLeft.direction.x*-0.002f),0,0});
             }
             
             // left arm
             if (IsKeyDown(KEY_A)){
-                //myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){-myGridPawn->accelRate,0,0});
                 myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){-1*myGridPawn->aimSpeed,0,0});
+                if (myGridPawn->rayLeft.direction.x < -myGridPawn->aimLimitX) myGridPawn->rayLeft.direction.x = -myGridPawn->aimLimitX; 
             }
             if (IsKeyDown(KEY_D)){
-                //myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){myGridPawn->accelRate,0,0});
                 myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){1*myGridPawn->aimSpeed,0,0});
+                if (myGridPawn->rayLeft.direction.x > 0) myGridPawn->rayLeft.direction.x = 0;
             }
             if (IsKeyDown(KEY_W)){
                 myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){0,1*myGridPawn->aimSpeed,0});
+                if (myGridPawn->rayLeft.direction.y > myGridPawn->aimLimitY) myGridPawn->rayLeft.direction.y = myGridPawn->aimLimitY;
             }
             if (IsKeyDown(KEY_S)){
                 myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){0,-1*myGridPawn->aimSpeed,0});
+                if (myGridPawn->rayLeft.direction.y < -1) myGridPawn->rayLeft.direction.y = -1;
             }
             
             // right arm
             if (IsKeyDown(KEY_LEFT)){
-                //myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){-myGridPawn->accelRate,0,0});
                 myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){-1*myGridPawn->aimSpeed,0,0});
+                if (myGridPawn->rayRight.direction.x < 0) myGridPawn->rayRight.direction.x = 0;
             }
             if (IsKeyDown(KEY_RIGHT)){
-                //myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){myGridPawn->accelRate,0,0});
                 myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){1*myGridPawn->aimSpeed,0,0});
+                if (myGridPawn->rayRight.direction.x > myGridPawn->aimLimitX) myGridPawn->rayRight.direction.x = myGridPawn->aimLimitX;
             }
             if (IsKeyDown(KEY_UP)){
                 myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,1*myGridPawn->aimSpeed,0});
+                if (myGridPawn->rayRight.direction.y > myGridPawn->aimLimitY) myGridPawn->rayRight.direction.y = myGridPawn->aimLimitY;
             }
             if (IsKeyDown(KEY_DOWN)){
                 myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,-1*myGridPawn->aimSpeed,0});
+                if (myGridPawn->rayRight.direction.y < -1) myGridPawn->rayRight.direction.y = -1;
             }
             
             // PAUSE
@@ -433,7 +439,6 @@ void MainUpdate(){
 
             Gridpawn_Update(myGridPawn, DT);
             
-            // camera updating BEFORE gridpawn adds a "weighty" effect
             switch(CAMERA_STATE){
                 case CS_SNAP:
                     cameraMoveTarget = myGridPawn->position;
@@ -464,8 +469,15 @@ void MainUpdate(){
             }
             break;
         case GS_MAIN:
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                if (!mainWindow->isActive) Window_Open(mainWindow);
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE)){
+                if (!mainWindow->isActive){
+                    EnableCursor();
+                    Window_Open(mainWindow);
+                } else {
+                    if (IsKeyPressed(KEY_SPACE)){
+                        StartGame();
+                    }
+                }
             }
             ExecuteButtonFunction(Window_Update(mainWindow, mousePos));
             ExecuteButtonFunction(Window_Update(settingsWindow, mousePos));
@@ -481,6 +493,7 @@ void MainCollide(){
 
     switch (GAME_STATE){
         case GS_PLAY:
+            Boxtree_Reset(boxtreeRoot);
             // bullet checkin
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                 if (!worldBullets[i]->isActive) continue;
@@ -894,12 +907,13 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
             spawnSelection = SS_TURRET;
             break;
         case BTN_PLAY:
+            StartGame();
+            break;
+        case BTN_RESUME:
             ChangeGameState(GS_PLAY);
             Window_Close(pauseWindow);
             Window_Close(settingsWindow);
             Window_Close(mainWindow);
-            bgColor = (Color){200,200,200,255};
-            bgColorTarget = (Vector3){50,50,50};
             break;
         case BTN_TEST:
             ChangeGameState(GS_TEST);
@@ -917,6 +931,17 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
         case BTN_NONE: break;
         default: break;
     }
+}
+
+void StartGame(){
+    ChangeGameState(GS_PLAY);
+    Window_Close(settingsWindow);
+    Window_Close(mainWindow);
+    bgColor = (Color){200,200,200,255};
+    bgColorTarget = (Vector3){50,50,50};
+    Gridpawn_Spawn(myGridPawn, gridpawnStartPos);
+    Gridpawn_Reset(myGridPawn);
+    ChangeCameraState(CS_LERP);
 }
 
 void GoToMain(){
@@ -1124,10 +1149,11 @@ void ChangeGameState(GameState gs){
         case GS_PLAY:
             strcpy(gameStateDebug, "PLAY");
             PrintToConsole("Game state: PLAY");
-            Gridpawn_Spawn(myGridPawn, gridpawnStartPos);
-            Gridpawn_Reset(myGridPawn);
             DisableCursor();
-            ChangeCameraState(CS_LERP);
+            break;
+        case GS_PAUSE:
+            strcpy(gameStateDebug, "PAUSE");
+            EnableCursor();
             break;
         case GS_TEST:
             strcpy(gameStateDebug, "TEST");
@@ -1153,13 +1179,15 @@ void ChangeCameraState(CameraState cs){
     // Enter State
     switch(cs){
         case CS_FREE:
-            strcpy(gameStateDebug, "FREE");
+            strcpy(cameraStateDebug, "FREE");
             PrintToConsole("Camera state: FREE");
             break;
         case CS_SNAP:
+            strcpy(cameraStateDebug, "SNAP");
             PrintToConsole("Camera state: SNAP");
             break;
         case CS_LERP:
+            strcpy(cameraStateDebug, "LERP");
             PrintToConsole("Camera state: LERP");
             break;
         default: break;

@@ -1,8 +1,5 @@
 === STUFFS ===
 
-- bullet collision is not correct in GS_Play
-- limits on aim range
-
 - bullet aesthetics, cluster of polygons that orbit around bullet position
 
 - bigger voxel world (tunnel):
@@ -11,15 +8,14 @@
 
 - encroaching entities
 
-- console/button commands with arguments (need to think of example)
+- console/button commands with arguments (need to think of an example)
 
 === NOTES
 
 ▼ inspiration
 - tempest (1981)
 - CONTRA
-- plants vs zombies
-- rocket slime
+- Star Fox
 
 === NEW ENVIRONMENT SETUP ===
 

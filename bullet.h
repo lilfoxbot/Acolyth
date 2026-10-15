@@ -41,14 +41,14 @@ Bullet* Bullet_Construct(){
 
     obj->position = (Vector3){0,0,0};
     obj->direction = (Vector3){0,0,0};
-    obj->speed = 1.0f;
+    obj->speed = 0.5f;
     obj->velocity = (Vector3){0,0,0};
 
     obj->size = 0.1f;
     obj->bb.min = (Vector3){0,0,0};
     obj->bb.max = (Vector3){0,0,0};
 
-    obj->bbColor = BLACK;
+    obj->bbColor = WHITE;
     obj->defaultColor = RED;
     obj->color = obj->defaultColor;
 
@@ -120,10 +120,14 @@ void Bullet_Draw(Bullet* obj) {
     if (!obj->isActive) return;
 
     if (obj->isArmed){
-        DrawCube(obj->position, obj->size, obj->size, obj->size, obj->color);
+        //DrawCube(obj->position, obj->size, obj->size, obj->size, obj->color);
+        DrawBoundingBox(obj->bb, obj->bbColor);
     } else {
         DrawCube(obj->position, obj->size, obj->size, obj->size, BLACK);
     }
     
-    DrawBoundingBox(obj->bb, obj->bbColor);
+    DrawLine3D(obj->position, Vector3Add(obj->position, (Vector3){0,0.05f,0}), RED);
+    DrawSphere(obj->position, 0.02f, WHITE);
+
+    // draw some cuh-razy polygons for a high energy feel
 }
