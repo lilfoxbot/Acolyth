@@ -26,6 +26,10 @@ typedef struct Bullet {
     float lifeSpanLimit;
     float armTimer;
     bool destroyFlag;
+    int drawDelay;
+    Vector3 tri_1_1;
+    Vector3 tri_1_2;
+    Vector3 tri_1_3;
 
     int hitCount;
     void *hitTargets[8];
@@ -33,6 +37,12 @@ typedef struct Bullet {
     struct BoxtreeNode* nodes[8];
     int nodeCount;
 } Bullet;
+
+Vector3 GetRandomSpherePoint(int range, float multiplier){
+    return (Vector3){ GetRandomValue(-range,range)*(multiplier),
+    GetRandomValue(-range,range)*(multiplier), 
+    GetRandomValue(-range,range)*(multiplier)};
+}
 
 Bullet* Bullet_Construct(){
     Bullet* obj = (Bullet*)malloc(sizeof(Bullet));
@@ -56,6 +66,10 @@ Bullet* Bullet_Construct(){
     obj->lifeSpanLimit = 3;
     obj->armTimer = 0.2f;
     obj->destroyFlag = false;
+    obj->drawDelay = 0;
+    obj->tri_1_1 = (Vector3){0,0,0};
+    obj->tri_1_2 = (Vector3){0,0,0};
+    obj->tri_1_3 = (Vector3){0,0,0};
     
     obj->nodeCount = 0;
     memset(obj->nodes, 0, sizeof(obj->nodes));
@@ -70,6 +84,7 @@ void Bullet_Spawn(Bullet* obj, Vector3 newPos, Vector3 newDir){
     obj->isActive = true;
     obj->isArmed = false;
     obj->lifeSpan = 0;
+    obj->drawDelay = 0;
     obj->position = newPos;
 
     obj->bb.min = (Vector3){newPos.x - obj->size / 2, newPos.y - obj->size / 2, newPos.z - obj->size / 2};
@@ -116,7 +131,7 @@ void Bullet_Update(Bullet* obj, float deltatime){
     }
 }
 
-void Bullet_Draw(Bullet* obj) {
+void Bullet_Draw(Bullet* obj){
     if (!obj->isActive) return;
 
     if (obj->isArmed){
@@ -126,8 +141,24 @@ void Bullet_Draw(Bullet* obj) {
         DrawCube(obj->position, obj->size, obj->size, obj->size, BLACK);
     }
     
-    DrawLine3D(obj->position, Vector3Add(obj->position, (Vector3){0,0.05f,0}), RED);
-    DrawSphere(obj->position, 0.02f, WHITE);
+    obj->drawDelay++;
+    if (obj->drawDelay % 10 == 0){
+        // update pos
+        obj->tri_1_1 = Vector3Scale(Vector3Normalize(GetRandomSpherePoint(5, 1)), 0.05f);
+        obj->tri_1_2 = Vector3Scale(Vector3Normalize(GetRandomSpherePoint(5, 1)), 0.05f);
+        obj->tri_1_3 = Vector3Scale(Vector3Normalize(GetRandomSpherePoint(5, 1)), 0.05f);
+    }
 
-    // draw some cuh-razy polygons for a high energy feel
+    DrawTriangle3D(Vector3Add(obj->tri_1_1, obj->position),
+                    Vector3Add(obj->tri_1_2, obj->position),
+                    Vector3Add(obj->tri_1_3, obj->position), LIGHTGRAY);
+
+    DrawTriangle3D(Vector3Add(obj->tri_1_1, obj->position),
+                    Vector3Add(obj->tri_1_3, obj->position),
+                    Vector3Add(obj->tri_1_2, obj->position), LIGHTGRAY);
+
+    DrawLine3D(Vector3Add(obj->tri_1_1, obj->position), Vector3Add(obj->tri_1_2, obj->position), BLACK);
+    DrawLine3D(Vector3Add(obj->tri_1_2, obj->position), Vector3Add(obj->tri_1_3, obj->position), BLACK);
+    DrawLine3D(Vector3Add(obj->tri_1_3, obj->position), Vector3Add(obj->tri_1_1, obj->position), BLACK);
+
 }
