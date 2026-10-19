@@ -1,7 +1,5 @@
 === STUFFS ===
 
-- bullet aesthetics, cluster of polygons that orbit around bullet position
-
 - bigger voxel world (tunnel):
     - scalable voxels (stretch)
     - multiple 2d voxel grids that face center (floor/ceiling/walls)

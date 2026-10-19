@@ -731,6 +731,7 @@ void MainCollide(){
                 // shoot a projectile
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                     SpawnWorldBullet(r1);
+                    
                 }
             }
             break;
