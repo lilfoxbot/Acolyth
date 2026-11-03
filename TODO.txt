@@ -1,14 +1,18 @@
 === STUFFS ===
 
-- bigger voxel world (tunnel):
-    - scalable voxels (stretch)
-    - multiple 2d voxel grids that face center (floor/ceiling/walls)
+- 2D grid object
+- voxel grid movement
+- scalable voxels (stretch)
+
+- new-voxel grid collision
+
+- multiple 2D voxel grids that face center (floor/ceiling/walls)
 
 - encroaching entities
 
 - console/button commands with arguments (need to think of an example)
 
-=== NOTES
+=== NOTES === 
 
 ▼ inspiration
 - tempest (1981)

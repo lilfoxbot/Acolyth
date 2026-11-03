@@ -6,7 +6,7 @@
 #include "poly.h"
 #include "cube.h"
 #include "boxtree.h"
-#include "voxel.h"
+#include "voxelgrid.h"
 #include "bullet.h"
 #include "pawn.h"
 #include "player.h"
@@ -28,12 +28,12 @@
 #define LEVEL_GRID_COLS 5
 #define LEVEL_GRID_DEPTH 10
 
-Vector3 DEFAULT_PLAYER_POSITION = (Vector3){ 0, 5, -3 };
-Vector3 CAM_DEFAULT_POS = (Vector3){ 0.0f, 3.0f, 6.0f };
-Vector3 CAM_DEFAULT_TARGET = (Vector3){ 0, 0, -1000 };
+Vector3 DEFAULT_PLAYER_POSITION = (Vector3){ 0, 5, 5 };
+Vector3 CAM_DEFAULT_POS = (Vector3){ 0, 3, 0 };
+Vector3 CAM_DEFAULT_TARGET = (Vector3){ 1000, 0, 0 };
 
 Color bgColor = { 200, 100, 50, 255 };
-Vector3 bgColorTarget = { 200, 100, 50 };
+Vector3 bgColorTarget = { 50, 50, 50 };
 float bgColorRate = 0.02;
 //Color bgColor = { 200, 100, 50, 255 }; cool orange
 
@@ -60,6 +60,7 @@ struct Ray voxelRay;
 const int OCTREE_ROOT_SIZE = 8; // octree root size
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
+struct VoxelGrid* grid_floor;
 BoxtreeNode* boxtreeRoot;
 
 struct Button* mainButtons[HUD_LIMIT];
@@ -185,32 +186,35 @@ void MainInit(){
     boxtreeRoot = Boxtree_Build((Vector3){0,0,0}, BOXTREE_INITIAL_SIZE, 1);
 
     // @GRID init
-    Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
-    int gridIndex = 0;
-    
-    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-        for (int y = 0; y < LEVEL_GRID_COLS; y++){
-            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                Voxel* newVoxel = Voxel_Construct((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, (Vector3){x, y, z}, 1);
-                grid3d[x][y][z] = newVoxel;
-                PlaceVoxelInBoxtree(newVoxel, boxtreeRoot);
-                gridIndex++;
-            }
-        }
-    }
+    grid_floor = VoxelGrid_Construct(5,5);
+    grid_floor->isActive = true;
 
-    // set all ground level voxels
-    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-        for (int y = 0; y < LEVEL_GRID_COLS; y++){
-            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                if (y == 0){
-                    grid3d[x][y][z]->isActive = true;
-                } else {
-                    grid3d[x][y][z]->isActive = false;
-                }
-            }
-        }
-    }
+    // Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
+    // int gridIndex = 0;
+    
+    // for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+    //     for (int y = 0; y < LEVEL_GRID_COLS; y++){
+    //         for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+    //             Voxel* newVoxel = Voxel_Construct((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, (Vector3){x, y, z}, 1);
+    //             grid3d[x][y][z] = newVoxel;
+    //             PlaceVoxelInBoxtree(newVoxel, boxtreeRoot);
+    //             gridIndex++;
+    //         }
+    //     }
+    // }
+
+    // // set all ground level voxels
+    // for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+    //     for (int y = 0; y < LEVEL_GRID_COLS; y++){
+    //         for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+    //             if (y == 0){
+    //                 grid3d[x][y][z]->isActive = true;
+    //             } else {
+    //                 grid3d[x][y][z]->isActive = false;
+    //             }
+    //         }
+    //     }
+    // }
 
     // OBJECT POOLS
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
@@ -320,6 +324,9 @@ void MainInput(){
 }
 
 void MainUpdate(){
+
+    VoxelGrid_Update(grid_floor, DT);
+
     switch (GAME_STATE){
         case GS_TEST:
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
@@ -576,12 +583,6 @@ void MainCollide(){
             }
             break;
         case GS_TEST:
-            Boxtree_Reset(boxtreeRoot);
-            Voxel* voxelHits[50] = {NULL};
-            Boxtree_GetRayVoxels(r1, boxtreeRoot, voxelHits, 50);
-            
-            float closestVoxelDist = 100;
-            struct Voxel* closestHitVoxel = NULL;
 
             // pawn checkin
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
@@ -604,7 +605,6 @@ void MainCollide(){
                 if (!worldBullets[i]->isArmed) continue;
                 // Nodes
                 for (int j = 0; j < worldBullets[i]->nodeCount; j++){
-
                     // Other Bullets
                     for (int l = 0; l < worldBullets[i]->nodes[j]->bulletCount; l++){
                         // check bullet if self
@@ -643,7 +643,6 @@ void MainCollide(){
                             }
                         }
                     }
-                    
                     // Pawns
                     for (int m = 0; m < worldBullets[i]->nodes[j]->pawnCount; m++){
                         if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->pawns[m]->bb)){
@@ -673,65 +672,10 @@ void MainCollide(){
             
             // edit ray collision
             if (editMode){
-                for (int i = 0; i < 50; i++){
-                    if (voxelHits[i] == NULL){
-                        break;
-                    } else {
-                        float dist = Vector3Distance(r1.position, voxelHits[i]->position);
-                        if (dist < closestVoxelDist){
-                            closestVoxelDist = dist;
-                            closestHitVoxel = voxelHits[i];
-                        }
-                    }
-                }
-
-                if (closestHitVoxel != NULL){
-                    RayCollision rc = GetRayCollisionBox(r1, closestHitVoxel->bb);
-                    rayHitNormal = rc.normal;
-
-                    closestHitVoxel->selected = true;
-                    closestHitVoxel->selectedNormal = rayHitNormal;
-
-                    switch(spawnSelection){
-                        case SS_VOXEL:
-                            if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
-                                Vector3 NVC = Vector3Add(closestHitVoxel->coordinates,rayHitNormal);
-                                Voxel* targetVoxel = grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)]
-                                [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
-                                [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)];
-
-                                if (targetVoxel->isOccupied == false && targetVoxel->isActive == false){
-                                    targetVoxel->isActive = true;
-                                }
-                            }
-                            break;
-                        case SS_TURRET:
-                            if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && IsNormalUp(rayHitNormal)){
-                                Vector3 NVC = Vector3Add(closestHitVoxel->coordinates, rayHitNormal);
-                                Voxel* targetVoxel = grid3d[(int)Clamp(NVC.x,0,LEVEL_GRID_ROWS-1)]
-                                [(int)Clamp(NVC.y,0,LEVEL_GRID_COLS-1)]
-                                [(int)Clamp(NVC.z,0,LEVEL_GRID_DEPTH-1)];
-
-                                if (targetVoxel->isOccupied == true || targetVoxel->isActive == true){ break; }
-                                
-                                Pawn* newPawn = SpawnWorldPawn(Vector3Add(closestHitVoxel->position, Vector3Scale(rayHitNormal,1.5f)), PAWN_TURRET);
-                                targetVoxel->isOccupied = true;
-                                targetVoxel->occupier = OB_TURRET;
-                                newPawn->rootVoxel = targetVoxel;
-                            }
-                            break;
-                        default: break;
-                    }
-
-                    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                        Voxel_Destroy(closestHitVoxel);
-                    }
-                }
+                
             } else {
-                // shoot a projectile
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                     SpawnWorldBullet(r1);
-                    
                 }
             }
             break;
@@ -744,11 +688,18 @@ void MainDraw(){
     UpdateBackground();
     BeginMode3D(camera); // =====================================================
     
-    DrawSphere((Vector3){ 0.0f, 20.0f, -500.0f }, 10.0f, WHITE);
+    DrawSphere((Vector3){ 500.0f, 20.0f, 0 }, 10.0f, WHITE);
     DrawGrid(10, 1.0f);
     DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
 
-    if (myDebug) Boxtree_DrawNode(boxtreeRoot);
+    if (myDebug){
+        Boxtree_DrawNode(boxtreeRoot);
+    }
+    // world origin
+    DrawCube((Vector3){0, 0, 0}, 0.5f, 0.5f, 0.5f, WHITE);
+    DrawCube((Vector3){0.5f, 0, 0}, 0.5f, 0.5f, 0.5f, RED);
+    DrawCube((Vector3){0, 0.5f, 0}, 0.5f, 0.5f, 0.5f, GREEN);
+    DrawCube((Vector3){0, 0, 0.5f}, 0.5f, 0.5f, 0.5f, BLUE);
 
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         Poly_Draw(worldPolys[i]);
@@ -756,14 +707,16 @@ void MainDraw(){
         Bullet_Draw(worldBullets[i]);
     }
     
-    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-        for (int y = 0; y < LEVEL_GRID_COLS; y++){
-            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                Voxel_Draw(grid3d[x][y][z]);
-                Voxel_Reset(grid3d[x][y][z]);
-            }
-        }
-    }
+    // for (int x = 0; x < LEVEL_GRID_ROWS; x++){
+    //     for (int y = 0; y < LEVEL_GRID_COLS; y++){
+    //         for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
+    //             Voxel_Draw(grid3d[x][y][z]);
+    //             Voxel_Reset(grid3d[x][y][z]);
+    //         }
+    //     }
+    // }
+
+    VoxelGrid_Draw(grid_floor);
 
     switch (GAME_STATE){
         case GS_TEST:
@@ -866,27 +819,7 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
             break;
         case BTN_SAVE:
             PlaySound(bullet_shot);
-            int lsIndex = 0;
-            for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-                for (int y = 0; y < LEVEL_GRID_COLS; y++){
-                    for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                        if (grid3d[x][y][z]->isActive == true){
-                            levelString[lsIndex] = '1';
-                        } else if (grid3d[x][y][z]->isOccupied == true){
-                            switch (grid3d[x][y][z]->occupier){
-                                case OB_TURRET:
-                                    levelString[lsIndex] = '2';
-                                break;
-                                default: break;
-                            }
-                        } else {
-                            levelString[lsIndex] = '0';
-                        }
-                        lsIndex++;
-                    }
-                }
-            }
-            SaveFileText("level_export.txt", (char *)levelString);
+            //SaveFileText("level_export.txt", (char *)levelString);
             break;
         case BTN_LOAD:
             LoadLevel();
@@ -957,32 +890,6 @@ void GoToMain(){
 
 void LoadLevel(){
     screenFade = 1;
-
-    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-        worldBullets[i]->isActive = false;
-        worldPolys[i]->isActive = false;
-        worldPawns[i]->isActive = false;
-    }
-
-    int lsIndex = 0;
-    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-        for (int y = 0; y < LEVEL_GRID_COLS; y++){
-            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                grid3d[x][y][z]->isActive = false;
-                grid3d[x][y][z]->isOccupied = false;
-
-                if (levels[levelSelection][lsIndex] == '1'){
-                    grid3d[x][y][z]->isActive = true;
-                } else if (levels[levelSelection][lsIndex] == '2'){
-                    grid3d[x][y][z]->isOccupied = true;
-                    grid3d[x][y][z]->occupier = OB_TURRET;
-                    Pawn* newPawn = SpawnWorldPawn(Vector3Add(grid3d[x][y][z]->position, (Vector3){0,0.5f,0}), PAWN_TURRET);
-                    newPawn->rootVoxel = grid3d[x][y][z];
-                }
-                lsIndex++;
-            }
-        }
-    }
 }
 
 void ResetScene(){
@@ -1009,26 +916,26 @@ void ResetScene(){
     }
 }
 
-void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
-    if (voxel == NULL || btnode == NULL) return;
+// void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
+//     if (voxel == NULL || btnode == NULL) return;
 
-    if (voxel->coordinates.y > 0){
-        voxel->isActive = false;
-    }
+//     if (voxel->coordinates.y > 0){
+//         voxel->isActive = false;
+//     }
 
-    if (CheckCollisionBoxes(voxel->bb, btnode->bb)){
-        if (btnode->depth == MAX_BOXTREE_DEPTH){
-            btnode->voxels[btnode->voxelCount] = voxel;
-            btnode->voxelCount++;
-        }
-    }
+//     if (CheckCollisionBoxes(voxel->bb, btnode->bb)){
+//         if (btnode->depth == MAX_BOXTREE_DEPTH){
+//             btnode->voxels[btnode->voxelCount] = voxel;
+//             btnode->voxelCount++;
+//         }
+//     }
 
-    if (btnode->depth == MAX_BOXTREE_DEPTH) return;
+//     if (btnode->depth == MAX_BOXTREE_DEPTH) return;
 
-    for (int i = 0; i < 8; i++) {
-        PlaceVoxelInBoxtree(voxel, btnode->children[i]);
-    }
-}
+//     for (int i = 0; i < 8; i++) {
+//         PlaceVoxelInBoxtree(voxel, btnode->children[i]);
+//     }
+// }
 
 void SpawnWorldBullet(Ray ray){
     // find empty slot in bullet object pool

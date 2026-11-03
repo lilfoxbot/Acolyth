@@ -5,104 +5,98 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef enum {
-    OB_NONE,
-    OB_TURRET
-} OccupiedBy;
+// typedef struct Voxel {
+//     bool isActive;
+//     bool isOccupied;
 
-typedef struct Voxel {
-    bool isActive;
-    bool isOccupied;
-    OccupiedBy occupier;
-
-    Vector3 coordinates;
-    Vector3 position;
-    float size;
-    BoundingBox bb;
+//     Vector3 coordinates;
+//     Vector3 position;
+//     float size;
+//     BoundingBox bb;
     
-    Color color;
-    Color defaultColor;
-    Color bbColor;
+//     Color color;
+//     Color defaultColor;
+//     Color bbColor;
 
-    bool selected;
-    Vector3 selectedNormal;
-    bool fading;
-} Voxel;
+//     bool selected;
+//     Vector3 selectedNormal;
+//     bool fading;
+// } Voxel;
 
-Voxel* Voxel_Construct(Vector3 position, Vector3 coordinates, float size) {
-    Voxel* voxel = (Voxel*)malloc(sizeof(Voxel));
-    voxel->position = position;
-    voxel->coordinates = coordinates;
-    voxel->size = size;
-    voxel->bb.min = (Vector3){position.x - size / 2, position.y - size / 2, position.z - size / 2};
-    voxel->bb.max = (Vector3){position.x + size / 2, position.y + size / 2, position.z + size / 2};
-    voxel->bbColor = BLACK;
-    voxel->defaultColor = (Color){coordinates.z*25, coordinates.z*25, coordinates.z*25, 255};
-    voxel->color = voxel->defaultColor;
-    voxel->isActive = false;
-    voxel->isOccupied = false;
-    voxel->selected = false;
-    voxel->selectedNormal = (Vector3){0,0,0};
-    voxel->fading = false;
-    return voxel;
-}
+// Voxel* Voxel_Construct(Vector3 position, Vector3 coordinates, float size) {
+//     Voxel* voxel = (Voxel*)malloc(sizeof(Voxel));
+//     voxel->position = position;
+//     voxel->coordinates = coordinates;
+//     voxel->size = size;
+//     voxel->bb.min = (Vector3){position.x - size / 2, position.y - size / 2, position.z - size / 2};
+//     voxel->bb.max = (Vector3){position.x + size / 2, position.y + size / 2, position.z + size / 2};
+//     voxel->bbColor = BLACK;
+//     voxel->defaultColor = (Color){coordinates.z*25, coordinates.z*25, coordinates.z*25, 255};
+//     voxel->color = voxel->defaultColor;
+//     voxel->isActive = false;
+//     voxel->isOccupied = false;
+//     voxel->selected = false;
+//     voxel->selectedNormal = (Vector3){0,0,0};
+//     voxel->fading = false;
+//     return voxel;
+// }
 
-void Voxel_Draw(Voxel* voxel) {
-    if (voxel == NULL || !voxel->isActive) return;
+// void Voxel_Draw(Voxel* voxel) {
+//     if (voxel == NULL || !voxel->isActive) return;
 
-    if (voxel->selected) {
-        float cursorSizeX = 0.8f;
-        float cursorSizeY = 0.8f;
-        float cursorSizeZ = 0.8f;
+//     if (voxel->selected) {
+//         float cursorSizeX = 0.8f;
+//         float cursorSizeY = 0.8f;
+//         float cursorSizeZ = 0.8f;
         
-        if (voxel->selectedNormal.x == 1 || voxel->selectedNormal.x == -1){ cursorSizeX = 0; }
-        if (voxel->selectedNormal.y == 1 || voxel->selectedNormal.y == -1){ cursorSizeY = 0; }
-        if (voxel->selectedNormal.z == 1 || voxel->selectedNormal.z == -1){ cursorSizeZ = 0; }
+//         if (voxel->selectedNormal.x == 1 || voxel->selectedNormal.x == -1){ cursorSizeX = 0; }
+//         if (voxel->selectedNormal.y == 1 || voxel->selectedNormal.y == -1){ cursorSizeY = 0; }
+//         if (voxel->selectedNormal.z == 1 || voxel->selectedNormal.z == -1){ cursorSizeZ = 0; }
 
-        // "edge" cases
-        if (voxel->selectedNormal.x < 1 && voxel->selectedNormal.x > -1 && voxel->selectedNormal.x != 0){ cursorSizeX = 0; }
-        if (voxel->selectedNormal.y < 1 && voxel->selectedNormal.y > -1 && voxel->selectedNormal.y != 0){ cursorSizeY = 0; }
-        if (voxel->selectedNormal.z < 1 && voxel->selectedNormal.z > -1 && voxel->selectedNormal.z != 0){ cursorSizeZ = 0; }
+//         // "edge" cases
+//         if (voxel->selectedNormal.x < 1 && voxel->selectedNormal.x > -1 && voxel->selectedNormal.x != 0){ cursorSizeX = 0; }
+//         if (voxel->selectedNormal.y < 1 && voxel->selectedNormal.y > -1 && voxel->selectedNormal.y != 0){ cursorSizeY = 0; }
+//         if (voxel->selectedNormal.z < 1 && voxel->selectedNormal.z > -1 && voxel->selectedNormal.z != 0){ cursorSizeZ = 0; }
         
-        DrawCubeWires(Vector3Add(voxel->position,Vector3Scale(voxel->selectedNormal,0.55)), cursorSizeX, cursorSizeY, cursorSizeZ, RAYWHITE);
-        DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, (Color){voxel->defaultColor.r+50,voxel->defaultColor.g+50,voxel->defaultColor.b+50,255});
-    } else {
-        if (voxel->fading){
-            // update fade
-            int newR = voxel->color.r;
-            int newG = voxel->color.g;
-            int newB = voxel->color.b;
+//         DrawCubeWires(Vector3Add(voxel->position,Vector3Scale(voxel->selectedNormal,0.55)), cursorSizeX, cursorSizeY, cursorSizeZ, RAYWHITE);
+//         DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, (Color){voxel->defaultColor.r+50,voxel->defaultColor.g+50,voxel->defaultColor.b+50,255});
+//     } else {
+//         if (voxel->fading){
+//             // update fade
+//             int newR = voxel->color.r;
+//             int newG = voxel->color.g;
+//             int newB = voxel->color.b;
 
-            if (voxel->color.r <= voxel->defaultColor.r && 
-                voxel->color.g <= voxel->defaultColor.g &&
-                voxel->color.b <= voxel->defaultColor.b)
-            {
-                voxel->color = voxel->defaultColor;
-                voxel->fading = false;
-            } else {
-                if (voxel->color.r > voxel->defaultColor.r) newR--;
-                if (voxel->color.g > voxel->defaultColor.g) newG--;
-                if (voxel->color.b > voxel->defaultColor.b) newB--;
+//             if (voxel->color.r <= voxel->defaultColor.r && 
+//                 voxel->color.g <= voxel->defaultColor.g &&
+//                 voxel->color.b <= voxel->defaultColor.b)
+//             {
+//                 voxel->color = voxel->defaultColor;
+//                 voxel->fading = false;
+//             } else {
+//                 if (voxel->color.r > voxel->defaultColor.r) newR--;
+//                 if (voxel->color.g > voxel->defaultColor.g) newG--;
+//                 if (voxel->color.b > voxel->defaultColor.b) newB--;
 
-                voxel->color = (Color){newR,newG,newB,voxel->color.a};
-            }
+//                 voxel->color = (Color){newR,newG,newB,voxel->color.a};
+//             }
 
-            DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, voxel->color);
-        } else {
-            DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, voxel->color);
-        }
-    }
+//             DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, voxel->color);
+//         } else {
+//             DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, voxel->color);
+//         }
+//     }
 
-    DrawBoundingBox(voxel->bb, voxel->bbColor);
-}
+//     DrawBoundingBox(voxel->bb, voxel->bbColor);
+// }
 
-void Voxel_Reset(Voxel* voxel) {
-    if (voxel == NULL) return;
-    //voxel->color = voxel->defaultColor;
-    voxel->bbColor = BLACK;
-    voxel->selected = false;
-}
+// void Voxel_Reset(Voxel* voxel) {
+//     if (voxel == NULL) return;
+//     //voxel->color = voxel->defaultColor;
+//     voxel->bbColor = BLACK;
+//     voxel->selected = false;
+// }
 
-void Voxel_Destroy(Voxel* voxel) {
-    voxel->isActive = false;
-}
+// void Voxel_Destroy(Voxel* voxel) {
+//     voxel->isActive = false;
+// }

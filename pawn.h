@@ -31,7 +31,7 @@ typedef struct Pawn{
     float shootTick;
     int hp;
 
-    Voxel* rootVoxel;
+    //Voxel* rootVoxel;
     struct BoxtreeNode* nodes[16];
     int nodeCount;
 } Pawn;
@@ -78,7 +78,7 @@ void Pawn_Spawn(Pawn* obj, Vector3 newPos, PawnType pt){
 void Pawn_Destroy(Pawn* obj){
     if (!obj->isActive) return;
     obj->isActive = false;
-    obj->rootVoxel->isOccupied = false;
+    //obj->rootVoxel->isOccupied = false;
 }
 
 void Pawn_Reset(Pawn* obj){

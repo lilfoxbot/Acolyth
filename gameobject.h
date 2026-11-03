@@ -17,7 +17,7 @@ typedef struct GameObject{
     Color bbColor;
 } GameObject;
 
-// GameObject* Create_This(){
+// GameObject* This_Construct(){
 //     GameObject* obj = (GameObject*)malloc(sizeof(GameObject));
 //     obj->isActive = false;
 
@@ -31,24 +31,24 @@ typedef struct GameObject{
 //     return obj;
 // }
 
-// void Spawn_This(GameObject* obj, Vector3 newPos){
+// void This_Spawn(GameObject* obj, Vector3 newPos){
 //     obj->isActive = true;
 //     obj->position = newPos;
 // }
 
-// void Destroy_This(GameObject* obj){
+// void This_Destroy(GameObject* obj){
 //     if (!obj->isActive) return;
 //     obj->isActive = false;
 // }
 
-// void Update_This(GameObject* obj, float deltaTime){
+// void This_Update(GameObject* obj, float deltaTime){
 //     if (!obj->isActive) return;
 
 //     obj->velocity = (Vector3){0,0,0};
 //     obj->position = Vector3Add(obj->position, obj->velocity);
 // }
 
-// void Draw_This(GameObject* obj){
+// void This_Draw(GameObject* obj){
 //     if (!obj->isActive) return;
 
 //     DrawCube(obj->position, obj->size, obj->size, obj->size, obj->color);
