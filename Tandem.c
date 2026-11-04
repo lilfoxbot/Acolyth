@@ -187,6 +187,7 @@ void MainInit(){
 
     // @GRID init
     grid_floor = VoxelGrid_Construct(5,5);
+    grid_floor->position = (Vector3){0.5,0.5,0.5};
     grid_floor->isActive = true;
 
     // Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
@@ -696,10 +697,9 @@ void MainDraw(){
         Boxtree_DrawNode(boxtreeRoot);
     }
     // world origin
-    DrawCube((Vector3){0, 0, 0}, 0.5f, 0.5f, 0.5f, WHITE);
-    DrawCube((Vector3){0.5f, 0, 0}, 0.5f, 0.5f, 0.5f, RED);
-    DrawCube((Vector3){0, 0.5f, 0}, 0.5f, 0.5f, 0.5f, GREEN);
-    DrawCube((Vector3){0, 0, 0.5f}, 0.5f, 0.5f, 0.5f, BLUE);
+    DrawLine3D((Vector3){0, 0, 0}, (Vector3){1, 0, 0}, RED);
+    DrawLine3D((Vector3){0, 0, 0}, (Vector3){0, 1, 0}, GREEN);
+    DrawLine3D((Vector3){0, 0, 0}, (Vector3){0, 0, 1}, BLUE);
 
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         Poly_Draw(worldPolys[i]);

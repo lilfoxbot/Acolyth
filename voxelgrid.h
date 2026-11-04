@@ -9,9 +9,9 @@ typedef struct Voxel {
     bool isActive;
     bool isOccupied;
 
-    Vector3 coordinates;
+    Vector2 coordinates;
     Vector3 position;
-    float size;
+    Vector3 size;
     BoundingBox bb;
     
     Color color;
@@ -23,26 +23,15 @@ typedef struct Voxel {
     bool fading;
 } Voxel;
 
-typedef struct VoxelGrid{
-    bool isActive;
-    bool isWall;
-
-    Vector3 position;
-    Vector3 velocity;
-    
-    
-
-} VoxelGrid;
-
-Voxel* Voxel_Construct(Vector3 position, Vector3 coordinates, float size) {
+Voxel* Voxel_Construct(Vector3 position, Vector2 coordinates) {
     Voxel* voxel = (Voxel*)malloc(sizeof(Voxel));
     voxel->position = position;
     voxel->coordinates = coordinates;
-    voxel->size = size;
-    voxel->bb.min = (Vector3){position.x - size / 2, position.y - size / 2, position.z - size / 2};
-    voxel->bb.max = (Vector3){position.x + size / 2, position.y + size / 2, position.z + size / 2};
+    voxel->size = (Vector3){1,1,1};
+    voxel->bb.min = Vector3Add(voxel->position, (Vector3){-0.5f,-0.5f,-0.5f});
+    voxel->bb.max = Vector3Add(voxel->position, (Vector3){0.5f,0.5f,0.5f});
     voxel->bbColor = BLACK;
-    voxel->defaultColor = (Color){coordinates.z*25, coordinates.z*25, coordinates.z*25, 255};
+    voxel->defaultColor = GRAY;
     voxel->color = voxel->defaultColor;
     voxel->isActive = false;
     voxel->isOccupied = false;
@@ -55,49 +44,31 @@ Voxel* Voxel_Construct(Vector3 position, Vector3 coordinates, float size) {
 void Voxel_Draw(Voxel* voxel) {
     if (voxel == NULL || !voxel->isActive) return;
 
-    if (voxel->selected) {
-        float cursorSizeX = 0.8f;
-        float cursorSizeY = 0.8f;
-        float cursorSizeZ = 0.8f;
-        
-        if (voxel->selectedNormal.x == 1 || voxel->selectedNormal.x == -1){ cursorSizeX = 0; }
-        if (voxel->selectedNormal.y == 1 || voxel->selectedNormal.y == -1){ cursorSizeY = 0; }
-        if (voxel->selectedNormal.z == 1 || voxel->selectedNormal.z == -1){ cursorSizeZ = 0; }
+    if (voxel->fading){
+        // update fade
+        int newR = voxel->color.r;
+        int newG = voxel->color.g;
+        int newB = voxel->color.b;
 
-        // "edge" cases
-        if (voxel->selectedNormal.x < 1 && voxel->selectedNormal.x > -1 && voxel->selectedNormal.x != 0){ cursorSizeX = 0; }
-        if (voxel->selectedNormal.y < 1 && voxel->selectedNormal.y > -1 && voxel->selectedNormal.y != 0){ cursorSizeY = 0; }
-        if (voxel->selectedNormal.z < 1 && voxel->selectedNormal.z > -1 && voxel->selectedNormal.z != 0){ cursorSizeZ = 0; }
-        
-        DrawCubeWires(Vector3Add(voxel->position,Vector3Scale(voxel->selectedNormal,0.55)), cursorSizeX, cursorSizeY, cursorSizeZ, RAYWHITE);
-        DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, (Color){voxel->defaultColor.r+50,voxel->defaultColor.g+50,voxel->defaultColor.b+50,255});
-    } else {
-        if (voxel->fading){
-            // update fade
-            int newR = voxel->color.r;
-            int newG = voxel->color.g;
-            int newB = voxel->color.b;
-
-            if (voxel->color.r <= voxel->defaultColor.r && 
-                voxel->color.g <= voxel->defaultColor.g &&
-                voxel->color.b <= voxel->defaultColor.b)
-            {
-                voxel->color = voxel->defaultColor;
-                voxel->fading = false;
-            } else {
-                if (voxel->color.r > voxel->defaultColor.r) newR--;
-                if (voxel->color.g > voxel->defaultColor.g) newG--;
-                if (voxel->color.b > voxel->defaultColor.b) newB--;
-
-                voxel->color = (Color){newR,newG,newB,voxel->color.a};
-            }
-
-            DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, voxel->color);
+        if (voxel->color.r <= voxel->defaultColor.r && 
+            voxel->color.g <= voxel->defaultColor.g &&
+            voxel->color.b <= voxel->defaultColor.b)
+        {
+            voxel->color = voxel->defaultColor;
+            voxel->fading = false;
         } else {
-            DrawCube(voxel->position, voxel->size, voxel->size, voxel->size, voxel->color);
-        }
-    }
+            if (voxel->color.r > voxel->defaultColor.r) newR--;
+            if (voxel->color.g > voxel->defaultColor.g) newG--;
+            if (voxel->color.b > voxel->defaultColor.b) newB--;
 
+            voxel->color = (Color){newR,newG,newB,voxel->color.a};
+        }
+
+        DrawCube(voxel->position, voxel->size.x, voxel->size.y, voxel->size.z, voxel->color);
+    } else {
+        DrawCube(voxel->position, voxel->size.x, voxel->size.y, voxel->size.z, voxel->color);
+    }
+    
     DrawBoundingBox(voxel->bb, voxel->bbColor);
 }
 
@@ -114,6 +85,18 @@ void Voxel_Destroy(Voxel* voxel) {
 
 // #GRID
 
+typedef struct VoxelGrid{
+    bool isActive;
+    bool isWall;
+
+    Vector3 position;
+    Vector3 velocity;
+
+    int voxelCount;
+    struct Voxel* voxels[100];
+
+} VoxelGrid;
+
 VoxelGrid* VoxelGrid_Construct(int length, int width){
     VoxelGrid* obj = (VoxelGrid*)malloc(sizeof(VoxelGrid));
     obj->isActive = false;
@@ -121,6 +104,20 @@ VoxelGrid* VoxelGrid_Construct(int length, int width){
 
     obj->position = (Vector3){0,0,0};
     obj->velocity = (Vector3){0,0,0};
+
+    // create voxels
+    obj->voxelCount = 0;
+    for (int x = 0; x < length; x++){
+        for (int y = 0; y < width; y++){
+            Voxel* newVoxel = Voxel_Construct((Vector3){obj->position.x + x, obj->position.y + y, obj->position.z}, (Vector2){x, y});
+            newVoxel->isActive = true;
+            newVoxel->size.z = 0.5f * x;
+            Color newColor = {20 * x, 20 * x, 20 * x, 255};
+            newVoxel->color = newColor; 
+            obj->voxels[obj->voxelCount] = newVoxel;
+            obj->voxelCount++;
+        }
+    }
 
     return obj;
 }
@@ -130,10 +127,24 @@ void VoxelGrid_Update(VoxelGrid* obj, float deltaTime){
 
     obj->velocity = (Vector3){0.01f,0,0};
     obj->position = Vector3Add(obj->position, obj->velocity);
+    for (int i = 0; i < obj->voxelCount; i++){
+        //Voxel_Update(obj->voxels[i]);
+        obj->voxels[i]->position = (Vector3){obj->position.x + obj->voxels[i]->coordinates.x,
+                                            obj->position.y + obj->voxels[i]->coordinates.y,
+                                            obj->position.z};
+        obj->voxels[i]->bb.min = Vector3Add(obj->voxels[i]->position, (Vector3){-0.5f,-0.5f,-0.5f});
+        obj->voxels[i]->bb.max = Vector3Add(obj->voxels[i]->position, (Vector3){0.5f,0.5f,0.5f});
+    }
 }
 
 void VoxelGrid_Draw(VoxelGrid* obj){
     if (!obj->isActive) return;
 
-    DrawCube(obj->position, 1, 1, 1, MAGENTA);
+    DrawLine3D(Vector3Add(obj->position, (Vector3){-1,0,0}), Vector3Add(obj->position, (Vector3){1,0,0}), MAGENTA);
+    DrawLine3D(Vector3Add(obj->position, (Vector3){0,-1,0}), Vector3Add(obj->position, (Vector3){0,1,0}), MAGENTA);
+    DrawLine3D(Vector3Add(obj->position, (Vector3){0,0,-1}), Vector3Add(obj->position, (Vector3){0,0,1}), MAGENTA);
+
+    for (int i = 0; i < obj->voxelCount; i++){
+        Voxel_Draw(obj->voxels[i]);
+    }
 }

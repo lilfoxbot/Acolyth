@@ -1,9 +1,7 @@
 === STUFFS ===
 
-- 2D grid object
-- voxel grid movement
 - scalable voxels (stretch)
-
+- floor version
 - new-voxel grid collision
 
 - multiple 2D voxel grids that face center (floor/ceiling/walls)
