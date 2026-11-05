@@ -1,7 +1,8 @@
 === STUFFS ===
 
-- scalable voxels (stretch)
-- floor version
+- second voxel wall
+- voxel floor
+
 - new-voxel grid collision
 
 - multiple 2D voxel grids that face center (floor/ceiling/walls)

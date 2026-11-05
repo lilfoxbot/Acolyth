@@ -48,7 +48,7 @@ typedef struct Bullet {
 
 Vector3 GetRandomSpherePoint(int range, float multiplier, float scale){
     Vector3 returnVec; 
-    returnVec = (Vector3){ GetRandomValue(-range,range)*(multiplier),
+    returnVec = (Vector3){GetRandomValue(-range,range)*(multiplier),
     GetRandomValue(-range,range)*(multiplier), 
     GetRandomValue(-range,range)*(multiplier)};
     

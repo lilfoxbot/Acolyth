@@ -2,9 +2,12 @@
 
 #include "raylib.h"
 #include "raymath.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "tandem_common.h"
 
 #define MAX_INPUT 50
 #define MAX_FEED 50
@@ -40,16 +43,12 @@ typedef struct Console{
 
 } Console;
 
-void SetText(char *dest, size_t dest_size, const char *source){
-    snprintf(dest, dest_size, "%s", source);
-}
-
 void Console_Print(Console* obj, const char* out){
     // shuffle feed
     for (int i = MAX_FEED-1; i >= 0; i--){
-        SetText(obj->feed[i], sizeof(obj->feed[i]), obj->feed[i-1]);
+        SetString(obj->feed[i], sizeof(obj->feed[i]), obj->feed[i-1]);
     }
-    SetText(obj->feed[0], sizeof(obj->feed[0]), out);
+    SetString(obj->feed[0], sizeof(obj->feed[0]), out);
 }
 
 Console* Console_Construct(){
@@ -66,10 +65,10 @@ Console* Console_Construct(){
     obj->inputCharCount = 0;
     obj->inputRectColor = LIGHTGRAY;
     obj->inputOutlineColor = BLACK;
-    SetText(obj->inputText, sizeof(obj->inputText), "");
+    SetString(obj->inputText, sizeof(obj->inputText), "");
 
     for (int i = 0; i < MAX_FEED; i++){
-        SetText(obj->feed[i], sizeof(obj->feed[i]), "---");
+        SetString(obj->feed[i], sizeof(obj->feed[i]), "---");
     }
     obj->feedRect.width = 500;
     obj->feedRect.height = 500;
@@ -78,7 +77,7 @@ Console* Console_Construct(){
     obj->feedOffset = 10;
 
     for (int i = 0; i < MAX_FEED; i++){
-        SetText(obj->history[i], sizeof(obj->feed[i]), "");
+        SetString(obj->history[i], sizeof(obj->feed[i]), "");
     }
     obj->historyCount = 0;
     obj->historyIdx = -1;
@@ -120,7 +119,7 @@ void Console_Update(Console* obj){
         if (obj->historyCount > obj->historyIdx + 1){
             obj->historyIdx++;
 
-            SetText(obj->inputText, sizeof(obj->inputText), obj->history[obj->historyIdx]);
+            SetString(obj->inputText, sizeof(obj->inputText), obj->history[obj->historyIdx]);
             obj->inputCharCount = strlen(obj->history[obj->historyIdx]);
             obj->inputText[obj->inputCharCount+1] = '\0';
         }
@@ -130,7 +129,7 @@ void Console_Update(Console* obj){
         if (obj->historyIdx > 0){
             obj->historyIdx--;
             
-            SetText(obj->inputText, sizeof(obj->inputText), obj->history[obj->historyIdx]);
+            SetString(obj->inputText, sizeof(obj->inputText), obj->history[obj->historyIdx]);
             obj->inputCharCount = strlen(obj->history[obj->historyIdx]);
             obj->inputText[obj->inputCharCount+1] = '\0';
         }
@@ -142,9 +141,9 @@ void Console_Update(Console* obj){
 ConsoleCommand Console_Submit(Console* obj){
     // shuffle feed
     for (int i = MAX_FEED-1; i >= 0; i--){
-        SetText(obj->feed[i], sizeof(obj->feed[i]), obj->feed[i-1]);
+        SetString(obj->feed[i], sizeof(obj->feed[i]), obj->feed[i-1]);
     }
-    SetText(obj->feed[0], sizeof(obj->feed[0]), obj->inputText);
+    SetString(obj->feed[0], sizeof(obj->feed[0]), obj->inputText);
 
     // add to history IF previous submission doesn't match
     if (strcmp(obj->inputText, obj->history[0]) == 0){ 
@@ -152,9 +151,9 @@ ConsoleCommand Console_Submit(Console* obj){
     } else {
         // shuffle history
     for (int i = MAX_FEED-1; i >= 0; i--){
-            SetText(obj->history[i], sizeof(obj->history[i]), obj->history[i-1]);
+            SetString(obj->history[i], sizeof(obj->history[i]), obj->history[i-1]);
         }
-        SetText(obj->history[0], sizeof(obj->history[0]), obj->inputText);
+        SetString(obj->history[0], sizeof(obj->history[0]), obj->inputText);
         obj->historyCount++;
     }
 
@@ -169,7 +168,7 @@ ConsoleCommand Console_Submit(Console* obj){
     // reset input
     obj->historyIdx = -1;
     obj->inputCharCount = 0;
-    SetText(obj->inputText, sizeof(obj->inputText), "");
+    SetString(obj->inputText, sizeof(obj->inputText), "");
     obj->inputText[obj->inputCharCount+1] = '\0';
 
     return returnCC;

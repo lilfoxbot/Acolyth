@@ -60,7 +60,10 @@ struct Ray voxelRay;
 const int OCTREE_ROOT_SIZE = 8; // octree root size
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
 struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
+struct VoxelGrid* grid_left;
+struct VoxelGrid* grid_right;
 struct VoxelGrid* grid_floor;
+
 BoxtreeNode* boxtreeRoot;
 
 struct Button* mainButtons[HUD_LIMIT];
@@ -186,8 +189,16 @@ void MainInit(){
     boxtreeRoot = Boxtree_Build((Vector3){0,0,0}, BOXTREE_INITIAL_SIZE, 1);
 
     // @GRID init
-    grid_floor = VoxelGrid_Construct(5,5);
-    grid_floor->position = (Vector3){0.5,0.5,0.5};
+    grid_left = VoxelGrid_Construct(5, 5, false);
+    grid_left->position = (Vector3){0.5, 0.5, -5};
+    grid_left->isActive = true;
+    
+    grid_right = VoxelGrid_Construct(5, 5, false);
+    grid_right->position = (Vector3){0.5, 0.5, 5};
+    grid_right->isActive = true;
+
+    grid_floor = VoxelGrid_Construct(11, 11, true);
+    grid_floor->position = (Vector3){-4.5, -0.5, -5};
     grid_floor->isActive = true;
 
     // Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
@@ -326,6 +337,8 @@ void MainInput(){
 
 void MainUpdate(){
 
+    VoxelGrid_Update(grid_left, DT);
+    VoxelGrid_Update(grid_right, DT);
     VoxelGrid_Update(grid_floor, DT);
 
     switch (GAME_STATE){
@@ -716,6 +729,8 @@ void MainDraw(){
     //     }
     // }
 
+    VoxelGrid_Draw(grid_left);
+    VoxelGrid_Draw(grid_right);
     VoxelGrid_Draw(grid_floor);
 
     switch (GAME_STATE){
@@ -902,18 +917,6 @@ void ResetScene(){
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldPolys[i]->isActive = false; }
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldPawns[i]->isActive = false; }
 
-    for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-        for (int y = 0; y < LEVEL_GRID_COLS; y++){
-            for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-                if (y == 0){
-                    grid3d[x][y][z]->isActive = true;
-                } else {
-                    grid3d[x][y][z]->isActive = false;
-                }
-                grid3d[x][y][z]->isOccupied = false;
-            }
-        }
-    }
 }
 
 // void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
