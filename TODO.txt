@@ -1,8 +1,5 @@
 === STUFFS ===
 
-- second voxel wall
-- voxel floor
-
 - new-voxel grid collision
 
 - multiple 2D voxel grids that face center (floor/ceiling/walls)

@@ -10,6 +10,8 @@
 #include "pawn.h"
 #include "player.h"
 
+extern bool myDebug;
+
 const int MAX_BOXTREE_DEPTH = 4;
 
 typedef struct BoxtreeNode {
@@ -51,41 +53,41 @@ BoxtreeNode* Boxtree_CreateNode(Vector3 center, int size, int depth) {
     return node;
 }
 
-BoxtreeNode* Boxtree_Build(Vector3 center, int size, int depth) {
+BoxtreeNode* Boxtree_Build(Vector3 center, int size, int depth){
     if (depth > MAX_BOXTREE_DEPTH) return NULL;
 
     BoxtreeNode* boxTreeNode = Boxtree_CreateNode(center, size, depth);
     int newSize = size / 2; 
-    Vector3 RTF = Vector3Add(center,(Vector3){newSize/2,newSize/2,newSize/2});
-    Vector3 LTF = Vector3Add(center,(Vector3){-newSize/2,newSize/2,newSize/2});
-    Vector3 LBF = Vector3Add(center,(Vector3){-newSize/2,-newSize/2,newSize/2});
-    Vector3 RBF = Vector3Add(center,(Vector3){newSize/2,-newSize/2,newSize/2});
-    Vector3 RTB = Vector3Add(center,(Vector3){newSize/2,newSize/2,-newSize/2});
-    Vector3 LTB = Vector3Add(center,(Vector3){-newSize/2,newSize/2,-newSize/2});
-    Vector3 LBB = Vector3Add(center,(Vector3){-newSize/2,-newSize/2,-newSize/2});
-    Vector3 RBB = Vector3Add(center,(Vector3){newSize/2,-newSize/2,-newSize/2});
+    Vector3 RUF = Vector3Add(center,(Vector3){newSize/2,newSize/2,newSize/2});
+    Vector3 LUF = Vector3Add(center,(Vector3){-newSize/2,newSize/2,newSize/2});
+    Vector3 LDF = Vector3Add(center,(Vector3){-newSize/2,-newSize/2,newSize/2});
+    Vector3 RDF = Vector3Add(center,(Vector3){newSize/2,-newSize/2,newSize/2});
+    Vector3 RUB = Vector3Add(center,(Vector3){newSize/2,newSize/2,-newSize/2});
+    Vector3 LUB = Vector3Add(center,(Vector3){-newSize/2,newSize/2,-newSize/2});
+    Vector3 LDB = Vector3Add(center,(Vector3){-newSize/2,-newSize/2,-newSize/2});
+    Vector3 RDB = Vector3Add(center,(Vector3){newSize/2,-newSize/2,-newSize/2});
 
-    // right-top-front
-    boxTreeNode->children[0] = Boxtree_Build(RTF, newSize, depth + 1);
-    // left-top-front
-    boxTreeNode->children[1] = Boxtree_Build(LTF, newSize, depth + 1);
-    // left-bottom-front
-    boxTreeNode->children[2] = Boxtree_Build(LBF, newSize, depth + 1);
-    // right-bottom-front
-    boxTreeNode->children[3] = Boxtree_Build(RBF, newSize, depth + 1);
-    // right-top-back
-    boxTreeNode->children[4] = Boxtree_Build(RTB, newSize, depth + 1);
-    // left-top-back
-    boxTreeNode->children[5] = Boxtree_Build(LTB, newSize, depth + 1);
-    // left-bottom-back
-    boxTreeNode->children[6] = Boxtree_Build(LBB, newSize, depth + 1);
-    // right-bottom-back
-    boxTreeNode->children[7] = Boxtree_Build(RBB, newSize, depth + 1);
+    // right-up-front
+    boxTreeNode->children[0] = Boxtree_Build(RUF, newSize, depth + 1);
+    // left-up-front
+    boxTreeNode->children[1] = Boxtree_Build(LUF, newSize, depth + 1);
+    // left-down-front
+    boxTreeNode->children[2] = Boxtree_Build(LDF, newSize, depth + 1);
+    // right-down-front
+    boxTreeNode->children[3] = Boxtree_Build(RDF, newSize, depth + 1);
+    // right-up-back
+    boxTreeNode->children[4] = Boxtree_Build(RUB, newSize, depth + 1);
+    // left-up-back
+    boxTreeNode->children[5] = Boxtree_Build(LUB, newSize, depth + 1);
+    // left-down-back
+    boxTreeNode->children[6] = Boxtree_Build(LDB, newSize, depth + 1);
+    // right-down-back
+    boxTreeNode->children[7] = Boxtree_Build(RDB, newSize, depth + 1);
     
     return boxTreeNode;
 }
 
-void Boxtree_Reset(BoxtreeNode* node) {
+void Boxtree_Reset(BoxtreeNode* node){
     if (node == NULL) return;
 
     node->isRayHit = false;
@@ -97,26 +99,22 @@ void Boxtree_Reset(BoxtreeNode* node) {
     node->pawnCount = 0;
     memset(node->pawns, 0, sizeof(node->pawns));
 
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++){
         Boxtree_Reset(node->children[i]);
     }
 }
 
-void Boxtree_DrawNode(BoxtreeNode* node) {
+void Boxtree_DrawNode(BoxtreeNode* node){
     if (node == NULL) return;
-    
-    if(node->depth == MAX_BOXTREE_DEPTH){
-        if (node->nodeTouched){
-            DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, SKYBLUE);
-        } else if (node->isRayHit){
-            DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, YELLOW);
-        }
-        
-    } else {
-        DrawCubeWires(node->position, node->size-0.1f, node->size-0.1f, node->size-0.1f, RED);
-    }
+    if (!myDebug) return;
 
-    for (int i = 0; i < 8; i++) {
+    DrawCubeWires(node->position, node->size, node->size, node->size, RED); 
+    
+    // if(node->depth == 1){
+    //     DrawCubeWires(node->position, node->size, node->size, node->size, RED);  
+    // } 
+
+    for (int i = 0; i < 8; i++){
         Boxtree_DrawNode(node->children[i]);
     }
 }

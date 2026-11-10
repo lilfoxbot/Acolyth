@@ -597,7 +597,7 @@ void MainCollide(){
             }
             break;
         case GS_TEST:
-
+            Boxtree_Reset(boxtreeRoot);
             // pawn checkin
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                 if (!worldPawns[i]->isActive) continue;
@@ -703,16 +703,17 @@ void MainDraw(){
     BeginMode3D(camera); // =====================================================
     
     DrawSphere((Vector3){ 500.0f, 20.0f, 0 }, 10.0f, WHITE);
-    DrawGrid(10, 1.0f);
-    DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
-
+    
     if (myDebug){
-        Boxtree_DrawNode(boxtreeRoot);
+        // world origin
+        DrawLine3D((Vector3){0, 0, 0}, (Vector3){1, 0, 0}, RED);
+        DrawLine3D((Vector3){0, 0, 0}, (Vector3){0, 1, 0}, GREEN);
+        DrawLine3D((Vector3){0, 0, 0}, (Vector3){0, 0, 1}, BLUE);
+        DrawGrid(10, 1.0f);
+        DrawCubeWires((Vector3){0,0,0}, 10, 0.2, 10, WHITE);
     }
-    // world origin
-    DrawLine3D((Vector3){0, 0, 0}, (Vector3){1, 0, 0}, RED);
-    DrawLine3D((Vector3){0, 0, 0}, (Vector3){0, 1, 0}, GREEN);
-    DrawLine3D((Vector3){0, 0, 0}, (Vector3){0, 0, 1}, BLUE);
+
+    Boxtree_DrawNode(boxtreeRoot);
 
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
         Poly_Draw(worldPolys[i]);

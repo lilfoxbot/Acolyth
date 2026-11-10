@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern bool myDebug;
+
 typedef struct BulletPoly{
     Vector3 A;
     Vector3 B;
@@ -83,17 +85,12 @@ void UpdateBulletPoly(BulletPoly* poly){
 }
 
 void DrawBulletPoly(Bullet* obj, BulletPoly* poly){
-    // DrawTriangle3D(Vector3Add(poly->A, obj->position),
-    //                 Vector3Add(poly->B, obj->position),
-    //                 Vector3Add(poly->C, obj->position), poly->color);
+    
+    if (myDebug){ DrawBoundingBox(obj->bb, WHITE); }
 
-    // DrawTriangle3D(Vector3Add(poly->A, obj->position),
-    //                 Vector3Add(poly->C, obj->position),
-    //                 Vector3Add(poly->B, obj->position), poly->color);
-
-    DrawLine3D(Vector3Add(poly->A, obj->position), Vector3Add(poly->B, obj->position), WHITE);
-    DrawLine3D(Vector3Add(poly->B, obj->position), Vector3Add(poly->C, obj->position), WHITE);
-    DrawLine3D(Vector3Add(poly->C, obj->position), Vector3Add(poly->A, obj->position), WHITE);
+    DrawLine3D(Vector3Add(poly->A, obj->position), Vector3Add(poly->B, obj->position), YELLOW);
+    DrawLine3D(Vector3Add(poly->B, obj->position), Vector3Add(poly->C, obj->position), YELLOW);
+    DrawLine3D(Vector3Add(poly->C, obj->position), Vector3Add(poly->A, obj->position), YELLOW);
 }
 
 BulletPoly* BulletPoly_Construct(){

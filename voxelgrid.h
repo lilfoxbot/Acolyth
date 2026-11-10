@@ -7,6 +7,8 @@
 
 #include "tandem_common.h"
 
+extern bool myDebug;
+
 typedef struct Voxel {
     bool isActive;
     bool isOccupied;
@@ -153,9 +155,12 @@ void VoxelGrid_Update(VoxelGrid* obj, float deltaTime){
 void VoxelGrid_Draw(VoxelGrid* obj){
     if (!obj->isActive) return;
 
-    DrawLine3D(Vector3Add(obj->position, (Vector3){-1,0,0}), Vector3Add(obj->position, (Vector3){1,0,0}), MAGENTA);
-    DrawLine3D(Vector3Add(obj->position, (Vector3){0,-1,0}), Vector3Add(obj->position, (Vector3){0,1,0}), MAGENTA);
-    DrawLine3D(Vector3Add(obj->position, (Vector3){0,0,-1}), Vector3Add(obj->position, (Vector3){0,0,1}), MAGENTA);
+    // origin
+    if (myDebug){
+        DrawLine3D(Vector3Add(obj->position, (Vector3){-1,0,0}), Vector3Add(obj->position, (Vector3){1,0,0}), MAGENTA);
+        DrawLine3D(Vector3Add(obj->position, (Vector3){0,-1,0}), Vector3Add(obj->position, (Vector3){0,1,0}), MAGENTA);
+        DrawLine3D(Vector3Add(obj->position, (Vector3){0,0,-1}), Vector3Add(obj->position, (Vector3){0,0,1}), MAGENTA);
+    }
 
     for (int i = 0; i < obj->voxelCount; i++){
         Voxel_Draw(obj->voxels[i]);
