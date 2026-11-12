@@ -41,7 +41,7 @@ typedef struct Button{
 
 } Button;
 
-static void SetBtnTextArray(char *dest, size_t dest_size, const char *source) {
+static void SetBtnTextArray(char *dest, size_t dest_size, const char *source){
     snprintf(dest, dest_size, "%s", source);
 }
 
