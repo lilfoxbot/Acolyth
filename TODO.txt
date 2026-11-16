@@ -1,5 +1,9 @@
 === STUFFS ===
 
+- emacs build/debug
+
+---
+
 - new-voxel grid collision
 
 - multiple 2D voxel grids that face center (floor/ceiling/walls)
@@ -10,10 +14,10 @@
 
 === NOTES === 
 
-▼ inspiration
-- tempest (1981)
-- CONTRA
-- Star Fox
++ inspiration
+  - tempest (1981)
+  - CONTRA
+  - Star Fox
 
 === NEW ENVIRONMENT SETUP ===
 

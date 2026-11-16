@@ -279,6 +279,7 @@ void MainInit(){
     pauseWindow->buttons[1] = pauseButtons[1];
     pauseWindow->buttons[2] = pauseButtons[2];
     pauseWindow->buttonCount = 3;
+    pauseWindow->but
 
     settingsWindow = Window_Construct((Vector2){(GetScreenWidth()/2), (GetScreenHeight()/2)}, (Vector2){400, 400}, "SETTINGS");
     settingsWindow->hasCloseBtn = true;
@@ -289,7 +290,6 @@ void MainInit(){
 
 void MainReady(){
     //Gridpawn_Spawn(myGridPawn, gridpawnStartPos);
-  
 }
 
 void MainInput(){

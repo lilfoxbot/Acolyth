@@ -1,0 +1,140 @@
+;; -*- lexical-binding: t; -*-
+
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(cua-mode t)
+ '(desktop-save-mode t)
+ '(global-display-line-numbers-mode t)
+ '(package-selected-packages '(corfu vscode-dark-plus-theme))
+ '(save-place-mode t)
+ '(tab-bar-mode t)
+ '(tool-bar-mode nil))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(default ((t (:family "JetBrains Mono Medium" :foundry "outline" :slant normal :weight medium :height 98 :width normal)))))
+
+;; Line Numbers
+(global-display-line-numbers-mode 1)
+;; File search suggestions
+(fido-vertical-mode 1)
+
+;; HOTKEYS
+;; NOTE: DO NOT USE "C-i" (it is a "tab" override)
+
+;; Enable C-c (copy), C-v (paste), C-x (cut), and C-z (undo) when text is selected
+(cua-mode 1)
+
+;; Select All
+(keymap-global-set "C-a" #'mark-whole-buffer)
+
+;; Save Buffer
+(keymap-global-set "C-s" 'save-buffer)
+
+;; Search Text
+(keymap-global-set "C-f" 'isearch-forward)
+(keymap-set isearch-mode-map "C-f" 'isearch-repeat-forward)
+
+;; Evaluate Line (when cursor at end of line)
+(global-set-key (kbd "C-e") 'eval-last-sexp)
+
+;; Toggle Speedbar (file explorer GUI)
+(global-set-key (kbd "C-SPC") 'speedbar)
+
+;; Open Init File (currently used)
+(keymap-global-set "C-p" (lambda () (interactive) (find-file user-init-file)))
+
+;; Open Scratch Buffer
+(global-set-key (kbd "C-l") #'scratch-buffer)
+
+;; Search File
+(keymap-global-set "C-S-f" #'project-find-file)
+
+;; Block Comment
+(global-set-key (kbd "C-/") 'comment-or-uncomment-region)
+
+;; LANGUAGE SERVER SETUP
+;; REQUIRES CLANGD, EGLOT, 
+(add-to-list 'exec-path "C:/Program Files/LLVM/bin")
+(setenv "PATH" (concat "C:/Program Files/LLVM/bin;" (getenv "PATH")))
+
+;; Set up package archives if not already configured
+(require 'package)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org") t)
+(package-initialize)
+
+;; Install and enable Corfu for the autocomplete popup menu
+(use-package corfu
+  :ensure t
+  :custom
+  (corfu-auto t)                 ;; Enable automatic popup as you type
+  (corfu-auto-delay 0.1)         ;; Short delay before popup appears
+  (corfu-auto-prefix 2)          ;; Trigger after 2 characters
+  :init
+  (global-corfu-mode))
+
+;; Automatically start Eglot (LSP) when opening C files
+(add-hook 'c-mode-hook 'eglot-ensure)
+(add-hook 'c-ts-mode-hook 'eglot-ensure) ;; For Tree-sitter C mode
+
+;; FUNCTIONS
+
+;; BUILD/RUN
+(let ((raylib-bin "C:/raylib/w64devkit/bin"))
+  (when (file-directory-p raylib-bin)
+    (add-to-list 'exec-path raylib-bin)
+    (setenv "PATH" (concat (replace-regexp-in-string "/" "\\\\" raylib-bin) ";" (getenv "PATH")))))
+
+(defun raylib-build-and-run ()
+  "Save all buffers, compile the current Raylib C file, and run it."
+  (interactive)
+  (save-some-buffers t)
+  (let* ((src (file-name-nondirectory (buffer-file-name)))
+         (exe (concat (file-name-sans-extension src) ".exe"))
+         (cmd (format "gcc %s -o %s -O1 -Wall -std=c99 -Wno-missing-braces -I C:/raylib/raylib/src -L C:/raylib/raylib/src -lraylib -lopengl32 -lgdi32 -lwinmm && %s"
+                      src exe exe)))
+    (compile cmd)))
+
+(with-eval-after-load 'cc-mode
+  (define-key c-mode-base-map (kbd "<f5>") 'raylib-build-and-run))
+;;
+
+;; BUILD/DEBUG
+(defun raylib-build-and-debug ()
+  "Save all buffers, compile the current Raylib C file with debug symbols, and launch GDB."
+  (interactive)
+  (save-some-buffers t)
+  (let* ((dir default-directory)
+         (src (file-name-nondirectory (buffer-file-name)))
+         (exe (concat (file-name-sans-extension src) ".exe"))
+         (cmd (format "gcc %s -o %s -g -O0 -Wall -std=c99 -Wno-missing-braces -I C:/raylib/raylib/src -L C:/raylib/raylib/src -lraylib -lopengl32 -lgdi32 -lwinmm"
+                      src exe))
+         (comp-buf (compile cmd)))
+    (with-current-buffer comp-buf
+      (setq-local compilation-finish-functions
+                  (list `(lambda (buf status)
+                           (if (string-match-p "finished" status)
+                               (let ((default-directory ,dir))
+                                 (gdb ,(format "gdb -i=mi %s" exe))
+                                 (gdb-many-windows 1))
+                             (message "Build failed; aborting debug."))))))))
+
+(with-eval-after-load 'cc-mode
+  (define-key c-mode-base-map (kbd "<f6>") #'raylib-build-and-debug))
+;;
+
+(with-eval-after-load 'gud
+  (define-key gud-minor-mode-map (kbd "<f7>")  #'gud-step)    ; Step Into
+  (define-key gud-minor-mode-map (kbd "<f8>")  #'gud-next)    ; Step Over
+  (define-key gud-minor-mode-map (kbd "S-<f8>") #'gud-finish) ; Step Out
+  (define-key gud-minor-mode-map (kbd "<f9>")  #'gud-cont)    ; Continue
+  (define-key gud-minor-mode-map (kbd "<f10>") #'gud-break))  ; Set Breakpoint
+
+
+(add-to-list 'custom-theme-load-path "~/.emacs.d/themes/")
+(load-theme 'vscode-dark-plus t)

@@ -46,6 +46,7 @@ typedef struct Bullet {
 
     struct BulletPoly* bp[5];
     int polyCount;
+  
 } Bullet;
 
 Vector3 GetRandomSpherePoint(int range, float multiplier, float scale){
