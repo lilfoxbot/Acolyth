@@ -89,7 +89,7 @@ int worldBulletCount = 0;
 struct Poly* worldPolys[WORLD_DEFAULT_LIMIT];
 
 struct Gridpawn* myGridPawn;
-Vector3 gridpawnStartPos = {0,2,7};
+Vector3 gridpawnStartPos = {-4,2,0};
 
 Camera camera = { 0 };
 Vector3 cameraMoveTarget = {0,0,0};
@@ -189,44 +189,17 @@ void MainInit(){
     boxtreeRoot = Boxtree_Build((Vector3){0,0,0}, BOXTREE_INITIAL_SIZE, 1);
 
     // @GRID init
-    grid_left = VoxelGrid_Construct(5, 5, false);
+    grid_left = VoxelGrid_Construct(5, 5, GT_XY);
     grid_left->position = (Vector3){0.5, 0.5, -5};
     grid_left->isActive = true;
     
-    grid_right = VoxelGrid_Construct(5, 5, false);
+    grid_right = VoxelGrid_Construct(5, 5, GT_XY);
     grid_right->position = (Vector3){0.5, 0.5, 5};
     grid_right->isActive = true;
 
-    grid_floor = VoxelGrid_Construct(11, 11, true);
+    grid_floor = VoxelGrid_Construct(11, 11, GT_XZ);
     grid_floor->position = (Vector3){-4.5, -0.5, -5};
     grid_floor->isActive = true;
-
-    // Vector3 gridOrigin = (Vector3){-4.5f, 0.0f, -4.5f};
-    // int gridIndex = 0;
-    
-    // for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-    //     for (int y = 0; y < LEVEL_GRID_COLS; y++){
-    //         for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-    //             Voxel* newVoxel = Voxel_Construct((Vector3){gridOrigin.x + x, gridOrigin.y + y, gridOrigin.z + z}, (Vector3){x, y, z}, 1);
-    //             grid3d[x][y][z] = newVoxel;
-    //             PlaceVoxelInBoxtree(newVoxel, boxtreeRoot);
-    //             gridIndex++;
-    //         }
-    //     }
-    // }
-
-    // // set all ground level voxels
-    // for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-    //     for (int y = 0; y < LEVEL_GRID_COLS; y++){
-    //         for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-    //             if (y == 0){
-    //                 grid3d[x][y][z]->isActive = true;
-    //             } else {
-    //                 grid3d[x][y][z]->isActive = false;
-    //             }
-    //         }
-    //     }
-    // }
 
     // OBJECT POOLS
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
@@ -288,7 +261,7 @@ void MainInit(){
 }
 
 void MainReady(){
-    //Gridpawn_Spawn(myGridPawn, gridpawnStartPos);
+    
 }
 
 void MainInput(){
@@ -338,6 +311,7 @@ void MainInput(){
 void MainUpdate(){
 
     VoxelGrid_Update(grid_left, DT);
+    //grid_right->velocity = (Vector3){0.01,0,0};
     VoxelGrid_Update(grid_right, DT);
     VoxelGrid_Update(grid_floor, DT);
 
@@ -418,38 +392,30 @@ void MainUpdate(){
             
             // left arm
             if (IsKeyDown(KEY_A)){
-                myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){-1*myGridPawn->aimSpeed,0,0});
-                if (myGridPawn->rayLeft.direction.x < -myGridPawn->aimLimitX) myGridPawn->rayLeft.direction.x = -myGridPawn->aimLimitX; 
+                myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){0,0,-1*myGridPawn->aimSpeed}); 
             }
             if (IsKeyDown(KEY_D)){
-                myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){1*myGridPawn->aimSpeed,0,0});
-                if (myGridPawn->rayLeft.direction.x > 0) myGridPawn->rayLeft.direction.x = 0;
+                myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){0,0,1*myGridPawn->aimSpeed});
             }
             if (IsKeyDown(KEY_W)){
                 myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){0,1*myGridPawn->aimSpeed,0});
-                if (myGridPawn->rayLeft.direction.y > myGridPawn->aimLimitY) myGridPawn->rayLeft.direction.y = myGridPawn->aimLimitY;
             }
             if (IsKeyDown(KEY_S)){
                 myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){0,-1*myGridPawn->aimSpeed,0});
-                if (myGridPawn->rayLeft.direction.y < -1) myGridPawn->rayLeft.direction.y = -1;
             }
             
             // right arm
             if (IsKeyDown(KEY_LEFT)){
-                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){-1*myGridPawn->aimSpeed,0,0});
-                if (myGridPawn->rayRight.direction.x < 0) myGridPawn->rayRight.direction.x = 0;
+                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,0,-1*myGridPawn->aimSpeed});
             }
             if (IsKeyDown(KEY_RIGHT)){
-                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){1*myGridPawn->aimSpeed,0,0});
-                if (myGridPawn->rayRight.direction.x > myGridPawn->aimLimitX) myGridPawn->rayRight.direction.x = myGridPawn->aimLimitX;
+                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,0,1*myGridPawn->aimSpeed});
             }
             if (IsKeyDown(KEY_UP)){
                 myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,1*myGridPawn->aimSpeed,0});
-                if (myGridPawn->rayRight.direction.y > myGridPawn->aimLimitY) myGridPawn->rayRight.direction.y = myGridPawn->aimLimitY;
             }
             if (IsKeyDown(KEY_DOWN)){
                 myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,-1*myGridPawn->aimSpeed,0});
-                if (myGridPawn->rayRight.direction.y < -1) myGridPawn->rayRight.direction.y = -1;
             }
             
             // PAUSE
@@ -464,7 +430,7 @@ void MainUpdate(){
                 case CS_SNAP:
                     cameraMoveTarget = myGridPawn->position;
                     camera.position = cameraMoveTarget;
-                    camera.target = Vector3Add(camera.position, (Vector3){0,0,-500});
+                    camera.target = Vector3Add(camera.position, (Vector3){100,0,0});
                     break;
                 case CS_LERP:
                     cameraMoveTarget = myGridPawn->position;
@@ -554,7 +520,6 @@ void MainCollide(){
                         if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->voxels[k]->bb)){
                             if (worldBullets[i]->nodes[j]->voxels[k]->isActive){
                                 worldBullets[i]->nodes[j]->voxels[k]->color = WHITE;
-                                worldBullets[i]->nodes[j]->voxels[k]->fading = true;
                                 
                                 worldBullets[i]->color = WHITE;
                                 if (!worldBullets[i]->destroyFlag){
@@ -598,14 +563,25 @@ void MainCollide(){
             break;
         case GS_TEST:
             Boxtree_Reset(boxtreeRoot);
-            // pawn checkin
+            // Voxel check-in
+            for (int i = 0; i < grid_floor->voxelCount; i++){
+                PlaceVoxelInBoxtree(grid_floor->voxels[i], boxtreeRoot);
+            }
+            for (int i = 0; i < grid_left->voxelCount; i++){
+                PlaceVoxelInBoxtree(grid_left->voxels[i], boxtreeRoot);
+            }
+            for (int i = 0; i < grid_right->voxelCount; i++){
+                PlaceVoxelInBoxtree(grid_right->voxels[i], boxtreeRoot);
+            }
+
+            // pawn check-in
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                 if (!worldPawns[i]->isActive) continue;
                 Pawn_Reset(worldPawns[i]);
                 Boxtree_GetPawnNodes(worldPawns[i], boxtreeRoot);
             }
             
-            // bullet checkin
+            // bullet check-in
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                 if (!worldBullets[i]->isActive) continue;
                 Bullet_Reset(worldBullets[i]);
@@ -642,8 +618,7 @@ void MainCollide(){
                         
                         if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->voxels[k]->bb)){
                             if (worldBullets[i]->nodes[j]->voxels[k]->isActive){
-                                worldBullets[i]->nodes[j]->voxels[k]->color = WHITE;
-                                worldBullets[i]->nodes[j]->voxels[k]->fading = true;
+                                Voxel_Hit(worldBullets[i]->nodes[j]->voxels[k]);
                                 
                                 worldBullets[i]->color = WHITE;
                                 if (!worldBullets[i]->destroyFlag){
@@ -720,15 +695,6 @@ void MainDraw(){
         Pawn_Draw(worldPawns[i]);
         Bullet_Draw(worldBullets[i]);
     }
-    
-    // for (int x = 0; x < LEVEL_GRID_ROWS; x++){
-    //     for (int y = 0; y < LEVEL_GRID_COLS; y++){
-    //         for (int z = 0; z < LEVEL_GRID_DEPTH; z++){
-    //             Voxel_Draw(grid3d[x][y][z]);
-    //             Voxel_Reset(grid3d[x][y][z]);
-    //         }
-    //     }
-    // }
 
     VoxelGrid_Draw(grid_left);
     VoxelGrid_Draw(grid_right);
@@ -920,26 +886,23 @@ void ResetScene(){
 
 }
 
-// void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
-//     if (voxel == NULL || btnode == NULL) return;
+void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
+    if (voxel == NULL || btnode == NULL) return;
 
-//     if (voxel->coordinates.y > 0){
-//         voxel->isActive = false;
-//     }
-
-//     if (CheckCollisionBoxes(voxel->bb, btnode->bb)){
-//         if (btnode->depth == MAX_BOXTREE_DEPTH){
-//             btnode->voxels[btnode->voxelCount] = voxel;
-//             btnode->voxelCount++;
-//         }
-//     }
-
-//     if (btnode->depth == MAX_BOXTREE_DEPTH) return;
-
-//     for (int i = 0; i < 8; i++) {
-//         PlaceVoxelInBoxtree(voxel, btnode->children[i]);
-//     }
-// }
+    // if voxel is within bounds and is a max depth, insert voxel into node
+    // else, check children of node
+    if (CheckCollisionBoxes(voxel->bb, btnode->bb)){
+        if (btnode->depth == MAX_BOXTREE_DEPTH){
+            btnode->voxels[btnode->voxelCount] = voxel;
+            btnode->voxelCount++;
+            return;
+        } else {
+            for (int i = 0; i < 8; i++) {
+                PlaceVoxelInBoxtree(voxel, btnode->children[i]);
+            }
+        }
+    }
+}
 
 void SpawnWorldBullet(Ray ray){
     // find empty slot in bullet object pool

@@ -60,9 +60,9 @@ Gridpawn* Gridpawn_Construct(){
     obj->aimLimitX = 8;
     obj->aimLimitY = 4;
     obj->rayLeft.position = (Vector3){0,0,0};
-    obj->rayLeft.direction = (Vector3){0,0,-10};
+    obj->rayLeft.direction = (Vector3){10,0,};
     obj->rayRight.position = (Vector3){0,0,0};
-    obj->rayRight.direction = (Vector3){0,0,-10};
+    obj->rayRight.direction = (Vector3){10,0,0};
 
     return obj;
 }
@@ -89,16 +89,16 @@ void Gridpawn_Update(Gridpawn* obj, float deltaTime){
                             obj->position.y + obj->height / 2, 
                             obj->position.z + obj->width / 2};
     
-    obj->rayLeft.position = Vector3Add(obj->position, (Vector3){-0.1f,-0.1f,-0.1f});
-    obj->rayRight.position = Vector3Add(obj->position, (Vector3){0.1f,-0.1f,-0.1f});
+    obj->rayLeft.position = Vector3Add(obj->position, (Vector3){0, -0.1f, -0.1f});
+    obj->rayRight.position = Vector3Add(obj->position, (Vector3){0, -0.1f, 0.1f});
     // drag
     obj->velocity = Vector3Lerp(obj->velocity, (Vector3){0,0,0}, obj->drag);
     
 }
 
 void Gridpawn_Reset(Gridpawn* obj){
-    obj->position = (Vector3){0,2,7};
-    obj->targetPos = (Vector3){0,2,7};
+    obj->position = (Vector3){-4,2,0};
+    obj->targetPos = (Vector3){-4,2,0};
     obj->moveSpeed = 0.01f;
     obj->accel = 0.0001f;
     obj->drag = 0.015;
@@ -121,6 +121,6 @@ void Gridpawn_Draw(Gridpawn* obj){
 
     // draw crosshair
     //DrawCubeWires(obj->rayRight.direction, 0.5f, 0.5f, 0.5f, WHITE);
-    DrawCubeWires(Vector3Add(obj->rayRight.position, obj->rayRight.direction), 0.5f, 0.5f, 0.1f, WHITE);
-    DrawCubeWires(Vector3Add(obj->rayLeft.position, obj->rayLeft.direction), 0.5f, 0.5f, 0.1f, WHITE);
+    DrawCubeWires(Vector3Add(obj->rayRight.position, obj->rayRight.direction), 0.1f, 0.4f, 0.4f, WHITE);
+    DrawCubeWires(Vector3Add(obj->rayLeft.position, obj->rayLeft.direction), 0.1f, 0.4f, 0.4f, WHITE);
 }

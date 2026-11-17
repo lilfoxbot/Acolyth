@@ -99,6 +99,10 @@ void Boxtree_Reset(BoxtreeNode* node){
     node->pawnCount = 0;
     memset(node->pawns, 0, sizeof(node->pawns));
 
+    node->voxelCount = 0;
+    memset(node->voxels, 0, sizeof(node->voxels));
+
+    if (node->depth == MAX_BOXTREE_DEPTH) return;
     for (int i = 0; i < 8; i++){
         Boxtree_Reset(node->children[i]);
     }
@@ -107,12 +111,10 @@ void Boxtree_Reset(BoxtreeNode* node){
 void Boxtree_DrawNode(BoxtreeNode* node){
     if (node == NULL) return;
     if (!myDebug) return;
-
-    DrawCubeWires(node->position, node->size, node->size, node->size, RED); 
     
-    // if(node->depth == 1){
-    //     DrawCubeWires(node->position, node->size, node->size, node->size, RED);  
-    // } 
+    if(node->depth == 1){
+        DrawCubeWires(node->position, node->size, node->size, node->size, RED);  
+    } 
 
     for (int i = 0; i < 8; i++){
         Boxtree_DrawNode(node->children[i]);
