@@ -49,6 +49,7 @@ float armX = 0;
 float armY = 0;
 float DT = 0;
 float timePassed = 0;
+float spawnTimer = 1;
 float playerSpeed = 2.0f;
 
 Vector3 rayHitNormal = (Vector3){0,0,0};
@@ -63,6 +64,7 @@ struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
 struct VoxelGrid* grid_left;
 struct VoxelGrid* grid_right;
 struct VoxelGrid* grid_floor;
+struct VoxelGrid* grid_front;
 
 BoxtreeNode* boxtreeRoot;
 
@@ -139,6 +141,8 @@ void ChangeCameraState(CameraState cs);
 void AllowFreeCameraControl();
 void UpdateBackground();
 void StartGame();
+void UpdateBoxtree();
+void BulletCollision();
 
 void MainInit();
 void MainReady();
@@ -200,6 +204,10 @@ void MainInit(){
     grid_floor = VoxelGrid_Construct(11, 11, GT_XZ);
     grid_floor->position = (Vector3){-4.5, -0.5, -5};
     grid_floor->isActive = true;
+
+    grid_front = VoxelGrid_Construct(11, 11, GT_YZ);
+    grid_front->position = (Vector3){6.5, -0.5, -5};
+    grid_front->isActive = false;
 
     // OBJECT POOLS
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
@@ -311,9 +319,9 @@ void MainInput(){
 void MainUpdate(){
 
     VoxelGrid_Update(grid_left, DT);
-    //grid_right->velocity = (Vector3){0.01,0,0};
     VoxelGrid_Update(grid_right, DT);
     VoxelGrid_Update(grid_floor, DT);
+    VoxelGrid_Update(grid_front, DT);
 
     switch (GAME_STATE){
         case GS_TEST:
@@ -378,30 +386,39 @@ void MainUpdate(){
             
             break;
         case GS_PLAY:
+            
+            // spawn pawn
+            spawnTimer -= DT;
+            if (spawnTimer <= 0){
+                spawnTimer = 2;
+                SpawnWorldPawn(Vector3Add((Vector3){5,2,0}, GetRandomVector(3,0.5f)), PAWN_TEST);
+            }
+            
             for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
                 Poly_Update(worldPolys[i], DT);
                 Bullet_Update(worldBullets[i], DT);
+                Pawn_Update(worldPawns[i], DT);
             }
 
             if (IsKeyPressed(KEY_SPACE)){
                 SpawnWorldBullet(myGridPawn->rayRight);
-                myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){(myGridPawn->rayRight.direction.x*-0.002f),0,0});
+                //myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){(myGridPawn->rayRight.direction.x*-0.002f),0,0});
                 SpawnWorldBullet(myGridPawn->rayLeft);
-                myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){(myGridPawn->rayLeft.direction.x*-0.002f),0,0});
+                //myGridPawn->velocity = Vector3Add(myGridPawn->velocity, (Vector3){(myGridPawn->rayLeft.direction.x*-0.002f),0,0});
             }
             
             // left arm
-            if (IsKeyDown(KEY_A)){
-                myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){0,0,-1*myGridPawn->aimSpeed}); 
+            if (IsKeyPressed(KEY_A)){
+                myGridPawn->aimTargetL = Vector3Add(myGridPawn->aimTargetL, (Vector3){0,0,-0.5f});
             }
-            if (IsKeyDown(KEY_D)){
-                myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){0,0,1*myGridPawn->aimSpeed});
+            if (IsKeyPressed(KEY_D)){
+                myGridPawn->aimTargetL = Vector3Add(myGridPawn->aimTargetL, (Vector3){0,0,0.5f});
             }
-            if (IsKeyDown(KEY_W)){
-                myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){0,1*myGridPawn->aimSpeed,0});
+            if (IsKeyPressed(KEY_W)){
+                myGridPawn->aimTargetL = Vector3Add(myGridPawn->aimTargetL, (Vector3){0,0.5f,0});
             }
-            if (IsKeyDown(KEY_S)){
-                myGridPawn->rayLeft.direction = Vector3Add(myGridPawn->rayLeft.direction, (Vector3){0,-1*myGridPawn->aimSpeed,0});
+            if (IsKeyPressed(KEY_S)){
+                myGridPawn->aimTargetL = Vector3Add(myGridPawn->aimTargetL, (Vector3){0,-0.5f,0});
             }
             
             // right arm
@@ -480,193 +497,18 @@ void MainCollide(){
 
     switch (GAME_STATE){
         case GS_PLAY:
-            Boxtree_Reset(boxtreeRoot);
-            // bullet checkin
-            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                if (!worldBullets[i]->isActive) continue;
-                Bullet_Reset(worldBullets[i]);
-                Boxtree_GetBulletNodes(worldBullets[i], boxtreeRoot);
-            }
-
-            // bullet collision
-            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                // Bullets
-                if (!worldBullets[i]->isActive) continue;
-                if (!worldBullets[i]->isArmed) continue;
-                // Nodes
-                for (int j = 0; j < worldBullets[i]->nodeCount; j++){
-
-                    // Other Bullets
-                    for (int l = 0; l < worldBullets[i]->nodes[j]->bulletCount; l++){
-                        // check bullet if self
-                        if (worldBullets[i] == worldBullets[i]->nodes[j]->bullets[l]) continue;
-
-                        if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->bullets[l]->bb)){
-                            if (worldBullets[i]->nodes[j]->bullets[l]->isActive){
-
-                                worldBullets[i]->color = WHITE;
-                                if (!worldBullets[i]->destroyFlag){
-                                    worldBullets[i]->destroyFlag = true;
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                }
-                            }
-                        }
-                    }
-                    // Voxels
-                    for (int k = 0; k < worldBullets[i]->nodes[j]->voxelCount; k++){
-                        
-                        if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->voxels[k]->bb)){
-                            if (worldBullets[i]->nodes[j]->voxels[k]->isActive){
-                                worldBullets[i]->nodes[j]->voxels[k]->color = WHITE;
-                                
-                                worldBullets[i]->color = WHITE;
-                                if (!worldBullets[i]->destroyFlag){
-                                    worldBullets[i]->destroyFlag = true;
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Pawns
-                    for (int m = 0; m < worldBullets[i]->nodes[j]->pawnCount; m++){
-                        if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->pawns[m]->bb)){
-                            if (worldBullets[i]->nodes[j]->pawns[m]->isActive){
-                                Pawn* hitPawn = worldBullets[i]->nodes[j]->pawns[m];
-
-                                // if bullet has not hit this target, add to hitTargets
-                                if (!ContainsInstance(worldBullets[i]->hitTargets, 8, hitPawn)){
-                                    worldBullets[i]->hitTargets[worldBullets[i]->hitCount] = hitPawn;
-                                    worldBullets[i]->hitCount++;
-                                    hitPawn->color = WHITE;
-                                    Pawn_Damage(hitPawn);
-                                }
-
-                                worldBullets[i]->color = WHITE;
-                                if (!worldBullets[i]->destroyFlag){
-                                    worldBullets[i]->destroyFlag = true;
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            UpdateBoxtree();
+            BulletCollision();
+            
             break;
         case GS_TEST:
-            Boxtree_Reset(boxtreeRoot);
-            // Voxel check-in
-            for (int i = 0; i < grid_floor->voxelCount; i++){
-                PlaceVoxelInBoxtree(grid_floor->voxels[i], boxtreeRoot);
-            }
-            for (int i = 0; i < grid_left->voxelCount; i++){
-                PlaceVoxelInBoxtree(grid_left->voxels[i], boxtreeRoot);
-            }
-            for (int i = 0; i < grid_right->voxelCount; i++){
-                PlaceVoxelInBoxtree(grid_right->voxels[i], boxtreeRoot);
-            }
-
-            // pawn check-in
-            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                if (!worldPawns[i]->isActive) continue;
-                Pawn_Reset(worldPawns[i]);
-                Boxtree_GetPawnNodes(worldPawns[i], boxtreeRoot);
+            UpdateBoxtree();
+            BulletCollision();
+            
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+                SpawnWorldBullet(r1);
             }
             
-            // bullet check-in
-            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                if (!worldBullets[i]->isActive) continue;
-                Bullet_Reset(worldBullets[i]);
-                Boxtree_GetBulletNodes(worldBullets[i], boxtreeRoot);
-            }
-
-            // bullet collision
-            for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
-                // Bullets
-                if (!worldBullets[i]->isActive) continue;
-                if (!worldBullets[i]->isArmed) continue;
-                // Nodes
-                for (int j = 0; j < worldBullets[i]->nodeCount; j++){
-                    // Other Bullets
-                    for (int l = 0; l < worldBullets[i]->nodes[j]->bulletCount; l++){
-                        // check bullet if self
-                        if (worldBullets[i] == worldBullets[i]->nodes[j]->bullets[l]) continue;
-
-                        if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->bullets[l]->bb)){
-                            if (worldBullets[i]->nodes[j]->bullets[l]->isActive){
-
-                                worldBullets[i]->color = WHITE;
-                                if (!worldBullets[i]->destroyFlag){
-                                    worldBullets[i]->destroyFlag = true;
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                }
-                            }
-                        }
-                    }
-                    // Voxels
-                    for (int k = 0; k < worldBullets[i]->nodes[j]->voxelCount; k++){
-                        
-                        if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->voxels[k]->bb)){
-                            if (worldBullets[i]->nodes[j]->voxels[k]->isActive){
-                                Voxel_Hit(worldBullets[i]->nodes[j]->voxels[k]);
-                                
-                                worldBullets[i]->color = WHITE;
-                                if (!worldBullets[i]->destroyFlag){
-                                    worldBullets[i]->destroyFlag = true;
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                }
-                            }
-                        }
-                    }
-                    // Pawns
-                    for (int m = 0; m < worldBullets[i]->nodes[j]->pawnCount; m++){
-                        if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->pawns[m]->bb)){
-                            if (worldBullets[i]->nodes[j]->pawns[m]->isActive){
-                                Pawn* hitPawn = worldBullets[i]->nodes[j]->pawns[m];
-
-                                // if bullet has not hit this target, add to hitTargets
-                                if (!ContainsInstance(worldBullets[i]->hitTargets, 8, hitPawn)){
-                                    worldBullets[i]->hitTargets[worldBullets[i]->hitCount] = hitPawn;
-                                    worldBullets[i]->hitCount++;
-                                    hitPawn->color = WHITE;
-                                    Pawn_Damage(hitPawn);
-                                }
-
-                                worldBullets[i]->color = WHITE;
-                                if (!worldBullets[i]->destroyFlag){
-                                    worldBullets[i]->destroyFlag = true;
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                    SpawnWorldPoly(worldBullets[i]->position);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // edit ray collision
-            if (editMode){
-                
-            } else {
-                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                    SpawnWorldBullet(r1);
-                }
-            }
             break;
         default: break;
     }
@@ -699,6 +541,7 @@ void MainDraw(){
     VoxelGrid_Draw(grid_left);
     VoxelGrid_Draw(grid_right);
     VoxelGrid_Draw(grid_floor);
+    VoxelGrid_Draw(grid_front);
 
     switch (GAME_STATE){
         case GS_TEST:
@@ -1078,4 +921,107 @@ void UpdateBackground(){
     bgColorVector = Vector3Lerp(bgColorVector, bgColorTarget, bgColorRate);
     bgColor = (Color){ bgColorVector.x, bgColorVector.y, bgColorVector.z, 255 };
     ClearBackground(bgColor);
+}
+
+void UpdateBoxtree(){
+    Boxtree_Reset(boxtreeRoot);
+    // Voxel check-in
+    for (int i = 0; i < grid_floor->voxelCount; i++){
+        PlaceVoxelInBoxtree(grid_floor->voxels[i], boxtreeRoot);
+    }
+    for (int i = 0; i < grid_left->voxelCount; i++){
+        PlaceVoxelInBoxtree(grid_left->voxels[i], boxtreeRoot);
+    }
+    for (int i = 0; i < grid_right->voxelCount; i++){
+        PlaceVoxelInBoxtree(grid_right->voxels[i], boxtreeRoot);
+    }
+    // for (int i = 0; i < grid_front->voxelCount; i++){
+    //     PlaceVoxelInBoxtree(grid_front->voxels[i], boxtreeRoot);
+    // }
+
+    // Bullet check-in
+    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+        if (!worldBullets[i]->isActive) continue;
+        Bullet_Reset(worldBullets[i]);
+        Boxtree_GetBulletNodes(worldBullets[i], boxtreeRoot);
+    }
+
+    // Pawn check-in
+    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+        if (!worldPawns[i]->isActive) continue;
+        Pawn_Reset(worldPawns[i]);
+        Boxtree_GetPawnNodes(worldPawns[i], boxtreeRoot);
+    }
+}
+
+void BulletCollision(){
+    for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
+        // Bullets
+        if (!worldBullets[i]->isActive) continue;
+        if (!worldBullets[i]->isArmed) continue;
+        // Nodes
+        for (int j = 0; j < worldBullets[i]->nodeCount; j++){
+            // Other Bullets
+            for (int l = 0; l < worldBullets[i]->nodes[j]->bulletCount; l++){
+                // check bullet if self
+                if (worldBullets[i] == worldBullets[i]->nodes[j]->bullets[l]) continue;
+
+                if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->bullets[l]->bb)){
+                    if (worldBullets[i]->nodes[j]->bullets[l]->isActive){
+
+                        worldBullets[i]->color = WHITE;
+                        if (!worldBullets[i]->destroyFlag){
+                            worldBullets[i]->destroyFlag = true;
+                            SpawnWorldPoly(worldBullets[i]->position);
+                            SpawnWorldPoly(worldBullets[i]->position);
+                            SpawnWorldPoly(worldBullets[i]->position);
+                        }
+                    }
+                }
+            }
+            // Voxels
+            for (int k = 0; k < worldBullets[i]->nodes[j]->voxelCount; k++){
+                
+                if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->voxels[k]->bb)){
+                    if (worldBullets[i]->nodes[j]->voxels[k]->isActive){
+                        Voxel_Hit(worldBullets[i]->nodes[j]->voxels[k]);
+                        
+                        worldBullets[i]->color = WHITE;
+                        if (!worldBullets[i]->destroyFlag){
+                            worldBullets[i]->destroyFlag = true;
+                            SpawnWorldPoly(worldBullets[i]->position);
+                            SpawnWorldPoly(worldBullets[i]->position);
+                            SpawnWorldPoly(worldBullets[i]->position);
+                            SpawnWorldPoly(worldBullets[i]->position);
+                            SpawnWorldPoly(worldBullets[i]->position);
+                        }
+                    }
+                }
+            }
+            // Pawns
+            for (int m = 0; m < worldBullets[i]->nodes[j]->pawnCount; m++){
+                if (CheckCollisionBoxes(worldBullets[i]->bb, worldBullets[i]->nodes[j]->pawns[m]->bb)){
+                    if (worldBullets[i]->nodes[j]->pawns[m]->isActive){
+                        Pawn* hitPawn = worldBullets[i]->nodes[j]->pawns[m];
+
+                        // if bullet has not hit this target, add to hitTargets
+                        if (!ContainsInstance(worldBullets[i]->hitTargets, 8, hitPawn)){
+                            worldBullets[i]->hitTargets[worldBullets[i]->hitCount] = hitPawn;
+                            worldBullets[i]->hitCount++;
+                            hitPawn->color = WHITE;
+                            Pawn_Damage(hitPawn);
+                        }
+
+                        worldBullets[i]->color = WHITE;
+                        if (!worldBullets[i]->destroyFlag){
+                            worldBullets[i]->destroyFlag = true;
+                            SpawnWorldPoly(worldBullets[i]->position);
+                            SpawnWorldPoly(worldBullets[i]->position);
+                            SpawnWorldPoly(worldBullets[i]->position);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

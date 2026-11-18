@@ -1,10 +1,18 @@
 === STUFFS ===
 
-- gridlocked aiming, use grid wall for targeting 
++ "hold direction" aiming
+  - test on right hand
+  - aim recenters if nothing is held
 
-- encroaching entities
++ hide grids until "Play"
 
-- console/button commands with arguments (need to think of an example)
++ move grids into position from off screen on "Play"
+
++ stretch formations (how levels are built from voxels)
+  - build levels in "Test" mode
+  - save/load system for database
+
++ console/button commands with arguments (need to think of an example)
 
 === NOTES === 
 

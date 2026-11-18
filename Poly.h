@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "tandem_common.h"
+
 const int RAND_RANGE = 5;
 const float RAND_MULTI = 0.001f;
 const float SHRINK_RATE = 0.99f;
@@ -33,12 +35,6 @@ typedef struct Poly{
     Color polyColor;
     Color polyOutlineColor;
 } Poly;
-
-Vector3 GetRandomVector(int range, float multiplier){
-    return (Vector3){ GetRandomValue(-range,range)*(multiplier),
-    GetRandomValue(-range,range)*(multiplier), 
-    GetRandomValue(-range,range)*(multiplier)};
-}
 
 Poly* Poly_Construct(){
     Poly* poly = (Poly*)malloc(sizeof(Poly));

@@ -1,7 +1,7 @@
 #pragma once
 
 //#include "raylib.h"
-//#include "raymath.h"
+#include "raymath.h"
 #include <stdio.h>
 //#include <stdlib.h>
 
@@ -19,4 +19,10 @@ float MoveToFloat(float from, float to, float delta){
         if (from < to){ return to; }
     }
     return from;
+}
+
+Vector3 GetRandomVector(int range, float multiplier){
+    return (Vector3){ GetRandomValue(-range,range)*(multiplier),
+    GetRandomValue(-range,range)*(multiplier), 
+    GetRandomValue(-range,range)*(multiplier)};
 }

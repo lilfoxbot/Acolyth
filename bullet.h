@@ -110,7 +110,7 @@ Bullet* Bullet_Construct(){
 
     obj->position = (Vector3){0,0,0};
     obj->direction = (Vector3){0,0,0};
-    obj->speed = 3;
+    obj->speed = 5;
     obj->velocity = (Vector3){0,0,0};
 
     obj->size = 0.1f;

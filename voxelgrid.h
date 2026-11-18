@@ -76,7 +76,7 @@ void Voxel_Hit(Voxel* voxel){
     if (voxel == NULL) return;
 
     voxel->color = WHITE;
-    voxel->stretchTarget += 0.1f;
+    voxel->stretchTarget -= 0.1f;
     //obj->voxels[i]->stretchTarget = GetRandomValue(1,3);
 }
 
@@ -133,6 +133,16 @@ VoxelGrid* VoxelGrid_Construct(int length, int width, GridType gridtype){
             }
             break;
         case GT_YZ:
+            for (int y = 0; y < length; y++){
+                for (int z = 0; z < width; z++){
+                    Voxel* newVoxel = Voxel_Construct((Vector3){obj->position.x, obj->position.y + y, obj->position.z + z}, (Vector2){y, z});
+                    newVoxel->isActive = true;
+                    Color newColor = {20 * y, 20 * y, 20 * y, 255};
+                    newVoxel->defaultColor = newColor;
+                    obj->voxels[obj->voxelCount] = newVoxel;
+                    obj->voxelCount++;
+                }
+            }
             break;
         default: break;
     }
@@ -163,6 +173,11 @@ void VoxelGrid_Update(VoxelGrid* obj, float deltaTime){
                 obj->voxels[i]->size.z = MoveToFloat(obj->voxels[i]->size.z, obj->voxels[i]->stretchTarget, 0.01f);
                 break;
             case GT_YZ:
+                obj->voxels[i]->position = 
+                (Vector3){obj->position.x,
+                        obj->position.y + obj->voxels[i]->coordinates.x,
+                        obj->position.z + obj->voxels[i]->coordinates.y};
+                obj->voxels[i]->size.x = MoveToFloat(obj->voxels[i]->size.x, obj->voxels[i]->stretchTarget, 0.01f);
                 break;
             default: break;
         }   

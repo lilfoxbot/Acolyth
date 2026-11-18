@@ -33,6 +33,8 @@ typedef struct Gridpawn{
     float aimSpeed;
     int aimLimitX;
     int aimLimitY;
+    Vector3 aimTargetL;
+    Vector3 aimTargetR;
 
 } Gridpawn;
 
@@ -60,9 +62,11 @@ Gridpawn* Gridpawn_Construct(){
     obj->aimLimitX = 8;
     obj->aimLimitY = 4;
     obj->rayLeft.position = (Vector3){0,0,0};
-    obj->rayLeft.direction = (Vector3){10,0,};
+    obj->rayLeft.direction = (Vector3){5,0,0};
     obj->rayRight.position = (Vector3){0,0,0};
-    obj->rayRight.direction = (Vector3){10,0,0};
+    obj->rayRight.direction = (Vector3){5,0,0};
+    obj->aimTargetL = (Vector3){5,0,0};
+    obj->aimTargetR = (Vector3){5,0,0};
 
     return obj;
 }
@@ -93,6 +97,9 @@ void Gridpawn_Update(Gridpawn* obj, float deltaTime){
     obj->rayRight.position = Vector3Add(obj->position, (Vector3){0, -0.1f, 0.1f});
     // drag
     obj->velocity = Vector3Lerp(obj->velocity, (Vector3){0,0,0}, obj->drag);
+
+    // lerp arm to target
+    obj->rayLeft.direction = Vector3Lerp(obj->rayLeft.direction, obj->aimTargetL, obj->aimSpeed);
     
 }
 
