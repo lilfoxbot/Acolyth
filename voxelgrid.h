@@ -30,6 +30,7 @@ typedef struct Voxel {
     Color bbColor;
     float fadeSpeed;
 
+    bool isRayHit;
     bool selected;
     Vector3 selectedNormal;
 } Voxel;
@@ -47,6 +48,7 @@ Voxel* Voxel_Construct(Vector3 position, Vector2 coordinates) {
     voxel->isActive = false;
     voxel->isOccupied = false;
     voxel->selected = false;
+    voxel->isRayHit = false;
     voxel->selectedNormal = (Vector3){0,0,0};
     voxel->fadeSpeed = 0.05f;
     voxel->stretchTarget = 1;
@@ -70,6 +72,7 @@ void Voxel_Reset(Voxel* voxel){
 
     voxel->bbColor = BLACK;
     voxel->selected = false;
+    voxel->isRayHit = false;
 }
 
 void Voxel_Hit(Voxel* voxel){
@@ -77,7 +80,6 @@ void Voxel_Hit(Voxel* voxel){
 
     voxel->color = WHITE;
     voxel->stretchTarget -= 0.1f;
-    //obj->voxels[i]->stretchTarget = GetRandomValue(1,3);
 }
 
 void Voxel_Destroy(Voxel* voxel){
@@ -91,6 +93,8 @@ typedef struct VoxelGrid{
     GridType gridtype;
 
     Vector3 position;
+    Vector3 targetPosition;
+    float lerpSpeed;
     Vector3 velocity;
 
     int voxelCount;
@@ -104,6 +108,8 @@ VoxelGrid* VoxelGrid_Construct(int length, int width, GridType gridtype){
     obj->gridtype = gridtype;
 
     obj->position = (Vector3){0,0,0};
+    obj->targetPosition = (Vector3){0,0,0};
+    obj->lerpSpeed = 0.05f;
     obj->velocity = (Vector3){0,0,0};
     obj->voxelCount = 0;
     
@@ -153,8 +159,9 @@ VoxelGrid* VoxelGrid_Construct(int length, int width, GridType gridtype){
 void VoxelGrid_Update(VoxelGrid* obj, float deltaTime){
     if (!obj->isActive) return;
 
-    //obj->velocity = (Vector3){0.01f,0,0};
-    obj->position = Vector3Add(obj->position, obj->velocity);
+    obj->position = Vector3Lerp(obj->position, obj->targetPosition, obj->lerpSpeed);
+
+    //obj->position = Vector3Add(obj->position, obj->velocity);
     for (int i = 0; i < obj->voxelCount; i++){
 
         switch(obj->gridtype){

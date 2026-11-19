@@ -24,18 +24,20 @@
 #define WORLD_DEFAULT_LIMIT 100
 #define BOXTREE_INITIAL_SIZE 16
 #define HUD_LIMIT 10
-#define LEVEL_GRID_ROWS 10
-#define LEVEL_GRID_COLS 5
-#define LEVEL_GRID_DEPTH 10
+
+Vector3 DEFAULT_GRID_LEFT_POS = (Vector3){0.5, 0.5, -5};
+Vector3 DEFAULT_GRID_RIGHT_POS = (Vector3){0.5, 0.5, 5};
+Vector3 DEFAULT_GRID_UP_POS = (Vector3){-4.5, 5.5, -5};
+Vector3 DEFAULT_GRID_DOWN_POS = (Vector3){-4.5, -0.5, -5};
 
 Vector3 DEFAULT_PLAYER_POSITION = (Vector3){ 0, 5, 5 };
 Vector3 CAM_DEFAULT_POS = (Vector3){ 0, 3, 0 };
 Vector3 CAM_DEFAULT_TARGET = (Vector3){ 1000, 0, 0 };
 
-Color bgColor = { 200, 100, 50, 255 };
-Vector3 bgColorTarget = { 50, 50, 50 };
+Color bgColor = { 50, 50, 50, 255 };
+Vector3 bgColorTarget = { 255, 153, 51 };
 float bgColorRate = 0.02;
-//Color bgColor = { 200, 100, 50, 255 }; cool orange
+//Color bgColor = { 255, 153, 51 }; cool orange
 
 Vector2 mousePos;
 float screenFade = 1;
@@ -55,16 +57,15 @@ float playerSpeed = 2.0f;
 Vector3 rayHitNormal = (Vector3){0,0,0};
 Vector3 playerColNormal = (Vector3){0,0,0};
 struct Ray r1;
-Color r1Color = RED;
+Color r1Color = GREEN;
 struct Ray voxelRay;
 
 const int OCTREE_ROOT_SIZE = 8; // octree root size
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
-struct Voxel* grid3d[LEVEL_GRID_ROWS][LEVEL_GRID_COLS][LEVEL_GRID_DEPTH];
 struct VoxelGrid* grid_left;
 struct VoxelGrid* grid_right;
-struct VoxelGrid* grid_floor;
-struct VoxelGrid* grid_front;
+struct VoxelGrid* grid_down;
+struct VoxelGrid* grid_up;
 
 BoxtreeNode* boxtreeRoot;
 
@@ -95,8 +96,6 @@ Vector3 gridpawnStartPos = {-4,2,0};
 
 Camera camera = { 0 };
 Vector3 cameraMoveTarget = {0,0,0};
-
-char levelString[LEVEL_GRID_ROWS*LEVEL_GRID_COLS*LEVEL_GRID_DEPTH];
 
 typedef enum {
     GS_MAIN,
@@ -141,6 +140,7 @@ void ChangeCameraState(CameraState cs);
 void AllowFreeCameraControl();
 void UpdateBackground();
 void StartGame();
+void StartTest();
 void UpdateBoxtree();
 void BulletCollision();
 
@@ -194,20 +194,16 @@ void MainInit(){
 
     // @GRID init
     grid_left = VoxelGrid_Construct(5, 5, GT_XY);
-    grid_left->position = (Vector3){0.5, 0.5, -5};
-    grid_left->isActive = true;
+    grid_left->targetPosition = (Vector3){0.5, 0.5, -5};
     
     grid_right = VoxelGrid_Construct(5, 5, GT_XY);
-    grid_right->position = (Vector3){0.5, 0.5, 5};
-    grid_right->isActive = true;
+    grid_right->targetPosition = (Vector3){0.5, 0.5, 5};
 
-    grid_floor = VoxelGrid_Construct(11, 11, GT_XZ);
-    grid_floor->position = (Vector3){-4.5, -0.5, -5};
-    grid_floor->isActive = true;
+    grid_down = VoxelGrid_Construct(11, 11, GT_XZ);
+    grid_down->targetPosition = (Vector3){-4.5, -0.5, -5};
 
-    grid_front = VoxelGrid_Construct(11, 11, GT_YZ);
-    grid_front->position = (Vector3){6.5, -0.5, -5};
-    grid_front->isActive = false;
+    grid_up = VoxelGrid_Construct(11, 11, GT_XZ);
+    grid_up->targetPosition = (Vector3){-4.5, 6.5, -5};
 
     // OBJECT POOLS
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){
@@ -240,7 +236,6 @@ void MainInit(){
     mainButtons[1]->fontSize = 20;
     mainButtons[2] = Button_Construct((Vector2){500, 700}, (Vector2){200, 30}, "SETTINGS", BTN_SETTINGS_MAIN);
     mainButtons[2]->fontSize = 20;
-
 
     mainWindow = Window_Construct((Vector2){(GetScreenWidth()/2)-400, (GetScreenHeight()/2)-200}, (Vector2){400, 400}, "MAIN");
     mainWindow->buttons[0] = mainButtons[0];
@@ -320,8 +315,8 @@ void MainUpdate(){
 
     VoxelGrid_Update(grid_left, DT);
     VoxelGrid_Update(grid_right, DT);
-    VoxelGrid_Update(grid_floor, DT);
-    VoxelGrid_Update(grid_front, DT);
+    VoxelGrid_Update(grid_down, DT);
+    VoxelGrid_Update(grid_up, DT);
 
     switch (GAME_STATE){
         case GS_TEST:
@@ -349,7 +344,7 @@ void MainUpdate(){
             aimRay = Vector3Scale(aimRay, 0.2f);
             aimRay = Vector3Add(aimRay, Vector3Add(camera.position, (Vector3){0,-0.2f,0}));
             
-            r1.position = aimRay;
+            r1.position = camera.position;
             r1.direction = camF;
             break;
         case GS_TEST_PAUSE:
@@ -390,7 +385,7 @@ void MainUpdate(){
             // spawn pawn
             spawnTimer -= DT;
             if (spawnTimer <= 0){
-                spawnTimer = 2;
+                spawnTimer = 3;
                 SpawnWorldPawn(Vector3Add((Vector3){5,2,0}, GetRandomVector(3,0.5f)), PAWN_TEST);
             }
             
@@ -422,17 +417,19 @@ void MainUpdate(){
             }
             
             // right arm
+            // set default pos, then add
+            myGridPawn->rayRight.direction = (Vector3){5,0,2};
             if (IsKeyDown(KEY_LEFT)){
-                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,0,-1*myGridPawn->aimSpeed});
+                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,0,-1});
             }
             if (IsKeyDown(KEY_RIGHT)){
-                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,0,1*myGridPawn->aimSpeed});
+                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,0,1});
             }
             if (IsKeyDown(KEY_UP)){
-                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,1*myGridPawn->aimSpeed,0});
+                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,1,0});
             }
             if (IsKeyDown(KEY_DOWN)){
-                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,-1*myGridPawn->aimSpeed,0});
+                myGridPawn->rayRight.direction = Vector3Add(myGridPawn->rayRight.direction, (Vector3){0,-1,0});
             }
             
             // PAUSE
@@ -505,6 +502,13 @@ void MainCollide(){
             UpdateBoxtree();
             BulletCollision();
             
+            //VoxelSelectionCollision(); @TODO
+            // return voxels hit, and how many
+            //Voxel* hv = NULL;
+            //int mh = 0;
+            //Boxtree_GetRayVoxels(r1, boxtreeRoot, hv, mh);
+
+            
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                 SpawnWorldBullet(r1);
             }
@@ -540,8 +544,8 @@ void MainDraw(){
 
     VoxelGrid_Draw(grid_left);
     VoxelGrid_Draw(grid_right);
-    VoxelGrid_Draw(grid_floor);
-    VoxelGrid_Draw(grid_front);
+    VoxelGrid_Draw(grid_down);
+    VoxelGrid_Draw(grid_up);
 
     switch (GAME_STATE){
         case GS_TEST:
@@ -571,8 +575,8 @@ void MainDraw(){
         case GS_TEST:
             Vector2 center = { screenWidth / 2.0f, screenHeight / 2.0f };
             // Draw a simple plus-sign crosshair
-            DrawLine(center.x - 10, center.y, center.x + 10, center.y, WHITE);
-            DrawLine(center.x, center.y - 10, center.x, center.y + 10, WHITE);
+            DrawLine(center.x - 4, center.y, center.x + 3, center.y, WHITE);
+            DrawLine(center.x, center.y - 4, center.x, center.y + 5, WHITE);
             break;
         case GS_TEST_PAUSE:
             for (int i = HUD_LIMIT; i >= 0; i--){
@@ -675,7 +679,7 @@ void ExecuteButtonFunction(ButtonFunction btnfunc){
             Window_Close(mainWindow);
             break;
         case BTN_TEST:
-            ChangeGameState(GS_TEST);
+            StartTest();
             break;
         case BTN_SETTINGS_PAUSE:
             pauseWindow->isFocused = false;
@@ -701,6 +705,42 @@ void StartGame(){
     Gridpawn_Spawn(myGridPawn, gridpawnStartPos);
     Gridpawn_Reset(myGridPawn);
     ChangeCameraState(CS_LERP);
+
+    grid_left->isActive = true;
+    grid_left->targetPosition = DEFAULT_GRID_LEFT_POS;
+    grid_left->position = Vector3Add(grid_left->targetPosition, (Vector3){0, 0, -10});
+    
+    grid_right->isActive = true;
+    grid_right->targetPosition = DEFAULT_GRID_RIGHT_POS;
+    grid_right->position = Vector3Add(grid_right->targetPosition, (Vector3){0, 0, 10});
+
+    grid_down->isActive = true;
+    grid_down->targetPosition = DEFAULT_GRID_DOWN_POS;
+    grid_down->position = Vector3Add(grid_down->targetPosition, (Vector3){0, -10, 0});
+
+    grid_up->isActive = true;
+    grid_up->targetPosition = DEFAULT_GRID_UP_POS;
+    grid_up->position = Vector3Add(grid_up->targetPosition, (Vector3){0, 10, 0});
+}
+
+void StartTest(){
+    ChangeGameState(GS_TEST);
+
+    grid_left->isActive = true;
+    grid_left->targetPosition = DEFAULT_GRID_LEFT_POS;
+    grid_left->position = grid_left->targetPosition;
+    
+    grid_right->isActive = true;
+    grid_right->targetPosition = DEFAULT_GRID_RIGHT_POS;
+    grid_right->position = grid_right->targetPosition;
+
+    grid_down->isActive = true;
+    grid_down->targetPosition = DEFAULT_GRID_DOWN_POS;
+    grid_down->position = grid_down->targetPosition;
+
+    grid_up->isActive = true;
+    grid_up->targetPosition = DEFAULT_GRID_UP_POS;
+    grid_up->position = grid_up->targetPosition;
 }
 
 void GoToMain(){
@@ -726,7 +766,6 @@ void ResetScene(){
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldBullets[i]->isActive = false; }
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldPolys[i]->isActive = false; }
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){ worldPawns[i]->isActive = false; }
-
 }
 
 void PlaceVoxelInBoxtree(Voxel* voxel, BoxtreeNode* btnode){
@@ -755,7 +794,7 @@ void SpawnWorldBullet(Ray ray){
             break;
         }
     }
-    PlaySoundInstance(bullet_shot, ray.position);
+    //PlaySoundInstance(bullet_shot, ray.position);
 }
 
 void SpawnWorldPoly(Vector3 newPos){
@@ -926,18 +965,26 @@ void UpdateBackground(){
 void UpdateBoxtree(){
     Boxtree_Reset(boxtreeRoot);
     // Voxel check-in
-    for (int i = 0; i < grid_floor->voxelCount; i++){
-        PlaceVoxelInBoxtree(grid_floor->voxels[i], boxtreeRoot);
+    if (grid_down->isActive){
+        for (int i = 0; i < grid_down->voxelCount; i++){
+            PlaceVoxelInBoxtree(grid_down->voxels[i], boxtreeRoot);
+        }
     }
-    for (int i = 0; i < grid_left->voxelCount; i++){
-        PlaceVoxelInBoxtree(grid_left->voxels[i], boxtreeRoot);
+    if (grid_up->isActive){
+        for (int i = 0; i < grid_up->voxelCount; i++){
+            PlaceVoxelInBoxtree(grid_up->voxels[i], boxtreeRoot);
+        }
     }
-    for (int i = 0; i < grid_right->voxelCount; i++){
-        PlaceVoxelInBoxtree(grid_right->voxels[i], boxtreeRoot);
+    if (grid_left->isActive){
+        for (int i = 0; i < grid_left->voxelCount; i++){
+            PlaceVoxelInBoxtree(grid_left->voxels[i], boxtreeRoot);
+        }
     }
-    // for (int i = 0; i < grid_front->voxelCount; i++){
-    //     PlaceVoxelInBoxtree(grid_front->voxels[i], boxtreeRoot);
-    // }
+    if (grid_right->isActive){
+        for (int i = 0; i < grid_right->voxelCount; i++){
+            PlaceVoxelInBoxtree(grid_right->voxels[i], boxtreeRoot);
+        }
+    }
 
     // Bullet check-in
     for (int i = 0; i < WORLD_DEFAULT_LIMIT; i++){

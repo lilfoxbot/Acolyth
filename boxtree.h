@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "voxel.h"
+#include "voxelgrid.h"
 #include "bullet.h"
 #include "pawn.h"
 #include "player.h"
@@ -113,7 +113,7 @@ void Boxtree_DrawNode(BoxtreeNode* node){
     if (!myDebug) return;
     
     if(node->depth == 1){
-        DrawCubeWires(node->position, node->size, node->size, node->size, RED);  
+        DrawCubeWires(node->position, node->size, node->size, node->size, BLUE);  
     } 
 
     for (int i = 0; i < 8; i++){
@@ -123,32 +123,31 @@ void Boxtree_DrawNode(BoxtreeNode* node){
 
 // @CHECKIN ===
 
-// void Boxtree_GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int maxHits) {
-//     if (node == NULL) return;
+void Boxtree_GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int* numHits){
+    if (node == NULL) return;
 
-//     if (GetRayCollisionBox(ray, node->bb).hit){
-//         node->isRayHit = true;
-//         if (node->depth == MAX_BOXTREE_DEPTH) {
-//             for (int i = 0; i < node->voxelCount; i++){
-//                 if (!node->voxels[i]->isActive) continue;
-//                 RayCollision rc = GetRayCollisionBox(ray, node->voxels[i]->bb);
-//                 if (rc.hit){
+    if (GetRayCollisionBox(ray, node->bb).hit){
+        node->isRayHit = true;
+        if (node->depth == MAX_BOXTREE_DEPTH){
+            for (int i = 0; i < node->voxelCount; i++){
+                if (!node->voxels[i]->isActive) continue;
+
+                RayCollision rc = GetRayCollisionBox(ray, node->voxels[i]->bb);
+                if (rc.hit && node->voxels[i]->isRayHit == false){
                     
-//                     for (int j = 0; j < maxHits; j++){
-//                         if (hitVoxels[j] == NULL){
-//                             hitVoxels[j] = node->voxels[i];
-//                             break;
-//                         }
-//                     }
-//                 }
-//             }
-//         } else {
-//             for (int i = 0; i < 8; i++) {
-//                 Boxtree_GetRayVoxels(ray, node->children[i], hitVoxels, maxHits);
-//             }
-//         }
-//     }
-// }
+                    node->voxels[i]->isRayHit = true;
+                    hitVoxels[*numHits] = node->voxels[i];
+                    //*numHits++;
+                
+                }
+            }
+        } else {
+            for (int i = 0; i < 8; i++){
+                Boxtree_GetRayVoxels(ray, node->children[i], hitVoxels, numHits);
+            }
+        }
+    }
+}
 
 void Boxtree_GetBulletNodes(Bullet* bullet, BoxtreeNode* node){
     if (node == NULL || !bullet->isActive) return;

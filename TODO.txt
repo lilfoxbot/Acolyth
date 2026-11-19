@@ -1,18 +1,20 @@
 === STUFFS ===
 
-+ "hold direction" aiming
-  - test on right hand
-  - aim recenters if nothing is held
-
-+ hide grids until "Play"
-
-+ move grids into position from off screen on "Play"
-
 + stretch formations (how levels are built from voxels)
-  - build levels in "Test" mode
-  - save/load system for database
+  - "test mode" build functions:
+    - reimplement voxel selection
+    - grow/shrink voxels
+    - save/load commands
 
-+ console/button commands with arguments (need to think of an example)
++ the schmup needs to feel good, with a tinge of novelty
+  - crosshair "lands" on target with aimray
+  - player fires "stream" of bullets
+  - because it's a stream, bullets needs to be a bit simpler looking
+  - if target is spotted, bullets are fired automatically
+  - instead of "fire" button, "lock" button
+
++ console/button commands with arguments
+  - likely will test levels with this "/level 3"
 
 === NOTES === 
 

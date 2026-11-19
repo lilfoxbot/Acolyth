@@ -128,6 +128,9 @@ void Gridpawn_Draw(Gridpawn* obj){
 
     // draw crosshair
     //DrawCubeWires(obj->rayRight.direction, 0.5f, 0.5f, 0.5f, WHITE);
-    DrawCubeWires(Vector3Add(obj->rayRight.position, obj->rayRight.direction), 0.1f, 0.4f, 0.4f, WHITE);
-    DrawCubeWires(Vector3Add(obj->rayLeft.position, obj->rayLeft.direction), 0.1f, 0.4f, 0.4f, WHITE);
+    DrawCubeWires(Vector3Add(obj->rayRight.position, obj->rayRight.direction), 0.1f, 0.3f, 0.3f, WHITE);
+    DrawCubeWires(Vector3Add(obj->rayRight.position, obj->rayRight.direction), 0.05f, 0.1f, 0.1f, WHITE);
+
+    DrawCubeWires(Vector3Add(obj->rayLeft.position, obj->rayLeft.direction), 0.1f, 0.3f, 0.3f, WHITE);
+    DrawCubeWires(Vector3Add(obj->rayLeft.position, obj->rayLeft.direction), 0.05f, 0.1f, 0.1f, WHITE);
 }
