@@ -59,6 +59,8 @@ Vector3 playerColNormal = (Vector3){0,0,0};
 struct Ray r1;
 Color r1Color = GREEN;
 struct Ray voxelRay;
+struct Voxel* rayHitVoxels[30];
+struct Voxel* closestHitVoxel;
 
 const int OCTREE_ROOT_SIZE = 8; // octree root size
 const float LEVEL_GRID_CELL_SIZE = 1.0f;
@@ -143,6 +145,7 @@ void StartGame();
 void StartTest();
 void UpdateBoxtree();
 void BulletCollision();
+void VoxelSelectionCollision();
 
 void MainInit();
 void MainReady();
@@ -502,16 +505,7 @@ void MainCollide(){
             UpdateBoxtree();
             BulletCollision();
             
-            //VoxelSelectionCollision(); @TODO
-            // return voxels hit, and how many
-            //Voxel* hv = NULL;
-            //int mh = 0;
-            //Boxtree_GetRayVoxels(r1, boxtreeRoot, hv, mh);
-
-            
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                SpawnWorldBullet(r1);
-            }
+            VoxelSelectionCollision();
             
             break;
         default: break;
@@ -1070,5 +1064,34 @@ void BulletCollision(){
                 }
             }
         }
+    }
+}
+
+void VoxelSelectionCollision(){
+    memset(rayHitVoxels, 0, sizeof(rayHitVoxels));
+    
+
+    int numHits = 0;
+    Boxtree_GetRayVoxels(r1, boxtreeRoot, rayHitVoxels, &numHits);
+
+    // get closestHitVoxel
+    closestHitVoxel = NULL;
+    float closestHitDist;
+    for (int i = 0; i < numHits; i++){
+        rayHitVoxels[i]->color = (Color){0, 0, 255, 255};
+        // First Voxel @TODO
+        // if (closestHitVoxel == NULL){
+        //     closestHitVoxel = rayHitVoxels[i];
+        //     closestHitDist = Vector3Distance(closestHitVoxel->rayHitPoint, r1.position);
+        // } else {
+
+        //     if (Vector3Distance(closestHitVoxel->rayHitPoint, r1.position) < closestHitDist){
+
+        //     }
+        // }   
+    }
+    
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+        SpawnWorldBullet(r1);
     }
 }

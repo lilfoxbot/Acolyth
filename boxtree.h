@@ -126,6 +126,7 @@ void Boxtree_DrawNode(BoxtreeNode* node){
 void Boxtree_GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int* numHits){
     if (node == NULL) return;
 
+    // get array of hitVoxels
     if (GetRayCollisionBox(ray, node->bb).hit){
         node->isRayHit = true;
         if (node->depth == MAX_BOXTREE_DEPTH){
@@ -134,11 +135,10 @@ void Boxtree_GetRayVoxels(Ray ray, BoxtreeNode* node, Voxel** hitVoxels, int* nu
 
                 RayCollision rc = GetRayCollisionBox(ray, node->voxels[i]->bb);
                 if (rc.hit && node->voxels[i]->isRayHit == false){
-                    
                     node->voxels[i]->isRayHit = true;
+                    node->voxels[i]->rayHitPoint = rc.point;
                     hitVoxels[*numHits] = node->voxels[i];
-                    //*numHits++;
-                
+                    (*numHits)++;
                 }
             }
         } else {

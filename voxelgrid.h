@@ -31,8 +31,10 @@ typedef struct Voxel {
     float fadeSpeed;
 
     bool isRayHit;
+    Vector3 rayHitPoint;
     bool selected;
     Vector3 selectedNormal;
+    
 } Voxel;
 
 Voxel* Voxel_Construct(Vector3 position, Vector2 coordinates) {
@@ -49,6 +51,7 @@ Voxel* Voxel_Construct(Vector3 position, Vector2 coordinates) {
     voxel->isOccupied = false;
     voxel->selected = false;
     voxel->isRayHit = false;
+    voxel->rayHitPoint = (Vector3){0,0,0};
     voxel->selectedNormal = (Vector3){0,0,0};
     voxel->fadeSpeed = 0.05f;
     voxel->stretchTarget = 1;
@@ -73,6 +76,7 @@ void Voxel_Reset(Voxel* voxel){
     voxel->bbColor = BLACK;
     voxel->selected = false;
     voxel->isRayHit = false;
+    voxel->rayHitPoint = (Vector3){0,0,0};
 }
 
 void Voxel_Hit(Voxel* voxel){
@@ -161,8 +165,8 @@ void VoxelGrid_Update(VoxelGrid* obj, float deltaTime){
 
     obj->position = Vector3Lerp(obj->position, obj->targetPosition, obj->lerpSpeed);
 
-    //obj->position = Vector3Add(obj->position, obj->velocity);
     for (int i = 0; i < obj->voxelCount; i++){
+        Voxel_Reset(obj->voxels[i]);
 
         switch(obj->gridtype){
             case GT_XZ:
